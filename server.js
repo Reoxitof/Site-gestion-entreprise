@@ -83,10 +83,12 @@ async function initDB() {
       client_contact TEXT DEFAULT '',
       division TEXT NOT NULL DEFAULT 'securite',
       type_prestation TEXT NOT NULL,
+      prestations_ids TEXT DEFAULT '[]',
       description TEXT DEFAULT '',
       date_evenement TIMESTAMP,
       lieu TEXT DEFAULT '',
       budget TEXT DEFAULT '',
+      budget_estime NUMERIC DEFAULT 0,
       statut TEXT NOT NULL DEFAULT 'nouveau',
       priorite TEXT NOT NULL DEFAULT 'normale',
       note_interne TEXT DEFAULT '',
@@ -95,6 +97,49 @@ async function initDB() {
       created_at TIMESTAMP DEFAULT NOW(),
       updated_at TIMESTAMP DEFAULT NOW()
     )`);
+    // Migration: ajouter les colonnes si elles n'existent pas encore
+    await getPool().query(`ALTER TABLE ec_commandes ADD COLUMN IF NOT EXISTS prestations_ids TEXT DEFAULT '[]'`);
+    await getPool().query(`ALTER TABLE ec_commandes ADD COLUMN IF NOT EXISTS budget_estime NUMERIC DEFAULT 0`);
+
+    await getPool().query(`CREATE TABLE IF NOT EXISTS ec_tarifs (
+      id SERIAL PRIMARY KEY,
+      code TEXT UNIQUE NOT NULL,
+      label TEXT NOT NULL,
+      division TEXT NOT NULL,
+      emoji TEXT DEFAULT '💼',
+      prix NUMERIC NOT NULL DEFAULT 0,
+      unite TEXT DEFAULT 'forfait',
+      actif BOOLEAN DEFAULT true,
+      updated_at TIMESTAMP DEFAULT NOW()
+    )`);
+    // Insérer les tarifs par défaut si la table est vide
+    const tc = await getPool().query('SELECT COUNT(*) FROM ec_tarifs');
+    if (parseInt(tc.rows[0].count) === 0) {
+      const tarifs = [
+        ['securite_evenement',   'Sécurité événement',     'securite', '🛡️', 5000,  'forfait'],
+        ['escorte_vip',          'Escorte VIP',             'securite', '🥷', 8000,  'forfait'],
+        ['convoi_securise',      'Convoi sécurisé',         'securite', '🚗', 6000,  'forfait'],
+        ['protection_rapprochee','Protection rapprochée',   'securite', '🔒', 12000, 'forfait'],
+        ['soiree_privee',        'Soirée privée',           'soiree',   '🎉', 15000, 'forfait'],
+        ['gala_ceremonie',       'Gala / Cérémonie',        'soiree',   '🏆', 25000, 'forfait'],
+        ['animation_show',       'Animation / Show',        'lillys',   '💃', 7000,  'forfait'],
+        ['prestation_artistique','Prestation artistique',   'lillys',   '🎭', 5000,  'forfait'],
+        ['transfert_vip',        'Transfert VIP',           'tourisme', '✈️', 3000,  'forfait'],
+        ['visite_guidee',        'Visite guidée',           'tourisme', '🗺️', 2000,  'forfait'],
+        ['concierge',            'Service conciergerie',    'tourisme', '🛎️', 4000,  'forfait'],
+        ['road_trip',            'Road Trip / Aventure',    'aventure', '🏔️', 10000, 'forfait'],
+        ['expedition',           'Expédition',              'aventure', '🧭', 18000, 'forfait'],
+        ['prestation_mesure',    'Prestation sur-mesure',   'multi',    '⭐', 0,     'à définir'],
+      ];
+      for (const [code, label, division, emoji, prix, unite] of tarifs) {
+        await getPool().query(
+          `INSERT INTO ec_tarifs (code,label,division,emoji,prix,unite) VALUES ($1,$2,$3,$4,$5,$6) ON CONFLICT (code) DO NOTHING`,
+          [code, label, division, emoji, prix, unite]
+        );
+      }
+      console.log('[DB] Tarifs par défaut insérés');
+    }
+
     const c = await getPool().query('SELECT COUNT(*) FROM ec_users');
     if (parseInt(c.rows[0].count) === 0) {
       const h = await bcrypt.hash(process.env.ADMIN_PASSWORD || 'elitecorp2026', 12);
@@ -162,7 +207,6 @@ app.put('/api/employes/:id', admin, async (req, res) => {
 app.delete('/api/employes/:id', admin, async (req, res) => {
   try {
     const id = req.params.id;
-    // Empêcher de supprimer son propre compte
     if (parseInt(id) === req.session.user.id) return res.status(400).json({ error: 'Impossible de supprimer votre propre compte' });
     await getPool().query('DELETE FROM ec_disponibilites WHERE user_id=$1', [id]);
     await getPool().query('DELETE FROM ec_presences WHERE user_id=$1', [id]);
@@ -226,6 +270,23 @@ app.delete('/api/planning/:id', admin, async (req, res) => {
   catch(e) { res.status(500).json({ error: e.message }); }
 });
 
+/* ═══ TARIFS ═══ */
+app.get('/api/tarifs', auth, async (req, res) => {
+  try {
+    res.json((await getPool().query('SELECT * FROM ec_tarifs WHERE actif=true ORDER BY division,label')).rows);
+  } catch(e) { res.status(500).json({ error: e.message }); }
+});
+app.put('/api/tarifs/:id', admin, async (req, res) => {
+  try {
+    const { prix, label, unite } = req.body;
+    await getPool().query(
+      'UPDATE ec_tarifs SET prix=$1, label=COALESCE($2,label), unite=COALESCE($3,unite), updated_at=NOW() WHERE id=$4',
+      [prix, label || null, unite || null, req.params.id]
+    );
+    res.json({ success: true });
+  } catch(e) { res.status(500).json({ error: e.message }); }
+});
+
 /* ═══ COMMANDES ÉVÉNEMENTS ═══ */
 app.get('/api/commandes', auth, async (req, res) => {
   try {
@@ -242,34 +303,31 @@ app.get('/api/commandes', auth, async (req, res) => {
     res.json((await getPool().query(q, params)).rows);
   } catch(e) { res.status(500).json({ error: e.message }); }
 });
-
 app.post('/api/commandes', auth, async (req, res) => {
   try {
-    const { client_nom, client_contact, division, type_prestation, description, date_evenement, lieu, budget, priorite, note_interne } = req.body;
+    const { client_nom, client_contact, division, type_prestation, prestations_ids, description, date_evenement, lieu, budget, budget_estime, priorite, note_interne } = req.body;
     if (!client_nom || !type_prestation) return res.status(400).json({ error: 'Champs manquants' });
     const r = await getPool().query(
-      `INSERT INTO ec_commandes (client_nom,client_contact,division,type_prestation,description,date_evenement,lieu,budget,priorite,note_interne,created_by)
-       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11) RETURNING id`,
-      [client_nom, client_contact||'', division||'securite', type_prestation, description||'', date_evenement||null, lieu||'', budget||'', priorite||'normale', note_interne||'', req.session.user.id]
+      `INSERT INTO ec_commandes (client_nom,client_contact,division,type_prestation,prestations_ids,description,date_evenement,lieu,budget,budget_estime,priorite,note_interne,created_by)
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13) RETURNING id`,
+      [client_nom, client_contact||'', division||'securite', type_prestation, JSON.stringify(prestations_ids||[]), description||'', date_evenement||null, lieu||'', budget||'', budget_estime||0, priorite||'normale', note_interne||'', req.session.user.id]
     );
     res.json({ success: true, id: r.rows[0].id });
   } catch(e) { res.status(500).json({ error: e.message }); }
 });
-
 app.put('/api/commandes/:id', auth, async (req, res) => {
   try {
-    const { statut, note_interne, assigned_to, priorite, budget, lieu, date_evenement } = req.body;
+    const { statut, note_interne, assigned_to, priorite, budget, budget_estime, lieu, date_evenement } = req.body;
     await getPool().query(
       `UPDATE ec_commandes SET statut=COALESCE($1,statut), note_interne=COALESCE($2,note_interne),
        assigned_to=COALESCE($3,assigned_to), priorite=COALESCE($4,priorite),
-       budget=COALESCE($5,budget), lieu=COALESCE($6,lieu),
-       date_evenement=COALESCE($7,date_evenement), updated_at=NOW() WHERE id=$8`,
-      [statut||null, note_interne||null, assigned_to||null, priorite||null, budget||null, lieu||null, date_evenement||null, req.params.id]
+       budget=COALESCE($5,budget), budget_estime=COALESCE($6,budget_estime),
+       lieu=COALESCE($7,lieu), date_evenement=COALESCE($8,date_evenement), updated_at=NOW() WHERE id=$9`,
+      [statut||null, note_interne||null, assigned_to||null, priorite||null, budget||null, budget_estime||null, lieu||null, date_evenement||null, req.params.id]
     );
     res.json({ success: true });
   } catch(e) { res.status(500).json({ error: e.message }); }
 });
-
 app.delete('/api/commandes/:id', admin, async (req, res) => {
   try { await getPool().query('DELETE FROM ec_commandes WHERE id=$1', [req.params.id]); res.json({ success: true }); }
   catch(e) { res.status(500).json({ error: e.message }); }
@@ -287,7 +345,6 @@ app.get('/api/disponibilites/:planning_id', auth, async (req, res) => {
     res.json(r.rows);
   } catch(e) { res.status(500).json({ error: e.message }); }
 });
-
 app.get('/api/disponibilites/moi/:planning_id', auth, async (req, res) => {
   try {
     const r = await getPool().query(
@@ -297,7 +354,6 @@ app.get('/api/disponibilites/moi/:planning_id', auth, async (req, res) => {
     res.json(r.rows[0] || null);
   } catch(e) { res.status(500).json({ error: e.message }); }
 });
-
 app.post('/api/disponibilites', auth, async (req, res) => {
   try {
     const { planning_id, statut, note } = req.body;
@@ -360,6 +416,3 @@ app.listen(PORT, '0.0.0.0', () => {
 
 process.on('unhandledRejection', r => console.error('[UNHANDLED]', r));
 process.on('uncaughtException', e => console.error('[UNCAUGHT]', e.message));
-
-
-
