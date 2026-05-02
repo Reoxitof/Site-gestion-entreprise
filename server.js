@@ -63,6 +63,15 @@ async function initDB() {
       priorite TEXT DEFAULT 'normale', auteur_id INTEGER REFERENCES ec_users(id),
       created_at TIMESTAMP DEFAULT NOW()
     )`);
+    await getPool().query(`CREATE TABLE IF NOT EXISTS ec_disponibilites (
+      id SERIAL PRIMARY KEY,
+      user_id INTEGER REFERENCES ec_users(id),
+      planning_id INTEGER REFERENCES ec_planning(id) ON DELETE CASCADE,
+      statut TEXT NOT NULL DEFAULT 'oui',
+      note TEXT DEFAULT '',
+      created_at TIMESTAMP DEFAULT NOW(),
+      UNIQUE(user_id, planning_id)
+    )`);
     const c = await getPool().query('SELECT COUNT(*) FROM ec_users');
     if (parseInt(c.rows[0].count) === 0) {
       const h = await bcrypt.hash(process.env.ADMIN_PASSWORD || 'elitecorp2026', 12);
@@ -185,6 +194,44 @@ app.post('/api/planning', admin, async (req, res) => {
 app.delete('/api/planning/:id', admin, async (req, res) => {
   try { await getPool().query('DELETE FROM ec_planning WHERE id=$1', [req.params.id]); res.json({ success: true }); }
   catch(e) { res.status(500).json({ error: e.message }); }
+});
+
+/* ═══ DISPONIBILITÉS PLANNING ═══ */
+app.get('/api/disponibilites/:planning_id', auth, async (req, res) => {
+  try {
+    const r = await getPool().query(
+      `SELECT d.*,u.nom,u.prenom,u.poste FROM ec_disponibilites d
+       JOIN ec_users u ON d.user_id=u.id
+       WHERE d.planning_id=$1 ORDER BY u.nom`,
+      [req.params.planning_id]
+    );
+    res.json(r.rows);
+  } catch(e) { res.status(500).json({ error: e.message }); }
+});
+
+app.get('/api/disponibilites/moi/:planning_id', auth, async (req, res) => {
+  try {
+    const r = await getPool().query(
+      'SELECT * FROM ec_disponibilites WHERE user_id=$1 AND planning_id=$2',
+      [req.session.user.id, req.params.planning_id]
+    );
+    res.json(r.rows[0] || null);
+  } catch(e) { res.status(500).json({ error: e.message }); }
+});
+
+app.post('/api/disponibilites', auth, async (req, res) => {
+  try {
+    const { planning_id, statut, note } = req.body;
+    const validStatuts = ['oui', 'non', 'peut-etre', 'retard'];
+    if (!planning_id || !validStatuts.includes(statut)) return res.status(400).json({ error: 'Données invalides' });
+    await getPool().query(
+      `INSERT INTO ec_disponibilites (user_id,planning_id,statut,note)
+       VALUES ($1,$2,$3,$4)
+       ON CONFLICT (user_id,planning_id) DO UPDATE SET statut=$3,note=$4`,
+      [req.session.user.id, planning_id, statut, note || '']
+    );
+    res.json({ success: true });
+  } catch(e) { res.status(500).json({ error: e.message }); }
 });
 
 /* ═══ ANNONCES ═══ */
