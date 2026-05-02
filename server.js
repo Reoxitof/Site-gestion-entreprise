@@ -149,6 +149,7 @@ async function initDB() {
     await getPool().query(`ALTER TABLE ec_commandes ADD COLUMN IF NOT EXISTS prix_final NUMERIC DEFAULT 0`);
     await getPool().query(`ALTER TABLE ec_commandes ADD COLUMN IF NOT EXISTS paiement_partage TEXT DEFAULT '[]'`);
     await getPool().query(`ALTER TABLE ec_users ADD COLUMN IF NOT EXISTS must_reset_password BOOLEAN DEFAULT false`);
+    await getPool().query(`ALTER TABLE ec_users ADD COLUMN IF NOT EXISTS statut_employe TEXT DEFAULT 'disponible'`);
 
     // Table fiches de paye
     await getPool().query(`CREATE TABLE IF NOT EXISTS ec_fiches_paye (
@@ -263,7 +264,28 @@ app.post('/api/login', loginLimiter, async (req, res) => {
   } catch(e) { res.status(500).json({ error: e.message }); }
 });
 app.post('/api/logout', (req, res) => req.session.destroy(() => res.json({ success: true })));
-app.get('/api/me', auth, (req, res) => res.json({ user: req.session.user }));
+
+app.get('/api/me', auth, async (req, res) => {
+  try {
+    const r = await getPool().query('SELECT id,username,nom,prenom,poste,role,actif,statut_employe FROM ec_users WHERE id=$1', [req.session.user.id]);
+    const u = r.rows[0];
+    if (u) req.session.user = { ...req.session.user, statut_employe: u.statut_employe || 'disponible' };
+    res.json({ user: req.session.user });
+  } catch(e) { res.json({ user: req.session.user }); }
+});
+
+// Changer son propre statut employé
+app.put('/api/me/statut', auth, async (req, res) => {
+  try {
+    const { statut_employe } = req.body;
+    const valides = ['disponible', 'en_mission', 'absent', 'conge', 'indisponible'];
+    if (!valides.includes(statut_employe)) return res.status(400).json({ error: 'Statut invalide' });
+    await getPool().query('UPDATE ec_users SET statut_employe=$1 WHERE id=$2', [statut_employe, req.session.user.id]);
+    req.session.user.statut_employe = statut_employe;
+    clearCache('employes');
+    res.json({ success: true });
+  } catch(e) { res.status(500).json({ error: e.message }); }
+});
 app.get('/mes-tickets', auth, (req, res) => res.sendFile(path.join(__dirname, 'public', 'mes-tickets.html')));
 app.get('/fiches-paye', auth, (req, res) => res.sendFile(path.join(__dirname, 'public', 'fiches-paye.html')));
 app.get('/livre-comptes', admin, (req, res) => res.sendFile(path.join(__dirname, 'public', 'livre-comptes.html')));
@@ -294,7 +316,7 @@ app.get('/api/employes', auth, async (req, res) => {
   try {
     const cached = getCache('employes');
     if (cached) return res.json(cached);
-    const rows = (await getPool().query('SELECT id,username,nom,prenom,poste,role,actif,created_at FROM ec_users ORDER BY nom')).rows;
+    const rows = (await getPool().query('SELECT id,username,nom,prenom,poste,role,actif,statut_employe,created_at FROM ec_users ORDER BY nom')).rows;
     setCache('employes', rows);
     res.json(rows);
   }

@@ -827,6 +827,16 @@
     </div>
 
     <!-- Changer mot de passe -->
+    <div style="font-size:10px;font-weight:800;letter-spacing:2px;text-transform:uppercase;color:var(--gold);margin-bottom:12px;margin-top:4px;"><i class="fa-solid fa-circle-dot"></i> Mon statut</div>
+    <div style="display:grid;grid-template-columns:repeat(2,1fr);gap:8px;margin-bottom:20px;" id="statutBtns">
+      <button onclick="changerStatut('disponible')" class="statut-btn" data-statut="disponible" style="padding:10px;border-radius:10px;border:1px solid rgba(76,175,125,0.4);background:rgba(76,175,125,0.08);color:#4caf7d;font-weight:700;font-size:12px;cursor:pointer;">🟢 Disponible</button>
+      <button onclick="changerStatut('en_mission')" class="statut-btn" data-statut="en_mission" style="padding:10px;border-radius:10px;border:1px solid rgba(201,168,76,0.4);background:rgba(201,168,76,0.08);color:var(--gold);font-weight:700;font-size:12px;cursor:pointer;">🟡 En mission</button>
+      <button onclick="changerStatut('absent')" class="statut-btn" data-statut="absent" style="padding:10px;border-radius:10px;border:1px solid rgba(226,64,64,0.4);background:rgba(226,64,64,0.08);color:#e24040;font-weight:700;font-size:12px;cursor:pointer;">🔴 Absent</button>
+      <button onclick="changerStatut('conge')" class="statut-btn" data-statut="conge" style="padding:10px;border-radius:10px;border:1px solid rgba(167,139,250,0.4);background:rgba(167,139,250,0.08);color:#a78bfa;font-weight:700;font-size:12px;cursor:pointer;">🟣 En congé</button>
+      <button onclick="changerStatut('indisponible')" class="statut-btn" data-statut="indisponible" style="grid-column:1/-1;padding:10px;border-radius:10px;border:1px solid rgba(255,255,255,0.1);background:rgba(255,255,255,0.04);color:var(--white-dim);font-weight:700;font-size:12px;cursor:pointer;">⚫ Indisponible</button>
+    </div>
+
+    <!-- Changer mot de passe -->
     <div style="font-size:10px;font-weight:800;letter-spacing:2px;text-transform:uppercase;color:var(--gold);margin-bottom:12px;"><i class="fa-solid fa-lock"></i> Changer le mot de passe</div>
     <div class="form-group">
       <label>Mot de passe actuel</label>
