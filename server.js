@@ -274,6 +274,20 @@ app.get('/api/me', auth, async (req, res) => {
   } catch(e) { res.json({ user: req.session.user }); }
 });
 
+// Modifier son propre profil (nom, prénom)
+app.put('/api/me/profil', auth, async (req, res) => {
+  try {
+    const nom = sanitizeStr(req.body.nom, 100);
+    const prenom = sanitizeStr(req.body.prenom, 100);
+    if (!nom || !prenom) return res.status(400).json({ error: 'Nom et prénom requis' });
+    await getPool().query('UPDATE ec_users SET nom=$1, prenom=$2 WHERE id=$3', [nom, prenom, req.session.user.id]);
+    req.session.user.nom = nom;
+    req.session.user.prenom = prenom;
+    clearCache('employes');
+    res.json({ success: true });
+  } catch(e) { res.status(500).json({ error: e.message }); }
+});
+
 // Changer son propre statut employé
 app.put('/api/me/statut', auth, async (req, res) => {
   try {
