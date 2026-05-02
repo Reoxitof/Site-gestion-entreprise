@@ -1899,55 +1899,6 @@ async function updateCmdStatut(id, statut) {
   loadCommandes();
 }
 
-function openCmdDetail(id) {
-  fetch('/api/commandes').then(r => r.json()).then(data => {
-    _cmdDetailData = data;
-    const c = data.find(x => x.id === id);
-    if (!c) return;
-    const estime = parseFloat(c.budget_estime)||0;
-    let prestHtml = '';
-    try {
-      const ids = JSON.parse(c.prestations_ids||'[]');
-      if (ids.length && allTarifs.length) {
-        const pts = allTarifs.filter(t => ids.includes(t.code));
-        if (pts.length) prestHtml = '<div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:12px;">' +
-          pts.map(t => `<span style="padding:4px 10px;border-radius:999px;background:rgba(201,168,76,0.12);border:1px solid rgba(201,168,76,0.3);font-size:11px;font-weight:700;color:var(--gold);">${t.emoji} ${t.label}</span>`).join('') + '</div>';
-      }
-    } catch(e) {}
-    document.getElementById('cmdDetailTitle').textContent = c.client_nom.toUpperCase();
-    document.getElementById('cmdDetailContent').innerHTML = `
-      <div style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:16px;">
-        <span class="badge badge-blue">${c.division}</span>
-        <span class="cmd-prio ${c.priorite}">${c.priorite}</span>
-        <span class="badge ${c.statut==='termine'?'badge-green':'badge-gold'}">${c.statut.replace('_',' ')}</span>
-      </div>
-      ${prestHtml}
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px;">
-        <div style="background:var(--bg);border:1px solid var(--border);border-radius:8px;padding:12px;">
-          <div style="font-size:9px;font-weight:800;letter-spacing:1px;text-transform:uppercase;color:var(--white-dim);margin-bottom:4px;">Contact</div>
-          <div style="font-size:12px;font-weight:700;color:var(--white);">${c.client_contact||'—'}</div>
-        </div>
-        <div style="background:var(--bg);border:1px solid var(--border);border-radius:8px;padding:12px;">
-          <div style="font-size:9px;font-weight:800;letter-spacing:1px;text-transform:uppercase;color:var(--white-dim);margin-bottom:4px;">Date événement</div>
-          <div style="font-size:12px;font-weight:700;color:var(--white);">${c.date_evenement?fmtDate(c.date_evenement,{weekday:'short',day:'numeric',month:'long',year:'numeric',hour:'2-digit',minute:'2-digit'}):'—'}</div>
-        </div>
-        <div style="background:var(--bg);border:1px solid var(--border);border-radius:8px;padding:12px;">
-          <div style="font-size:9px;font-weight:800;letter-spacing:1px;text-transform:uppercase;color:var(--white-dim);margin-bottom:4px;">Lieu</div>
-          <div style="font-size:12px;font-weight:700;color:var(--white);">${c.lieu||'—'}</div>
-        </div>
-        <div style="background:rgba(201,168,76,0.06);border:1px solid rgba(201,168,76,0.25);border-radius:8px;padding:12px;">
-          <div style="font-size:9px;font-weight:800;letter-spacing:1px;text-transform:uppercase;color:var(--white-dim);margin-bottom:4px;">Budget</div>
-          <div style="font-family:'Anton',sans-serif;font-size:18px;color:var(--gold);">${c.budget||(estime>0?estime.toLocaleString('fr-FR')+' $':'—')}</div>
-          ${estime>0&&c.budget?'<div style="font-size:10px;color:var(--white-dim);">Estimé: '+estime.toLocaleString('fr-FR')+' $</div>':''}
-        </div>
-      </div>
-      ${c.description?'<div style="background:var(--bg);border:1px solid var(--border);border-radius:8px;padding:12px;margin-bottom:10px;"><div style="font-size:9px;font-weight:800;letter-spacing:1px;text-transform:uppercase;color:var(--white-dim);margin-bottom:6px;">Description</div><div style="font-size:12px;color:var(--white-dim);line-height:1.6;">'+c.description+'</div></div>':''}
-      ${c.note_interne&&isAdmin()?'<div style="background:rgba(240,144,48,0.06);border:1px solid rgba(240,144,48,0.2);border-radius:8px;padding:12px;margin-bottom:10px;"><div style="font-size:9px;font-weight:800;letter-spacing:1px;text-transform:uppercase;color:#f09030;margin-bottom:6px;">Note interne</div><div style="font-size:12px;color:var(--white-dim);line-height:1.6;">'+c.note_interne+'</div></div>':''}
-      ${isAdmin()?`<div style="margin-top:14px;"><div style="font-size:10px;font-weight:800;letter-spacing:1px;text-transform:uppercase;color:var(--white-dim);margin-bottom:8px;">Changer le statut</div><div style="display:flex;gap:8px;flex-wrap:wrap;"><button class="btn btn-outline" style="font-size:11px;padding:7px 14px;" onclick="updateCmdStatut(${c.id},'nouveau')">📥 Nouveau</button><button class="btn btn-outline" style="font-size:11px;padding:7px 14px;" onclick="updateCmdStatut(${c.id},'en_cours')">⚙️ En cours</button><button class="btn btn-outline" style="font-size:11px;padding:7px 14px;" onclick="updateCmdStatut(${c.id},'confirme')">✅ Confirmé</button><button class="btn btn-green" style="font-size:11px;padding:7px 14px;" onclick="updateCmdStatut(${c.id},'termine')">🏁 Terminé</button></div></div>`:''}`;
-    openModal('modalCommandeDetail');
-  });
-}
-
 // Charger les tarifs au démarrage
 window.addEventListener('load', () => loadTarifs());
 
