@@ -105,6 +105,21 @@ async function initDB() {
     await getPool().query(`ALTER TABLE ec_commandes ADD COLUMN IF NOT EXISTS prix_final NUMERIC DEFAULT 0`);
     await getPool().query(`ALTER TABLE ec_commandes ADD COLUMN IF NOT EXISTS paiement_partage TEXT DEFAULT '[]'`);
 
+    // Table fiches de paye
+    await getPool().query(`CREATE TABLE IF NOT EXISTS ec_fiches_paye (
+      id SERIAL PRIMARY KEY,
+      user_id INTEGER REFERENCES ec_users(id) ON DELETE CASCADE,
+      semaine_debut DATE NOT NULL,
+      semaine_fin DATE NOT NULL,
+      montant_total NUMERIC DEFAULT 0,
+      statut TEXT DEFAULT 'en_attente',
+      paye_par INTEGER REFERENCES ec_users(id),
+      paye_le TIMESTAMP,
+      details TEXT DEFAULT '[]',
+      created_at TIMESTAMP DEFAULT NOW(),
+      UNIQUE(user_id, semaine_debut)
+    )`);
+
     await getPool().query(`CREATE TABLE IF NOT EXISTS ec_tarifs (
       id SERIAL PRIMARY KEY,
       code TEXT UNIQUE NOT NULL,
@@ -182,6 +197,7 @@ app.post('/api/login', async (req, res) => {
 app.post('/api/logout', (req, res) => req.session.destroy(() => res.json({ success: true })));
 app.get('/api/me', auth, (req, res) => res.json({ user: req.session.user }));
 app.get('/mes-tickets', auth, (req, res) => res.sendFile(path.join(__dirname, 'public', 'mes-tickets.html')));
+app.get('/fiches-paye', auth, (req, res) => res.sendFile(path.join(__dirname, 'public', 'fiches-paye.html')));
 
 /* Changer son propre mot de passe */
 app.put('/api/me/password', auth, async (req, res) => {
@@ -474,6 +490,129 @@ app.post('/api/commandes/:id/payer', admin, async (req, res) => {
       [Number(prix_final), JSON.stringify(partage), req.params.id]
     );
     res.json({ success: true, partage, prix_final: Number(prix_final) });
+  } catch(e) { res.status(500).json({ error: e.message }); }
+});
+
+/* ═══ FICHES DE PAYE ═══ */
+
+// Helper: obtenir lundi et dimanche d'une semaine donnée
+function getSemaineBornes(dateStr) {
+  const d = dateStr ? new Date(dateStr) : new Date();
+  const day = d.getDay(); // 0=dim, 1=lun...
+  const diffLundi = (day === 0 ? -6 : 1 - day);
+  const lundi = new Date(d);
+  lundi.setDate(d.getDate() + diffLundi);
+  lundi.setHours(0,0,0,0);
+  const dimanche = new Date(lundi);
+  dimanche.setDate(lundi.getDate() + 6);
+  dimanche.setHours(23,59,59,999);
+  return { lundi, dimanche };
+}
+
+// Générer les fiches de paye pour une semaine (direction)
+app.post('/api/fiches-paye/generer', admin, async (req, res) => {
+  try {
+    const { semaine } = req.body; // date ISO dans la semaine voulue
+    const { lundi, dimanche } = getSemaineBornes(semaine);
+    const lundiStr = lundi.toISOString().split('T')[0];
+    const dimancheStr = dimanche.toISOString().split('T')[0];
+
+    // Récupérer toutes les commandes terminées cette semaine avec leur partage
+    const cmdsRes = await getPool().query(
+      `SELECT id, client_nom, type_prestation, division, lieu, date_evenement, prix_final, paiement_partage
+       FROM ec_commandes
+       WHERE statut = 'termine'
+       AND date_evenement >= $1 AND date_evenement <= $2`,
+      [lundi.toISOString(), dimanche.toISOString()]
+    );
+
+    // Construire un map user_id → gains
+    const gainsParUser = {};
+    for (const cmd of cmdsRes.rows) {
+      let partage = [];
+      try { partage = JSON.parse(cmd.paiement_partage || '[]'); } catch(e) {}
+      for (const p of partage) {
+        if (!p.user_id) continue; // skip part entreprise
+        if (!gainsParUser[p.user_id]) gainsParUser[p.user_id] = { total: 0, evenements: [] };
+        gainsParUser[p.user_id].total += Number(p.montant);
+        gainsParUser[p.user_id].evenements.push({
+          commande_id: cmd.id,
+          client_nom: cmd.client_nom,
+          type_prestation: cmd.type_prestation,
+          division: cmd.division,
+          lieu: cmd.lieu || '',
+          date_evenement: cmd.date_evenement,
+          montant: Number(p.montant)
+        });
+      }
+    }
+
+    // Créer ou mettre à jour les fiches
+    const fiches = [];
+    for (const [userId, data] of Object.entries(gainsParUser)) {
+      const r = await getPool().query(
+        `INSERT INTO ec_fiches_paye (user_id, semaine_debut, semaine_fin, montant_total, statut, details)
+         VALUES ($1, $2, $3, $4, 'en_attente', $5)
+         ON CONFLICT (user_id, semaine_debut) DO UPDATE
+         SET montant_total = EXCLUDED.montant_total, details = EXCLUDED.details, statut = 'en_attente'
+         RETURNING *`,
+        [userId, lundiStr, dimancheStr, data.total, JSON.stringify(data.evenements)]
+      );
+      fiches.push(r.rows[0]);
+    }
+
+    res.json({ success: true, semaine_debut: lundiStr, semaine_fin: dimancheStr, fiches_generees: fiches.length });
+  } catch(e) { res.status(500).json({ error: e.message }); }
+});
+
+// Lister les fiches (direction = toutes, employé = les siennes)
+app.get('/api/fiches-paye', auth, async (req, res) => {
+  try {
+    const { semaine } = req.query;
+    const isDir = isAdminOrDirection(req.session.user);
+    let q = `SELECT f.*, u.nom, u.prenom, u.poste,
+             p.nom as paye_par_nom FROM ec_fiches_paye f
+             JOIN ec_users u ON f.user_id = u.id
+             LEFT JOIN ec_users p ON f.paye_par = p.id
+             WHERE 1=1`;
+    const params = [];
+    if (!isDir) {
+      params.push(req.session.user.id);
+      q += ` AND f.user_id = $${params.length}`;
+    }
+    if (semaine) {
+      const { lundi } = getSemaineBornes(semaine);
+      params.push(lundi.toISOString().split('T')[0]);
+      q += ` AND f.semaine_debut = $${params.length}`;
+    }
+    q += ' ORDER BY f.semaine_debut DESC, u.nom ASC';
+    res.json((await getPool().query(q, params)).rows);
+  } catch(e) { res.status(500).json({ error: e.message }); }
+});
+
+// Marquer une fiche comme payée (direction)
+app.post('/api/fiches-paye/:id/payer', admin, async (req, res) => {
+  try {
+    await getPool().query(
+      `UPDATE ec_fiches_paye SET statut='paye', paye_par=$1, paye_le=NOW() WHERE id=$2`,
+      [req.session.user.id, req.params.id]
+    );
+    res.json({ success: true });
+  } catch(e) { res.status(500).json({ error: e.message }); }
+});
+
+// Semaines disponibles
+app.get('/api/fiches-paye/semaines', auth, async (req, res) => {
+  try {
+    const isDir = isAdminOrDirection(req.session.user);
+    let q = `SELECT DISTINCT semaine_debut, semaine_fin FROM ec_fiches_paye`;
+    const params = [];
+    if (!isDir) {
+      params.push(req.session.user.id);
+      q += ` WHERE user_id = $1`;
+    }
+    q += ' ORDER BY semaine_debut DESC';
+    res.json((await getPool().query(q, params)).rows);
   } catch(e) { res.status(500).json({ error: e.message }); }
 });
 
