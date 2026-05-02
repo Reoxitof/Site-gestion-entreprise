@@ -16,7 +16,12 @@ app.use(session({
   secret: process.env.SESSION_SECRET || 'elitecorp2026',
   resave: false,
   saveUninitialized: false,
-  cookie: { maxAge: 604800000 }
+  cookie: { 
+    maxAge: 604800000,
+    httpOnly: true,
+    sameSite: 'lax',
+    secure: false
+  }
 }));
 
 /* ═══ DB ═══ */
@@ -285,11 +290,8 @@ app.get('/api/stats', auth, async (req, res) => {
 
 /* ═══ PAGES ═══ */
 app.get('/login', (req, res) => res.sendFile(path.join(__dirname, 'public', 'login.html')));
-app.get('/dashboard', (req, res) => {
-  if (!req.session?.user) return res.redirect('/login');
-  res.sendFile(path.join(__dirname, 'public', 'index.html'));
-});
-app.get('*', (req, res) => res.sendFile(path.join(__dirname, 'public', req.session?.user ? 'index.html' : 'login.html')));
+app.get('/dashboard', (req, res) => res.sendFile(path.join(__dirname, 'public', 'index.html')));
+app.get('*', (req, res) => res.sendFile(path.join(__dirname, 'public', 'index.html')));
 
 /* ═══ START ═══ */
 app.listen(PORT, '0.0.0.0', () => {
