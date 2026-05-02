@@ -29,11 +29,11 @@ function getPool() {
   if (!pool) {
     const { Pool } = require('pg');
     pool = new Pool({
-      host:     process.env.PG_HOST     || 'localhost',
-      port:     parseInt(process.env.PG_PORT || '5432'),
-      database: process.env.PG_DB       || 'mydb',
-      user:     process.env.PG_USER     || 'postgres',
-      password: process.env.PG_PASSWORD || '',
+      host:     process.env.PG_HOST      || process.env.POSTGRES_HOST     || 'postgres-ghzw.internal',
+      port:     parseInt(process.env.PG_PORT || process.env.POSTGRES_PORT || '5432'),
+      database: process.env.PG_DB        || process.env.POSTGRES_DB       || 'mydb',
+      user:     process.env.PG_USER      || process.env.POSTGRES_USER     || 'postgres',
+      password: process.env.PG_PASSWORD  || process.env.POSTGRES_PASSWORD || '',
       ssl: false,
       connectionTimeoutMillis: 8000,
       idleTimeoutMillis: 30000,
