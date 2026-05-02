@@ -1661,6 +1661,22 @@ async function loadCommandes() {
   } catch(e) { console.error(e); }
 }
 
+async function deleteCommande(id) {
+  if (!confirm('Supprimer cette commande ? Cette action est irréversible.')) return;
+  try {
+    const r = await fetch('/api/commandes/' + id, { method: 'DELETE' });
+    if (r.ok) {
+      showToast('Commande supprimée', true);
+      loadCommandes();
+    } else {
+      const d = await r.json().catch(() => ({}));
+      showToast(d.error || 'Erreur lors de la suppression', false);
+    }
+  } catch(e) {
+    showToast('Erreur réseau', false);
+  }
+}
+
 let _cmdDetailData = [];
 function openCmdDetail(id) {
   fetch('/api/commandes').then(r => r.json()).then(data => {
