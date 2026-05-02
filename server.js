@@ -359,13 +359,14 @@ app.post('/api/commandes', auth, async (req, res) => {
 });
 app.put('/api/commandes/:id', auth, async (req, res) => {
   try {
-    const { statut, note_interne, assigned_to, priorite, budget, budget_estime, lieu, date_evenement } = req.body;
+    const { statut, note_interne, assigned_to, priorite, budget, budget_estime, lieu, date_evenement, client_contact } = req.body;
     await getPool().query(
       `UPDATE ec_commandes SET statut=COALESCE($1,statut), note_interne=COALESCE($2,note_interne),
        assigned_to=COALESCE($3,assigned_to), priorite=COALESCE($4,priorite),
        budget=COALESCE($5,budget), budget_estime=COALESCE($6,budget_estime),
-       lieu=COALESCE($7,lieu), date_evenement=COALESCE($8,date_evenement), updated_at=NOW() WHERE id=$9`,
-      [statut||null, note_interne||null, assigned_to||null, priorite||null, budget||null, budget_estime||null, lieu||null, date_evenement||null, req.params.id]
+       lieu=COALESCE($7,lieu), date_evenement=COALESCE($8,date_evenement),
+       client_contact=COALESCE($9,client_contact), updated_at=NOW() WHERE id=$10`,
+      [statut||null, note_interne||null, assigned_to||null, priorite||null, budget||null, budget_estime||null, lieu||null, date_evenement||null, client_contact||null, req.params.id]
     );
     res.json({ success: true });
   } catch(e) { res.status(500).json({ error: e.message }); }

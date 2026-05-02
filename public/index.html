@@ -1816,16 +1816,84 @@ async function assignCommande(cmdId) {
 function renderStatutButtons(c) {
   const prixFinal = parseFloat(c.prix_final)||0;
   const estime = parseFloat(c.budget_estime)||0;
+  const dir = isAdmin(); // direction ou admin
+
+  // Ordre des statuts (sens unique pour non-direction)
+  const statutOrder = ['nouveau', 'en_cours', 'confirme', 'paye', 'termine'];
+  const currentIdx = statutOrder.indexOf(c.statut);
+
+  // Bloc édition infos (direction uniquement, statut nouveau)
+  const editBlock = (dir && c.statut === 'nouveau') ? `
+    <div style="margin-bottom:12px;background:rgba(201,168,76,0.05);border:1px solid rgba(201,168,76,0.2);border-radius:8px;padding:12px;">
+      <div style="font-size:9px;font-weight:800;letter-spacing:1px;text-transform:uppercase;color:var(--gold);margin-bottom:10px;"><i class="fa-solid fa-pen"></i> Modifier les infos</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
+        <div>
+          <div style="font-size:9px;color:var(--white-dim);margin-bottom:4px;">Contact client</div>
+          <input id="editContact_${c.id}" value="${c.client_contact||''}" style="width:100%;padding:7px 10px;border-radius:7px;border:1px solid var(--border);background:#08040d;color:white;font-size:12px;">
+        </div>
+        <div>
+          <div style="font-size:9px;color:var(--white-dim);margin-bottom:4px;">Date événement</div>
+          <input id="editDate_${c.id}" type="datetime-local" value="${c.date_evenement ? new Date(c.date_evenement).toISOString().slice(0,16) : ''}" style="width:100%;padding:7px 10px;border-radius:7px;border:1px solid var(--border);background:#08040d;color:white;font-size:12px;">
+        </div>
+        <div style="grid-column:1/-1;">
+          <div style="font-size:9px;color:var(--white-dim);margin-bottom:4px;">Lieu</div>
+          <input id="editLieu_${c.id}" value="${c.lieu||''}" style="width:100%;padding:7px 10px;border-radius:7px;border:1px solid var(--border);background:#08040d;color:white;font-size:12px;">
+        </div>
+      </div>
+      <button class="btn btn-gold" style="margin-top:10px;font-size:11px;padding:7px 16px;" onclick="saveInfosCommande(${c.id})"><i class="fa-solid fa-floppy-disk"></i> Sauvegarder</button>
+    </div>` : '';
+
+  // Boutons d'avancement
+  let avanceBtn = '';
+  if (c.statut === 'nouveau') {
+    avanceBtn = `<button class="btn btn-outline" style="font-size:11px;padding:8px 16px;" onclick="ouvrirDevis(${c.id},${estime})"><i class="fa-solid fa-file-invoice-dollar"></i> ⚙️ Mettre en cours</button>`;
+  } else if (c.statut === 'en_cours') {
+    avanceBtn = `<button class="btn btn-gold" style="font-size:11px;padding:8px 16px;" onclick="updateCmdStatut(${c.id},'confirme')"><i class="fa-solid fa-check"></i> ✅ Confirmer le devis</button>`;
+  } else if (c.statut === 'confirme') {
+    avanceBtn = `<button class="btn" style="font-size:11px;padding:8px 16px;background:rgba(167,139,250,0.15);border:1px solid rgba(167,139,250,0.4);color:#a78bfa;" onclick="ouvrirPaiement(${c.id},${prixFinal||estime})"><i class="fa-solid fa-money-bill-wave"></i> 💰 Marquer payé</button>`;
+  } else if (c.statut === 'paye') {
+    avanceBtn = `<button class="btn btn-green" style="font-size:11px;padding:8px 16px;" onclick="updateCmdStatut(${c.id},'termine')"><i class="fa-solid fa-flag-checkered"></i> 🏁 Terminer</button>`;
+  }
+
+  // Bouton retour arrière — direction uniquement
+  const retourBtn = (dir && c.statut !== 'nouveau') ? `
+    <button class="btn btn-outline" style="font-size:11px;padding:8px 16px;opacity:0.6;" onclick="updateCmdStatut(${c.id},'nouveau')">↩ Remettre en nouveau</button>` : '';
+
+  // Message pour non-direction sur statuts avancés
+  const lockMsg = (!dir && currentIdx >= 2) ? `
+    <div style="font-size:11px;color:var(--white-dim);padding:8px 12px;background:rgba(255,255,255,0.04);border-radius:8px;border:1px solid var(--border);">
+      <i class="fa-solid fa-lock" style="color:var(--gold);margin-right:6px;"></i>Retour en arrière réservé à la direction.
+    </div>` : '';
+
   return `<div style="margin-top:14px;border-top:1px solid var(--border);padding-top:14px;">
     <div style="font-size:10px;font-weight:800;letter-spacing:1px;text-transform:uppercase;color:var(--white-dim);margin-bottom:10px;">Actions</div>
-    <div style="display:flex;gap:8px;flex-wrap:wrap;">
-      ${c.statut==='nouveau'?`<button class="btn btn-outline" style="font-size:11px;padding:8px 16px;" onclick="ouvrirDevis(${c.id},${estime})"><i class="fa-solid fa-file-invoice-dollar"></i> ⚙️ Mettre en cours</button>`:''}
-      ${c.statut==='en_cours'?`<button class="btn btn-gold" style="font-size:11px;padding:8px 16px;" onclick="updateCmdStatut(${c.id},'confirme')"><i class="fa-solid fa-check"></i> ✅ Confirmer le devis</button>`:''}
-      ${c.statut==='confirme'?`<button class="btn" style="font-size:11px;padding:8px 16px;background:rgba(167,139,250,0.15);border:1px solid rgba(167,139,250,0.4);color:#a78bfa;" onclick="ouvrirPaiement(${c.id},${prixFinal||estime})"><i class="fa-solid fa-money-bill-wave"></i> 💰 Marquer payé</button>`:''}
-      ${c.statut==='paye'?`<button class="btn btn-green" style="font-size:11px;padding:8px 16px;" onclick="updateCmdStatut(${c.id},'termine')"><i class="fa-solid fa-flag-checkered"></i> 🏁 Terminer</button>`:''}
-      ${c.statut!=='nouveau'?`<button class="btn btn-outline" style="font-size:11px;padding:8px 16px;opacity:0.6;" onclick="updateCmdStatut(${c.id},'nouveau')">↩ Remettre en nouveau</button>`:''}
+    ${editBlock}
+    <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;">
+      ${avanceBtn}
+      ${retourBtn}
+      ${lockMsg}
     </div>
   </div>`;
+}
+
+async function saveInfosCommande(cmdId) {
+  const contact = document.getElementById('editContact_' + cmdId)?.value || '';
+  const date = document.getElementById('editDate_' + cmdId)?.value || '';
+  const lieu = document.getElementById('editLieu_' + cmdId)?.value || '';
+  try {
+    const r = await fetch('/api/commandes/' + cmdId, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ client_contact: contact, date_evenement: date || null, lieu })
+    });
+    if (r.ok) {
+      showToast('✅ Infos mises à jour', true);
+      closeModal('modalCommandeDetail');
+      loadCommandes();
+    } else {
+      showToast('❌ Erreur sauvegarde', false);
+    }
+  } catch(e) { showToast('❌ Erreur réseau', false); }
 }
 
 function ouvrirDevis(cmdId, estimé) {
