@@ -727,7 +727,8 @@ async function init() {
     // Accès recrutement : admin + postes de direction/responsables
     const POSTES_RECRUTEMENT = [
       'Directeur Général', 'Directeur de Division', 'Coordinateur',
-      'Chef de la Sécurité', 'Responsable Événementiel', 'Responsable Artistique'
+      'Chef de la Sécurité', 'Responsable Événementiel', 'Responsable Artistique',
+      'Guide Touristique', 'Guide Aventure'
     ];
     const canRecruit = data.user.role === 'admin' || POSTES_RECRUTEMENT.includes(data.user.poste);
     if (!canRecruit) {
