@@ -346,17 +346,16 @@ app.get('*', (req, res) => {
 });
 
 /* ═══════════════════════════════════════════
-   START
+   START — serveur écoute EN PREMIER pour Sliplane healthcheck
 ═══════════════════════════════════════════ */
 const PORT = process.env.PORT || 3000;
-initDB().then(() => {
-  app.listen(PORT, '0.0.0.0', () => {
-    console.log('═══════════════════════════════════════════');
-    console.log('  ELITE CORP. — Panel de Gestion');
-    console.log(`  Port : ${PORT}`);
-    console.log('═══════════════════════════════════════════');
-  });
-}).catch(e => {
-  console.error('[FATAL]', e.message);
-  process.exit(1);
+app.listen(PORT, '0.0.0.0', () => {
+  console.log('═══════════════════════════════════════════');
+  console.log('  ELITE CORP. — Panel de Gestion');
+  console.log(`  Port : ${PORT}`);
+  console.log('═══════════════════════════════════════════');
+  // Init DB après que le serveur écoute
+  initDB().catch(e => console.error('[DB] Erreur init (non fatale) :', e.message));
 });
+
+process.on('unhandledRejection', reason => console.error('[ERREUR]', reason));
