@@ -89,6 +89,8 @@ async function initDB() {
       lieu TEXT DEFAULT '',
       budget TEXT DEFAULT '',
       budget_estime NUMERIC DEFAULT 0,
+      prix_final NUMERIC DEFAULT 0,
+      paiement_partage TEXT DEFAULT '[]',
       statut TEXT NOT NULL DEFAULT 'nouveau',
       priorite TEXT NOT NULL DEFAULT 'normale',
       note_interne TEXT DEFAULT '',
@@ -97,7 +99,7 @@ async function initDB() {
       created_at TIMESTAMP DEFAULT NOW(),
       updated_at TIMESTAMP DEFAULT NOW()
     )`);
-    // Migration: ajouter les colonnes si elles n'existent pas encore
+    // Migration: ajouter les colonnes si elles n'existent pas encore (pour les BDD existantes)
     await getPool().query(`ALTER TABLE ec_commandes ADD COLUMN IF NOT EXISTS prestations_ids TEXT DEFAULT '[]'`);
     await getPool().query(`ALTER TABLE ec_commandes ADD COLUMN IF NOT EXISTS budget_estime NUMERIC DEFAULT 0`);
     await getPool().query(`ALTER TABLE ec_commandes ADD COLUMN IF NOT EXISTS prix_final NUMERIC DEFAULT 0`);

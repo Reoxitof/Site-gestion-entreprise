@@ -939,10 +939,16 @@ function openModal(id) {
     document.getElementById('profilError').style.display = 'none';
   }
   if (id === 'modalCommande') {
+    // Forcer rechargement des tarifs à chaque ouverture
+    allTarifs = [];
+    selectedPrestations = [];
+    const container = document.getElementById('prestationsSelector');
+    if (container) container.innerHTML = '<div style="color:var(--white-dim);font-size:12px;grid-column:1/-1;padding:8px 0;">Chargement des prestations...</div>';
     loadTarifs().then(() => {
-      selectedPrestations = [];
       renderPrestationsSelector();
       updateBudgetEstim();
+    }).catch(() => {
+      if (container) container.innerHTML = '<div style="color:#ff7b7b;font-size:12px;grid-column:1/-1;padding:8px 0;">❌ Erreur de chargement. Réessaie.</div>';
     });
   }
 }
