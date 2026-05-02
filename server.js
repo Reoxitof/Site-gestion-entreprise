@@ -77,6 +77,24 @@ async function initDB() {
       created_at TIMESTAMP DEFAULT NOW(),
       UNIQUE(user_id, planning_id)
     )`);
+    await getPool().query(`CREATE TABLE IF NOT EXISTS ec_commandes (
+      id SERIAL PRIMARY KEY,
+      client_nom TEXT NOT NULL,
+      client_contact TEXT DEFAULT '',
+      division TEXT NOT NULL DEFAULT 'securite',
+      type_prestation TEXT NOT NULL,
+      description TEXT DEFAULT '',
+      date_evenement TIMESTAMP,
+      lieu TEXT DEFAULT '',
+      budget TEXT DEFAULT '',
+      statut TEXT NOT NULL DEFAULT 'nouveau',
+      priorite TEXT NOT NULL DEFAULT 'normale',
+      note_interne TEXT DEFAULT '',
+      assigned_to INTEGER REFERENCES ec_users(id),
+      created_by INTEGER REFERENCES ec_users(id),
+      created_at TIMESTAMP DEFAULT NOW(),
+      updated_at TIMESTAMP DEFAULT NOW()
+    )`);
     const c = await getPool().query('SELECT COUNT(*) FROM ec_users');
     if (parseInt(c.rows[0].count) === 0) {
       const h = await bcrypt.hash(process.env.ADMIN_PASSWORD || 'elitecorp2026', 12);
@@ -205,6 +223,55 @@ app.post('/api/planning', admin, async (req, res) => {
 });
 app.delete('/api/planning/:id', admin, async (req, res) => {
   try { await getPool().query('DELETE FROM ec_planning WHERE id=$1', [req.params.id]); res.json({ success: true }); }
+  catch(e) { res.status(500).json({ error: e.message }); }
+});
+
+/* ═══ COMMANDES ÉVÉNEMENTS ═══ */
+app.get('/api/commandes', requireAuth, async (req, res) => {
+  try {
+    const { statut, division } = req.query;
+    let q = `SELECT c.*, u.nom as assigned_nom, u.prenom as assigned_prenom,
+             cr.nom as createur_nom FROM ec_commandes c
+             LEFT JOIN ec_users u ON c.assigned_to = u.id
+             LEFT JOIN ec_users cr ON c.created_by = cr.id
+             WHERE 1=1`;
+    const params = [];
+    if (statut) { params.push(statut); q += ` AND c.statut=$${params.length}`; }
+    if (division) { params.push(division); q += ` AND c.division=$${params.length}`; }
+    q += ' ORDER BY c.created_at DESC';
+    res.json((await getPool().query(q, params)).rows);
+  } catch(e) { res.status(500).json({ error: e.message }); }
+});
+
+app.post('/api/commandes', requireAuth, async (req, res) => {
+  try {
+    const { client_nom, client_contact, division, type_prestation, description, date_evenement, lieu, budget, priorite, note_interne } = req.body;
+    if (!client_nom || !type_prestation) return res.status(400).json({ error: 'Champs manquants' });
+    const r = await getPool().query(
+      `INSERT INTO ec_commandes (client_nom,client_contact,division,type_prestation,description,date_evenement,lieu,budget,priorite,note_interne,created_by)
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11) RETURNING id`,
+      [client_nom, client_contact||'', division||'securite', type_prestation, description||'', date_evenement||null, lieu||'', budget||'', priorite||'normale', note_interne||'', req.session.user.id]
+    );
+    res.json({ success: true, id: r.rows[0].id });
+  } catch(e) { res.status(500).json({ error: e.message }); }
+});
+
+app.put('/api/commandes/:id', requireAuth, async (req, res) => {
+  try {
+    const { statut, note_interne, assigned_to, priorite, budget, lieu, date_evenement } = req.body;
+    await getPool().query(
+      `UPDATE ec_commandes SET statut=COALESCE($1,statut), note_interne=COALESCE($2,note_interne),
+       assigned_to=COALESCE($3,assigned_to), priorite=COALESCE($4,priorite),
+       budget=COALESCE($5,budget), lieu=COALESCE($6,lieu),
+       date_evenement=COALESCE($7,date_evenement), updated_at=NOW() WHERE id=$8`,
+      [statut||null, note_interne||null, assigned_to||null, priorite||null, budget||null, lieu||null, date_evenement||null, req.params.id]
+    );
+    res.json({ success: true });
+  } catch(e) { res.status(500).json({ error: e.message }); }
+});
+
+app.delete('/api/commandes/:id', admin, async (req, res) => {
+  try { await getPool().query('DELETE FROM ec_commandes WHERE id=$1', [req.params.id]); res.json({ success: true }); }
   catch(e) { res.status(500).json({ error: e.message }); }
 });
 

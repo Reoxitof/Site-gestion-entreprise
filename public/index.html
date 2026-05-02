@@ -168,6 +168,7 @@
     <button class="nav-btn admin-only" onclick="showTab('employes')"><i class="fa-solid fa-users"></i> Employés</button>
     <button class="nav-btn" onclick="showTab('annonces')"><i class="fa-solid fa-bullhorn"></i> Annonces</button>
     <button class="nav-btn admin-only" onclick="showTab('recrutement')"><i class="fa-solid fa-user-tie"></i> Recrutement</button>
+    <button class="nav-btn admin-only" onclick="showTab('commandes')"><i class="fa-solid fa-clipboard-list"></i> Commandes</button>
   </nav>
   <div class="sidebar-bottom">
     <button class="btn-logout" onclick="doLogout()"><i class="fa-solid fa-right-from-bracket"></i> Déconnexion</button>
@@ -344,6 +345,80 @@
       </div>
     </div>
 
+    <!-- ═══ TAB: COMMANDES ═══ -->
+    <div class="tab-content" id="tab-commandes">
+      <style>
+        .cmd-kanban { display: grid; grid-template-columns: repeat(4,1fr); gap: 14px; margin-bottom: 24px; }
+        @media(max-width:1100px){ .cmd-kanban { grid-template-columns: repeat(2,1fr); } }
+        @media(max-width:600px){ .cmd-kanban { grid-template-columns: 1fr; } }
+        .cmd-col { background: var(--card); border: 1px solid var(--border); border-radius: var(--radius); padding: 14px; min-height: 200px; }
+        .cmd-col-title { font-size: 10px; font-weight: 800; letter-spacing: 2px; text-transform: uppercase; margin-bottom: 12px; display: flex; align-items: center; gap: 8px; }
+        .cmd-card { background: var(--bg); border: 1px solid var(--border); border-radius: 10px; padding: 12px; margin-bottom: 8px; cursor: pointer; transition: all 0.2s; }
+        .cmd-card:hover { border-color: var(--gold); transform: translateY(-1px); }
+        .cmd-card-client { font-size: 13px; font-weight: 800; color: var(--white); margin-bottom: 4px; }
+        .cmd-card-type { font-size: 10px; font-weight: 700; color: var(--gold); letter-spacing: 1px; text-transform: uppercase; }
+        .cmd-card-meta { font-size: 10px; color: var(--white-dim); margin-top: 6px; display: flex; gap: 8px; flex-wrap: wrap; }
+        .cmd-prio { padding: 2px 8px; border-radius: 999px; font-size: 9px; font-weight: 800; letter-spacing: 1px; text-transform: uppercase; }
+        .cmd-prio.urgente { background: rgba(226,64,64,0.2); color: #ff7b7b; border: 1px solid rgba(226,64,64,0.3); }
+        .cmd-prio.haute { background: rgba(240,144,48,0.2); color: #f09030; border: 1px solid rgba(240,144,48,0.3); }
+        .cmd-prio.normale { background: rgba(201,168,76,0.15); color: var(--gold); border: 1px solid rgba(201,168,76,0.25); }
+        .cmd-prio.basse { background: rgba(154,144,128,0.1); color: var(--white-dim); border: 1px solid rgba(154,144,128,0.2); }
+      </style>
+
+      <!-- Header -->
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;flex-wrap:wrap;gap:12px;">
+        <div>
+          <div class="section-label">Gestion interne</div>
+          <div style="font-family:'Anton',sans-serif;font-size:22px;letter-spacing:3px;color:var(--white);">COMMANDES <span style="color:var(--gold);">ÉVÉNEMENTS</span></div>
+        </div>
+        <div style="display:flex;gap:10px;flex-wrap:wrap;">
+          <select class="input-field" id="cmdFilterDiv" style="width:180px;" onchange="loadCommandes()">
+            <option value="">Toutes les divisions</option>
+            <option value="securite">🛡️ Penny's Elite Security</option>
+            <option value="soiree">🎉 Événementiel</option>
+            <option value="tourisme">✈️ Elite Tourisme</option>
+            <option value="aventure">🏔️ Elite Aventure</option>
+            <option value="lillys">💃 Lilly's Girls</option>
+          </select>
+          <button class="btn btn-gold" onclick="openModal('modalCommande')"><i class="fa-solid fa-plus"></i> Nouvelle commande</button>
+        </div>
+      </div>
+
+      <!-- Stats rapides -->
+      <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:20px;" id="cmdStats"></div>
+
+      <!-- Kanban -->
+      <div class="cmd-kanban">
+        <div class="cmd-col">
+          <div class="cmd-col-title" style="color:#3fa7d6;"><i class="fa-solid fa-inbox"></i> NOUVEAU <span id="cmdCount-nouveau" style="background:rgba(63,167,214,0.2);padding:2px 8px;border-radius:999px;font-size:10px;">0</span></div>
+          <div id="cmdCol-nouveau"></div>
+        </div>
+        <div class="cmd-col">
+          <div class="cmd-col-title" style="color:#f09030;"><i class="fa-solid fa-spinner"></i> EN COURS <span id="cmdCount-en_cours" style="background:rgba(240,144,48,0.2);padding:2px 8px;border-radius:999px;font-size:10px;">0</span></div>
+          <div id="cmdCol-en_cours"></div>
+        </div>
+        <div class="cmd-col">
+          <div class="cmd-col-title" style="color:var(--gold);"><i class="fa-solid fa-clock"></i> CONFIRMÉ <span id="cmdCount-confirme" style="background:rgba(201,168,76,0.2);padding:2px 8px;border-radius:999px;font-size:10px;">0</span></div>
+          <div id="cmdCol-confirme"></div>
+        </div>
+        <div class="cmd-col">
+          <div class="cmd-col-title" style="color:#4caf7d;"><i class="fa-solid fa-check-circle"></i> TERMINÉ <span id="cmdCount-termine" style="background:rgba(76,175,125,0.2);padding:2px 8px;border-radius:999px;font-size:10px;">0</span></div>
+          <div id="cmdCol-termine"></div>
+        </div>
+      </div>
+
+      <!-- Liste complète -->
+      <div class="card">
+        <div class="card-title"><i class="fa-solid fa-list"></i> Toutes les commandes</div>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>Client</th><th>Division</th><th>Prestation</th><th>Date événement</th><th>Priorité</th><th>Statut</th><th>Assigné</th><th>Actions</th></tr></thead>
+            <tbody id="cmdTable"><tr><td colspan="8" style="text-align:center;color:var(--white-dim);">Chargement...</td></tr></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
   </div><!-- /content -->
 </div><!-- /main -->
 
@@ -501,6 +576,86 @@
       <button class="btn btn-gold" onclick="savePlanning()"><i class="fa-solid fa-floppy-disk"></i> Enregistrer</button>
       <button class="btn btn-outline" onclick="closeModal('modalPlanning')">Annuler</button>
     </div>
+  </div>
+</div>
+
+<!-- Modal Commande -->
+<div class="modal-overlay" id="modalCommande">
+  <div class="modal" style="max-width:600px;">
+    <button class="modal-close" onclick="closeModal('modalCommande')"><i class="fa-solid fa-xmark"></i></button>
+    <div class="modal-title">NOUVELLE COMMANDE</div>
+    <div class="grid-2">
+      <div class="form-group"><label>Nom du client *</label><input class="input-field" id="cmdClientNom" placeholder="Ex: M. Dupont"/></div>
+      <div class="form-group"><label>Contact (téléphone/discord)</label><input class="input-field" id="cmdClientContact" placeholder="Ex: 555-0123 / Discord#1234"/></div>
+    </div>
+    <div class="grid-2">
+      <div class="form-group"><label>Division concernée *</label>
+        <select class="input-field" id="cmdDivision">
+          <option value="securite">🛡️ Penny's Elite Security</option>
+          <option value="soiree">🎉 Événementiel</option>
+          <option value="tourisme">✈️ Elite Tourisme</option>
+          <option value="aventure">🏔️ Elite Aventure</option>
+          <option value="lillys">💃 Lilly's Girls</option>
+          <option value="multi">🏢 Multi-divisions</option>
+        </select>
+      </div>
+      <div class="form-group"><label>Type de prestation *</label>
+        <select class="input-field" id="cmdTypePrestation">
+          <option value="Sécurité événement">Sécurité événement</option>
+          <option value="Escorte VIP">Escorte VIP</option>
+          <option value="Convoi sécurisé">Convoi sécurisé</option>
+          <option value="Protection rapprochée">Protection rapprochée</option>
+          <option value="Soirée privée">Soirée privée</option>
+          <option value="Gala / Cérémonie">Gala / Cérémonie</option>
+          <option value="Animation / Show">Animation / Show</option>
+          <option value="Transfert VIP">Transfert VIP</option>
+          <option value="Visite guidée">Visite guidée</option>
+          <option value="Road Trip / Aventure">Road Trip / Aventure</option>
+          <option value="Expédition">Expédition</option>
+          <option value="Prestation sur-mesure">Prestation sur-mesure</option>
+        </select>
+      </div>
+    </div>
+    <div class="form-group"><label>Description de la demande</label>
+      <textarea class="input-field" id="cmdDescription" placeholder="Détails de la demande client..." rows="3"></textarea>
+    </div>
+    <div class="grid-2">
+      <div class="form-group"><label>Date souhaitée</label>
+        <div style="position:relative;">
+          <input class="input-field" id="cmdDateDisplay" placeholder="JJ/MM/AAAA HH:MM" readonly style="cursor:pointer;" onclick="openDatePicker('cmdDate')"/>
+          <i class="fa-solid fa-calendar" style="position:absolute;right:12px;top:50%;transform:translateY(-50%);color:var(--gold);pointer-events:none;"></i>
+        </div>
+        <input type="hidden" id="cmdDate"/>
+      </div>
+      <div class="form-group"><label>Lieu</label><input class="input-field" id="cmdLieu" placeholder="Ex: Galaxy, Blaine County..."/></div>
+    </div>
+    <div class="grid-2">
+      <div class="form-group"><label>Budget estimé</label><input class="input-field" id="cmdBudget" placeholder="Ex: 50 000$, À définir..."/></div>
+      <div class="form-group"><label>Priorité</label>
+        <select class="input-field" id="cmdPriorite">
+          <option value="normale">Normale</option>
+          <option value="haute">Haute</option>
+          <option value="urgente">🔴 Urgente</option>
+          <option value="basse">Basse</option>
+        </select>
+      </div>
+    </div>
+    <div class="form-group"><label>Note interne (non visible client)</label>
+      <textarea class="input-field" id="cmdNoteInterne" placeholder="Observations, points d'attention..." rows="2"></textarea>
+    </div>
+    <div class="btn-row">
+      <button class="btn btn-gold" onclick="saveCommande()"><i class="fa-solid fa-floppy-disk"></i> Enregistrer</button>
+      <button class="btn btn-outline" onclick="closeModal('modalCommande')">Annuler</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal détail commande -->
+<div class="modal-overlay" id="modalCommandeDetail">
+  <div class="modal" style="max-width:560px;">
+    <button class="modal-close" onclick="closeModal('modalCommandeDetail')"><i class="fa-solid fa-xmark"></i></button>
+    <div class="modal-title" id="cmdDetailTitle">COMMANDE</div>
+    <div id="cmdDetailContent"></div>
   </div>
 </div>
 
@@ -1268,3 +1423,225 @@ window.showTab = function(name, btn) {
 </script>
 </body>
 </html>
+
+<script>
+/* ══════════════════════════════════════════
+   COMMANDES ÉVÉNEMENTS
+══════════════════════════════════════════ */
+
+const CMD_DIVISIONS = {
+  securite: "🛡️ Penny's Elite Security",
+  soiree: "🎉 Événementiel",
+  tourisme: "✈️ Elite Tourisme",
+  aventure: "🏔️ Elite Aventure",
+  lillys: "💃 Lilly's Girls",
+  multi: "🏢 Multi-divisions"
+};
+
+const CMD_STATUTS = {
+  nouveau: { label: 'NOUVEAU', color: '#3fa7d6' },
+  en_cours: { label: 'EN COURS', color: '#f09030' },
+  confirme: { label: 'CONFIRMÉ', color: 'var(--gold)' },
+  termine: { label: 'TERMINÉ', color: '#4caf7d' },
+  annule: { label: 'ANNULÉ', color: '#ff7b7b' }
+};
+
+let commandesData = [];
+
+async function loadCommandes() {
+  try {
+    const div = document.getElementById('cmdFilterDiv')?.value || '';
+    const url = '/api/commandes' + (div ? '?division=' + div : '');
+    commandesData = await fetch(url).then(r => r.json());
+    renderCommandesKanban();
+    renderCommandesTable();
+    renderCommandesStats();
+  } catch(e) { console.error(e); }
+}
+
+function renderCommandesStats() {
+  const counts = { nouveau:0, en_cours:0, confirme:0, termine:0, annule:0 };
+  commandesData.forEach(c => { if(counts[c.statut] !== undefined) counts[c.statut]++; });
+  const el = document.getElementById('cmdStats');
+  if (!el) return;
+  el.innerHTML = [
+    { k:'nouveau', label:'Nouvelles', color:'#3fa7d6', icon:'fa-inbox' },
+    { k:'en_cours', label:'En cours', color:'#f09030', icon:'fa-spinner' },
+    { k:'confirme', label:'Confirmées', color:'var(--gold)', icon:'fa-check' },
+    { k:'termine', label:'Terminées', color:'#4caf7d', icon:'fa-check-circle' }
+  ].map(s => `
+    <div style="background:var(--card);border:1px solid var(--border);border-radius:10px;padding:14px;text-align:center;">
+      <div style="font-family:'Anton',sans-serif;font-size:28px;color:${s.color};">${counts[s.k]}</div>
+      <div style="font-size:10px;font-weight:800;letter-spacing:1px;text-transform:uppercase;color:var(--white-dim);">${s.label}</div>
+    </div>`).join('');
+}
+
+function renderCommandesKanban() {
+  ['nouveau','en_cours','confirme','termine'].forEach(statut => {
+    const col = document.getElementById('cmdCol-' + statut);
+    const count = document.getElementById('cmdCount-' + statut);
+    const items = commandesData.filter(c => c.statut === statut);
+    if (count) count.textContent = items.length;
+    if (!col) return;
+    if (!items.length) { col.innerHTML = '<div style="color:var(--white-dim);font-size:11px;text-align:center;padding:20px 0;">Aucune</div>'; return; }
+    col.innerHTML = items.map(c => `
+      <div class="cmd-card" onclick="cmdShowDetail(${c.id})">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px;">
+          <span class="cmd-prio ${c.priorite}">${c.priorite.toUpperCase()}</span>
+          <span style="font-size:9px;color:var(--white-dim);">${c.date_evenement ? new Date(c.date_evenement).toLocaleDateString('fr-FR',{day:'numeric',month:'short'}) : 'Date TBD'}</span>
+        </div>
+        <div class="cmd-card-client">${c.client_nom}</div>
+        <div class="cmd-card-type">${CMD_DIVISIONS[c.division] || c.division}</div>
+        <div class="cmd-card-meta">
+          <span><i class="fa-solid fa-briefcase"></i> ${c.type_prestation}</span>
+          ${c.lieu ? `<span><i class="fa-solid fa-location-dot"></i> ${c.lieu}</span>` : ''}
+          ${c.budget ? `<span><i class="fa-solid fa-coins"></i> ${c.budget}</span>` : ''}
+        </div>
+        ${c.assigned_nom ? `<div style="margin-top:6px;font-size:10px;color:var(--white-dim);"><i class="fa-solid fa-user"></i> ${c.assigned_prenom} ${c.assigned_nom}</div>` : ''}
+      </div>`).join('');
+  });
+}
+
+function renderCommandesTable() {
+  const tbody = document.getElementById('cmdTable');
+  if (!tbody) return;
+  if (!commandesData.length) { tbody.innerHTML = '<tr><td colspan="8" style="text-align:center;color:var(--white-dim);">Aucune commande.</td></tr>'; return; }
+  tbody.innerHTML = commandesData.map(c => {
+    const s = CMD_STATUTS[c.statut] || { label: c.statut, color: 'var(--white-dim)' };
+    return `<tr>
+      <td style="font-weight:800;color:var(--white);">${c.client_nom}<br><span style="font-size:10px;color:var(--white-dim);font-weight:400;">${c.client_contact || '—'}</span></td>
+      <td style="font-size:11px;">${CMD_DIVISIONS[c.division] || c.division}</td>
+      <td style="font-size:11px;">${c.type_prestation}</td>
+      <td style="font-size:11px;">${c.date_evenement ? new Date(c.date_evenement).toLocaleDateString('fr-FR',{day:'numeric',month:'short',year:'numeric',hour:'2-digit',minute:'2-digit'}) : '—'}</td>
+      <td><span class="cmd-prio ${c.priorite}">${c.priorite}</span></td>
+      <td><span style="font-size:11px;font-weight:800;color:${s.color};">${s.label}</span></td>
+      <td style="font-size:11px;">${c.assigned_nom ? c.assigned_prenom + ' ' + c.assigned_nom : '—'}</td>
+      <td style="display:flex;gap:4px;">
+        <button class="btn btn-outline" style="padding:4px 8px;font-size:10px;" onclick="cmdShowDetail(${c.id})"><i class="fa-solid fa-eye"></i></button>
+        <button class="btn btn-danger" style="padding:4px 8px;font-size:10px;" onclick="cmdDelete(${c.id})"><i class="fa-solid fa-trash"></i></button>
+      </td>
+    </tr>`;
+  }).join('');
+}
+
+function cmdShowDetail(id) {
+  const c = commandesData.find(x => x.id === id);
+  if (!c) return;
+  const s = CMD_STATUTS[c.statut] || { label: c.statut, color: 'var(--white-dim)' };
+  document.getElementById('cmdDetailTitle').textContent = c.client_nom.toUpperCase();
+  document.getElementById('cmdDetailContent').innerHTML = `
+    <div style="display:flex;gap:8px;margin-bottom:16px;flex-wrap:wrap;">
+      <span class="cmd-prio ${c.priorite}">${c.priorite.toUpperCase()}</span>
+      <span style="font-size:11px;font-weight:800;color:${s.color};padding:3px 10px;border-radius:999px;border:1px solid ${s.color};background:rgba(0,0,0,0.2);">${s.label}</span>
+      <span class="badge badge-gold">${CMD_DIVISIONS[c.division] || c.division}</span>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:16px;">
+      <div class="form-group"><label>Contact</label><div style="font-size:13px;color:var(--white);">${c.client_contact || '—'}</div></div>
+      <div class="form-group"><label>Prestation</label><div style="font-size:13px;color:var(--white);">${c.type_prestation}</div></div>
+      <div class="form-group"><label>Date événement</label><div style="font-size:13px;color:var(--gold);">${c.date_evenement ? new Date(c.date_evenement).toLocaleDateString('fr-FR',{weekday:'long',day:'numeric',month:'long',year:'numeric',hour:'2-digit',minute:'2-digit'}) : '—'}</div></div>
+      <div class="form-group"><label>Lieu</label><div style="font-size:13px;color:var(--white);">${c.lieu || '—'}</div></div>
+      <div class="form-group"><label>Budget</label><div style="font-size:13px;color:var(--gold);font-weight:800;">${c.budget || '—'}</div></div>
+      <div class="form-group"><label>Assigné à</label><div style="font-size:13px;color:var(--white);">${c.assigned_nom ? c.assigned_prenom + ' ' + c.assigned_nom : '—'}</div></div>
+    </div>
+    ${c.description ? `<div class="form-group"><label>Description</label><div style="font-size:12px;color:var(--white-dim);line-height:1.6;">${c.description}</div></div>` : ''}
+    ${c.note_interne ? `<div class="form-group" style="margin-top:10px;"><label>🔒 Note interne</label><div style="font-size:12px;color:var(--white-dim);line-height:1.6;background:rgba(201,168,76,0.05);border:1px solid var(--border);border-radius:8px;padding:10px;">${c.note_interne}</div></div>` : ''}
+    <div class="form-group" style="margin-top:14px;"><label>Changer le statut</label>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;">
+        ${Object.entries(CMD_STATUTS).map(([k,v]) => `
+          <button onclick="cmdUpdateStatut(${c.id},'${k}')" style="padding:6px 14px;border-radius:999px;border:1px solid ${v.color};background:${c.statut===k ? v.color : 'transparent'};color:${c.statut===k ? '#000' : v.color};font-size:11px;font-weight:800;cursor:pointer;transition:all 0.2s;">${v.label}</button>
+        `).join('')}
+      </div>
+    </div>`;
+  openModal('modalCommandeDetail');
+}
+
+async function cmdUpdateStatut(id, statut) {
+  try {
+    await fetch('/api/commandes/' + id, { method: 'PUT', headers: {'Content-Type':'application/json'}, body: JSON.stringify({ statut }) });
+    showToast('✅ Statut mis à jour');
+    closeModal('modalCommandeDetail');
+    loadCommandes();
+  } catch(e) { showToast('❌ Erreur', false); }
+}
+
+async function saveCommande() {
+  const client_nom = document.getElementById('cmdClientNom').value.trim();
+  const client_contact = document.getElementById('cmdClientContact').value.trim();
+  const division = document.getElementById('cmdDivision').value;
+  const type_prestation = document.getElementById('cmdTypePrestation').value;
+  const description = document.getElementById('cmdDescription').value.trim();
+  const date_evenement = document.getElementById('cmdDate').value;
+  const lieu = document.getElementById('cmdLieu').value.trim();
+  const budget = document.getElementById('cmdBudget').value.trim();
+  const priorite = document.getElementById('cmdPriorite').value;
+  const note_interne = document.getElementById('cmdNoteInterne').value.trim();
+  if (!client_nom) { showToast('❌ Nom du client requis', false); return; }
+  try {
+    const r = await fetch('/api/commandes', { method: 'POST', headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({ client_nom, client_contact, division, type_prestation, description, date_evenement: date_evenement || null, lieu, budget, priorite, note_interne }) });
+    const data = await r.json();
+    if (data.success) {
+      showToast('✅ Commande enregistrée');
+      closeModal('modalCommande');
+      loadCommandes();
+      document.getElementById('cmdClientNom').value = '';
+      document.getElementById('cmdClientContact').value = '';
+      document.getElementById('cmdDescription').value = '';
+      document.getElementById('cmdDate').value = '';
+      document.getElementById('cmdDateDisplay').value = '';
+      document.getElementById('cmdLieu').value = '';
+      document.getElementById('cmdBudget').value = '';
+      document.getElementById('cmdNoteInterne').value = '';
+    } else showToast('❌ ' + (data.error || 'Erreur'), false);
+  } catch(e) { showToast('❌ Erreur réseau', false); }
+}
+
+async function cmdDelete(id) {
+  if (!confirm('Supprimer cette commande ?')) return;
+  await fetch('/api/commandes/' + id, { method: 'DELETE' });
+  showToast('✅ Commande supprimée');
+  loadCommandes();
+}
+
+// Hook sur switchTab pour charger les commandes
+const _origST2 = window.showTab;
+window.showTab = function(name, btn) {
+  _origST2(name, btn);
+  if (name === 'commandes') loadCommandes();
+};
+
+// Patch picker pour cmdDate
+const _origOpenPicker = window.openDatePicker;
+window.openDatePicker = function(target) {
+  if (target === 'cmdDate') {
+    pickerTarget = 'cmdDate';
+    pickerYear = new Date().getFullYear();
+    pickerMonth = new Date().getMonth();
+    pickerSelectedDay = null;
+    document.getElementById('pickerLabel').textContent = 'DATE DE L\'ÉVÉNEMENT';
+    document.getElementById('pickerHour').value = 20;
+    document.getElementById('pickerMin').value = 0;
+    document.getElementById('datePickerWrap').style.display = 'block';
+    renderPickerCalendar();
+    return;
+  }
+  _origOpenPicker(target);
+};
+
+const _origConfirmPicker = window.confirmDatePicker;
+window.confirmDatePicker = function() {
+  if (pickerTarget === 'cmdDate') {
+    if (!pickerSelectedDay) { showToast('❌ Sélectionne un jour', false); return; }
+    const h = String(document.getElementById('pickerHour').value || 0).padStart(2,'0');
+    const m = String(document.getElementById('pickerMin').value || 0).padStart(2,'0');
+    const mo = String(pickerMonth + 1).padStart(2,'0');
+    const d = String(pickerSelectedDay).padStart(2,'0');
+    document.getElementById('cmdDate').value = `${pickerYear}-${mo}-${d}T${h}:${m}`;
+    document.getElementById('cmdDateDisplay').value = `${d}/${mo}/${pickerYear} ${h}:${m}`;
+    closeDatePicker();
+    showToast('✅ Date sélectionnée');
+    return;
+  }
+  _origConfirmPicker();
+};
+</script>
