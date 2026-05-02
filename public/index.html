@@ -939,17 +939,28 @@ function openModal(id) {
     document.getElementById('profilError').style.display = 'none';
   }
   if (id === 'modalCommande') {
-    // Forcer rechargement des tarifs à chaque ouverture
     allTarifs = [];
     selectedPrestations = [];
     const container = document.getElementById('prestationsSelector');
     if (container) container.innerHTML = '<div style="color:var(--white-dim);font-size:12px;grid-column:1/-1;padding:8px 0;">Chargement des prestations...</div>';
-    loadTarifs().then(() => {
-      renderPrestationsSelector();
-      updateBudgetEstim();
-    }).catch(() => {
-      if (container) container.innerHTML = '<div style="color:#ff7b7b;font-size:12px;grid-column:1/-1;padding:8px 0;">❌ Erreur de chargement. Réessaie.</div>';
-    });
+    fetch('/api/tarifs', { credentials: 'include' })
+      .then(r => {
+        if (!r.ok) throw new Error('HTTP ' + r.status);
+        return r.json();
+      })
+      .then(data => {
+        allTarifs = Array.isArray(data) ? data : [];
+        if (allTarifs.length === 0) {
+          if (container) container.innerHTML = '<div style="color:#f09030;font-size:12px;grid-column:1/-1;padding:8px 0;">⚠️ Aucune prestation en base. Redémarre le serveur pour insérer les tarifs par défaut.</div>';
+        } else {
+          renderPrestationsSelector();
+          updateBudgetEstim();
+        }
+      })
+      .catch(err => {
+        console.error('Erreur tarifs:', err);
+        if (container) container.innerHTML = '<div style="color:#ff7b7b;font-size:12px;grid-column:1/-1;padding:8px 0;">❌ ' + err.message + ' — <button onclick="openModal(\'modalCommande\')" style="background:none;border:none;color:var(--gold);cursor:pointer;font-weight:800;text-decoration:underline;">Réessayer</button></div>';
+      });
   }
 }
 
@@ -1444,7 +1455,7 @@ function cmdPickerClear() {
 }
 
 async function loadTarifs() {
-  try { allTarifs = await fetch('/api/tarifs').then(r => r.json()); }
+  try { allTarifs = await fetch('/api/tarifs', { credentials: 'include' }).then(r => r.json()); }
   catch(e) { allTarifs = []; }
 }
 
