@@ -953,8 +953,9 @@ function openModal(id) {
         if (allTarifs.length === 0) {
           if (container) container.innerHTML = '<div style="color:#f09030;font-size:12px;grid-column:1/-1;padding:8px 0;">⚠️ Aucune prestation en base. Redémarre le serveur pour insérer les tarifs par défaut.</div>';
         } else {
-          renderPrestationsSelector();
-          updateBudgetEstim();
+          if (typeof renderPrestationsSelector === 'function') renderPrestationsSelector();
+          else if (container) container.innerHTML = '<div style="color:#ff7b7b;font-size:12px;grid-column:1/-1;padding:8px 0;">❌ Erreur JS: renderPrestationsSelector non chargée.</div>';
+          if (typeof updateBudgetEstim === 'function') updateBudgetEstim();
         }
       })
       .catch(err => {
@@ -991,9 +992,9 @@ async function saveProfil() {
     }
   } catch(e) { errEl.textContent = 'Erreur réseau.'; errEl.style.display = 'block'; }
 }
-</script>
 
-<script>
+
+
 /* ── DASHBOARD ── */
 async function loadDashboard() {
   try {
@@ -1036,13 +1037,13 @@ async function loadDashboard() {
     }
   } catch(e) { console.error(e); }
 }
-</script>
 
-<script>
+
+
 /* ── PRÉSENCES ── */
-</script>
 
-<script>
+
+
 /* ── PLANNING / CALENDRIER ── */
 const JOURS = ['Lun','Mar','Mer','Jeu','Ven','Sam','Dim'];
 const MOIS_FR = ['Janvier','Février','Mars','Avril','Mai','Juin','Juillet','Août','Septembre','Octobre','Novembre','Décembre'];
@@ -1272,9 +1273,9 @@ async function deletePlanning(id) {
   showToast('✅ Événement supprimé');
   loadCalendar();
 }
-</script>
 
-<script>
+
+
 /* ── EMPLOYÉS ── */
 async function loadEmployes() {
   try {
@@ -1377,9 +1378,9 @@ async function deleteAnnonce(id) {
 
 /* ── START ── */
 init();
-</script>
 
-<script>
+
+
 /* ══════════════════════════════════════════
    COMMANDES — Prestations multiples & Tarifs
 ══════════════════════════════════════════ */
@@ -1932,9 +1933,9 @@ function openCmdDetail(id) {
 
 // Charger les tarifs au démarrage
 window.addEventListener('load', () => loadTarifs());
-</script>
 
-<script>
+
+
 /* ══════════════════════════════════════════
    RECRUTEMENT — Questions & Réponses
 ══════════════════════════════════════════ */
