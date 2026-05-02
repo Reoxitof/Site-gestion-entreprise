@@ -100,6 +100,8 @@ async function initDB() {
     // Migration: ajouter les colonnes si elles n'existent pas encore
     await getPool().query(`ALTER TABLE ec_commandes ADD COLUMN IF NOT EXISTS prestations_ids TEXT DEFAULT '[]'`);
     await getPool().query(`ALTER TABLE ec_commandes ADD COLUMN IF NOT EXISTS budget_estime NUMERIC DEFAULT 0`);
+    await getPool().query(`ALTER TABLE ec_commandes ADD COLUMN IF NOT EXISTS prix_final NUMERIC DEFAULT 0`);
+    await getPool().query(`ALTER TABLE ec_commandes ADD COLUMN IF NOT EXISTS paiement_partage TEXT DEFAULT '[]'`);
 
     await getPool().query(`CREATE TABLE IF NOT EXISTS ec_tarifs (
       id SERIAL PRIMARY KEY,
@@ -348,6 +350,48 @@ app.put('/api/commandes/:id', auth, async (req, res) => {
 app.delete('/api/commandes/:id', admin, async (req, res) => {
   try { await getPool().query('DELETE FROM ec_commandes WHERE id=$1', [req.params.id]); res.json({ success: true }); }
   catch(e) { res.status(500).json({ error: e.message }); }
+});
+
+/* Passer une commande en "payé" et calculer le partage */
+app.post('/api/commandes/:id/payer', admin, async (req, res) => {
+  try {
+    const { prix_final } = req.body;
+    if (!prix_final || isNaN(prix_final) || Number(prix_final) <= 0) {
+      return res.status(400).json({ error: 'Prix final invalide' });
+    }
+    // Récupérer la commande pour avoir la date de l'événement
+    const cmdRes = await getPool().query('SELECT * FROM ec_commandes WHERE id=$1', [req.params.id]);
+    const cmd = cmdRes.rows[0];
+    if (!cmd) return res.status(404).json({ error: 'Commande introuvable' });
+
+    // Trouver les employés présents sur la date de l'événement
+    let partage = [];
+    if (cmd.date_evenement) {
+      const dateStr = new Date(cmd.date_evenement).toISOString().split('T')[0];
+      const presRes = await getPool().query(
+        `SELECT p.user_id, u.nom, u.prenom, u.poste FROM ec_presences p
+         JOIN ec_users u ON p.user_id = u.id
+         WHERE p.date = $1 AND p.statut = 'present' AND u.actif = true`,
+        [dateStr]
+      );
+      const presents = presRes.rows;
+      if (presents.length > 0) {
+        const montantParPersonne = Math.round((Number(prix_final) / presents.length) * 100) / 100;
+        partage = presents.map(p => ({
+          user_id: p.user_id,
+          nom: p.prenom + ' ' + p.nom,
+          poste: p.poste,
+          montant: montantParPersonne
+        }));
+      }
+    }
+
+    await getPool().query(
+      `UPDATE ec_commandes SET statut='paye', prix_final=$1, paiement_partage=$2, updated_at=NOW() WHERE id=$3`,
+      [Number(prix_final), JSON.stringify(partage), req.params.id]
+    );
+    res.json({ success: true, partage, prix_final: Number(prix_final) });
+  } catch(e) { res.status(500).json({ error: e.message }); }
 });
 
 /* ═══ DISPONIBILITÉS PLANNING ═══ */
