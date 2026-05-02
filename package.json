@@ -1,7 +1,7 @@
 {
   "name": "elite-corp-panel",
   "version": "1.0.0",
-  "description": "Panel de gestion Elite Corp. — Planning, Présences, Employés",
+  "description": "Panel de gestion Elite Corp.",
   "main": "server.js",
   "scripts": { "start": "node server.js" },
   "dependencies": {
@@ -9,7 +9,7 @@
     "pg": "^8.11.3",
     "bcryptjs": "^2.4.3",
     "express-session": "^1.18.1",
-    "cors": "^2.8.5"
+    "dotenv": "^16.4.5"
   },
   "engines": { "node": ">=18.0.0" }
 }
