@@ -129,12 +129,6 @@
     .cal-day-num{font-size:11px;font-weight:800;color:var(--white-dim);margin-bottom:4px;}
     .cal-day.today .cal-day-num{color:var(--gold);}
     .cal-event{font-size:9px;font-weight:700;padding:2px 5px;border-radius:4px;margin-bottom:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;background:rgba(201,168,76,0.2);color:var(--gold);}
-    /* ── PRESENCE POINTAGE ── */
-    .pointage-card{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:32px;text-align:center;max-width:400px;margin:0 auto;}
-    .pointage-time{font-family:'Anton',sans-serif;font-size:48px;letter-spacing:4px;color:var(--gold);margin:16px 0;}
-    .pointage-date{font-size:12px;font-weight:700;letter-spacing:2px;color:var(--white-dim);text-transform:uppercase;}
-    .pointage-status{font-size:13px;font-weight:800;letter-spacing:1px;margin:16px 0;padding:10px 20px;border-radius:999px;display:inline-block;}
-    .btn-pointer{width:100%;padding:18px;font-size:16px;font-weight:900;letter-spacing:2px;margin-top:16px;}
     /* ── ANNONCES ── */
     .annonce-item{background:var(--card);border:1px solid var(--border);border-radius:var(--radius-sm);padding:20px;margin-bottom:12px;position:relative;overflow:hidden;transition:border-color 0.2s;}
     .annonce-item:hover{border-color:var(--border-hover);}
@@ -169,7 +163,6 @@
   <nav class="sidebar-nav">
     <div class="sidebar-section">Principal</div>
     <button class="nav-btn active" onclick="showTab('dashboard')"><i class="fa-solid fa-gauge"></i> Dashboard</button>
-    <button class="nav-btn" onclick="showTab('presences')"><i class="fa-solid fa-clock"></i> Présences</button>
     <button class="nav-btn" onclick="showTab('planning')"><i class="fa-solid fa-calendar-days"></i> Planning</button>
     <div class="sidebar-section">Gestion</div>
     <button class="nav-btn admin-only" onclick="showTab('employes')"><i class="fa-solid fa-users"></i> Employés</button>
@@ -216,10 +209,6 @@
       </div>
       <div class="grid-2">
         <div class="card">
-          <div class="card-title"><i class="fa-solid fa-clock"></i> Présences du jour</div>
-          <div id="dashPresences"><div style="color:var(--white-dim);font-size:12px;">Chargement...</div></div>
-        </div>
-        <div class="card">
           <div class="card-title"><i class="fa-solid fa-bullhorn"></i> Dernières annonces</div>
           <div id="dashAnnonces"><div style="color:var(--white-dim);font-size:12px;">Chargement...</div></div>
         </div>
@@ -230,47 +219,6 @@
       </div>
     </div>
 
-    <!-- ═══ TAB: PRÉSENCES ═══ -->
-    <div class="tab-content" id="tab-presences">
-      <div class="grid-2" style="margin-bottom:24px;">
-        <!-- Pointage -->
-        <div class="pointage-card">
-          <div class="gold-line" style="margin:0 auto 12px;"></div>
-          <div class="section-label" style="text-align:center;">Pointage</div>
-          <div class="pointage-time" id="pointageTime">00:00:00</div>
-          <div class="pointage-date" id="pointageDate"></div>
-          <div class="pointage-status badge badge-dim" id="pointageStatus">Non pointé</div>
-          <button class="btn btn-gold btn-pointer" id="btnPointer" onclick="doPointer()">
-            <i class="fa-solid fa-fingerprint"></i> POINTER MON ARRIVÉE
-          </button>
-        </div>
-        <!-- Mon historique -->
-        <div class="card">
-          <div class="card-title"><i class="fa-solid fa-history"></i> Mon historique</div>
-          <div class="table-wrap">
-            <table>
-              <thead><tr><th>Date</th><th>Arrivée</th><th>Départ</th><th>Statut</th></tr></thead>
-              <tbody id="myPresencesTable"><tr><td colspan="4" style="text-align:center;color:var(--white-dim);">Chargement...</td></tr></tbody>
-            </table>
-          </div>
-        </div>
-      </div>
-      <!-- Toutes les présences (admin) -->
-      <div class="card admin-only" id="allPresencesCard">
-        <div class="card-title"><i class="fa-solid fa-list-check"></i> Toutes les présences</div>
-        <div style="display:flex;gap:10px;margin-bottom:14px;flex-wrap:wrap;">
-          <input class="input-field" type="date" id="filterDate" style="width:180px;" onchange="loadAllPresences()"/>
-          <button class="btn btn-gold" onclick="loadAllPresences()"><i class="fa-solid fa-search"></i> Filtrer</button>
-          <button class="btn btn-outline" onclick="document.getElementById('filterDate').value='';loadAllPresences()"><i class="fa-solid fa-xmark"></i> Tout</button>
-        </div>
-        <div class="table-wrap">
-          <table>
-            <thead><tr><th>Employé</th><th>Poste</th><th>Date</th><th>Arrivée</th><th>Départ</th><th>Statut</th><th>Note</th></tr></thead>
-            <tbody id="allPresencesTable"><tr><td colspan="7" style="text-align:center;color:var(--white-dim);">Chargement...</td></tr></tbody>
-          </table>
-        </div>
-      </div>
-    </div>
 
     <!-- ═══ TAB: PLANNING ═══ -->
     <div class="tab-content" id="tab-planning">
@@ -555,75 +503,6 @@ async function loadDashboard() {
 
 <script>
 /* ── PRÉSENCES ── */
-async function loadMyPresences() {
-  try {
-    const r = await fetch('/api/presences?user_id=' + (currentUser?.id || ''));
-    const data = await r.json();
-    const tbody = document.getElementById('myPresencesTable');
-    if (!data.length) { tbody.innerHTML = '<tr><td colspan="4" style="text-align:center;color:var(--white-dim);">Aucune présence enregistrée.</td></tr>'; return; }
-    tbody.innerHTML = data.slice(0,10).map(p => `
-      <tr>
-        <td>${new Date(p.date).toLocaleDateString('fr-FR')}</td>
-        <td style="color:var(--gold);">${p.heure_arrivee ? p.heure_arrivee.slice(0,5) : '—'}</td>
-        <td style="color:var(--white-dim);">${p.heure_depart ? p.heure_depart.slice(0,5) : '<span style="color:var(--green);">En cours</span>'}</td>
-        <td><span class="badge ${p.statut === 'present' ? 'badge-green' : 'badge-red'}">${p.statut}</span></td>
-      </tr>`).join('');
-
-    // Mettre à jour le statut de pointage
-    const today = new Date().toISOString().split('T')[0];
-    const todayP = data.find(p => p.date === today || p.date?.startsWith(today));
-    const statusEl = document.getElementById('pointageStatus');
-    const btnEl = document.getElementById('btnPointer');
-    if (todayP) {
-      if (!todayP.heure_depart) {
-        statusEl.textContent = '✅ Arrivée pointée à ' + todayP.heure_arrivee?.slice(0,5);
-        statusEl.className = 'pointage-status badge badge-green';
-        btnEl.innerHTML = '<i class="fa-solid fa-door-open"></i> POINTER MON DÉPART';
-      } else {
-        statusEl.textContent = '✅ Journée complète — ' + todayP.heure_arrivee?.slice(0,5) + ' → ' + todayP.heure_depart?.slice(0,5);
-        statusEl.className = 'pointage-status badge badge-dim';
-        btnEl.disabled = true;
-        btnEl.innerHTML = '<i class="fa-solid fa-check"></i> JOURNÉE TERMINÉE';
-      }
-    } else {
-      statusEl.textContent = 'Non pointé';
-      statusEl.className = 'pointage-status badge badge-dim';
-      btnEl.disabled = false;
-      btnEl.innerHTML = '<i class="fa-solid fa-fingerprint"></i> POINTER MON ARRIVÉE';
-    }
-  } catch(e) { console.error(e); }
-}
-
-async function loadAllPresences() {
-  try {
-    const date = document.getElementById('filterDate')?.value || '';
-    const url = '/api/presences' + (date ? '?date=' + date : '');
-    const data = await fetch(url).then(r => r.json());
-    const tbody = document.getElementById('allPresencesTable');
-    if (!data.length) { tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;color:var(--white-dim);">Aucune présence.</td></tr>'; return; }
-    tbody.innerHTML = data.map(p => `
-      <tr>
-        <td style="font-weight:800;color:var(--white);">${p.prenom} ${p.nom}</td>
-        <td>${p.poste}</td>
-        <td>${new Date(p.date).toLocaleDateString('fr-FR')}</td>
-        <td style="color:var(--gold);">${p.heure_arrivee ? p.heure_arrivee.slice(0,5) : '—'}</td>
-        <td style="color:var(--white-dim);">${p.heure_depart ? p.heure_depart.slice(0,5) : '—'}</td>
-        <td><span class="badge ${p.statut === 'present' ? 'badge-green' : 'badge-red'}">${p.statut}</span></td>
-        <td style="font-size:11px;">${p.note || '—'}</td>
-      </tr>`).join('');
-  } catch(e) { console.error(e); }
-}
-
-async function doPointer() {
-  try {
-    const r = await fetch('/api/presences/pointer', { method: 'POST' });
-    const data = await r.json();
-    if (data.action === 'arrivee') showToast('✅ Arrivée pointée à ' + data.heure.slice(0,5));
-    else if (data.action === 'depart') showToast('✅ Départ pointé à ' + data.heure.slice(0,5));
-    else showToast('ℹ️ Journée déjà complète');
-    loadMyPresences();
-  } catch(e) { showToast('❌ Erreur réseau', false); }
-}
 </script>
 
 <script>
@@ -793,8 +672,9 @@ async function loadEmployes() {
         <td>${e.poste}</td>
         <td><span class="badge ${e.role === 'admin' ? 'badge-gold' : 'badge-dim'}">${e.role === 'admin' ? 'Admin' : 'Employé'}</span></td>
         <td><span class="badge ${e.actif ? 'badge-green' : 'badge-red'}">${e.actif ? 'Actif' : 'Inactif'}</span></td>
-        <td>
+        <td style="display:flex;gap:6px;align-items:center;">
           ${e.actif ? `<button class="btn btn-danger" style="padding:5px 10px;font-size:10px;" onclick="desactiverEmploye(${e.id})"><i class="fa-solid fa-user-slash"></i> Désactiver</button>` : ''}
+          <button class="btn btn-danger" style="padding:5px 10px;font-size:10px;background:rgba(139,0,0,0.25);border-color:rgba(139,0,0,0.5);" onclick="supprimerEmploye(${e.id},'${e.prenom} ${e.nom}')"><i class="fa-solid fa-trash"></i> Supprimer</button>
         </td>
       </tr>`).join('');
   } catch(e) { console.error(e); }
@@ -821,6 +701,16 @@ async function desactiverEmploye(id) {
   await fetch('/api/employes/' + id, { method: 'PUT', headers: {'Content-Type':'application/json'}, body: JSON.stringify({ actif: false }) });
   showToast('✅ Employé désactivé');
   loadEmployes();
+}
+
+async function supprimerEmploye(id, nom) {
+  if (!confirm(`⚠️ Supprimer définitivement le compte de ${nom} ?\n\nCette action est irréversible.`)) return;
+  try {
+    const r = await fetch('/api/employes/' + id, { method: 'DELETE' });
+    const data = await r.json();
+    if (data.success) { showToast('✅ Compte supprimé définitivement'); loadEmployes(); }
+    else showToast('❌ ' + (data.error || 'Erreur'), false);
+  } catch(e) { showToast('❌ Erreur réseau', false); }
 }
 
 /* ── ANNONCES ── */

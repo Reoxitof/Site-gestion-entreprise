@@ -137,8 +137,15 @@ app.put('/api/employes/:id', admin, async (req, res) => {
   } catch(e) { res.status(500).json({ error: e.message }); }
 });
 app.delete('/api/employes/:id', admin, async (req, res) => {
-  try { await getPool().query('UPDATE ec_users SET actif=false WHERE id=$1', [req.params.id]); res.json({ success: true }); }
-  catch(e) { res.status(500).json({ error: e.message }); }
+  try {
+    const id = req.params.id;
+    // Empêcher de supprimer son propre compte
+    if (parseInt(id) === req.session.user.id) return res.status(400).json({ error: 'Impossible de supprimer votre propre compte' });
+    await getPool().query('DELETE FROM ec_disponibilites WHERE user_id=$1', [id]);
+    await getPool().query('DELETE FROM ec_presences WHERE user_id=$1', [id]);
+    await getPool().query('DELETE FROM ec_users WHERE id=$1', [id]);
+    res.json({ success: true });
+  } catch(e) { res.status(500).json({ error: e.message }); }
 });
 
 /* ═══ PRESENCES ═══ */
