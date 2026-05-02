@@ -282,12 +282,37 @@
     <div class="form-group"><label>Mot de passe</label><input class="input-field" id="empPassword" type="password" placeholder="••••••••"/></div>
     <div class="form-group"><label>Poste</label>
       <select class="input-field" id="empPoste">
-        <option>Agent de Sécurité</option>
-        <option>Chef de la Sécurité</option>
-        <option>Responsable Événementiel</option>
-        <option>Coordinateur</option>
-        <option>Directeur</option>
-        <option>Employé</option>
+        <optgroup label="🏢 Direction">
+          <option>Directeur Général</option>
+          <option>Directeur de Division</option>
+          <option>Coordinateur</option>
+        </optgroup>
+        <optgroup label="🛡️ Penny's Elite Security">
+          <option>Chef de la Sécurité</option>
+          <option>Agent de Sécurité</option>
+          <option>Agent VIP / Escorte</option>
+          <option>Convoyeur</option>
+        </optgroup>
+        <optgroup label="🎉 Événementiel">
+          <option>Responsable Événementiel</option>
+          <option>Organisateur d'Événements</option>
+          <option>Hôte / Hôtesse</option>
+        </optgroup>
+        <optgroup label="✈️ Elite Tourisme">
+          <option>Guide Touristique</option>
+          <option>Chauffeur VIP</option>
+          <option>Concierge</option>
+        </optgroup>
+        <optgroup label="🏔️ Elite Aventure">
+          <option>Guide Aventure</option>
+          <option>Pilote / Conducteur</option>
+          <option>Expert Terrain</option>
+        </optgroup>
+        <optgroup label="💃 Lilly's Girls">
+          <option>Responsable Artistique</option>
+          <option>Animatrice</option>
+          <option>Coordinatrice Spectacle</option>
+        </optgroup>
       </select>
     </div>
     <div class="form-group"><label>Rôle système</label>
@@ -360,14 +385,36 @@
 
     <div class="form-group"><label>Type</label>
       <select class="input-field" id="planType">
-        <option value="service">🛡️ Service de sécurité</option>
-        <option value="soiree">🎉 Soirée / Événement</option>
-        <option value="patrouille">🚔 Patrouille</option>
-        <option value="reunion">📋 Réunion d'équipe</option>
-        <option value="formation">🎓 Formation</option>
-        <option value="mission">⚡ Mission spéciale</option>
-        <option value="garde">🔒 Garde / Surveillance</option>
-        <option value="autre">📌 Autre</option>
+        <optgroup label="🛡️ Penny's Elite Security">
+          <option value="service">Service de Sécurité</option>
+          <option value="escorte">Escorte VIP</option>
+          <option value="convoi">Convoi Sécurisé</option>
+          <option value="garde">Garde / Surveillance</option>
+        </optgroup>
+        <optgroup label="🎉 Événementiel">
+          <option value="soiree">Soirée / Événement</option>
+          <option value="gala">Gala / Cérémonie</option>
+          <option value="privatif">Événement Privatif</option>
+        </optgroup>
+        <optgroup label="✈️ Elite Tourisme">
+          <option value="tourisme">Sortie Touristique</option>
+          <option value="transfert">Transfert VIP</option>
+          <option value="concierge">Service Conciergerie</option>
+        </optgroup>
+        <optgroup label="🏔️ Elite Aventure">
+          <option value="aventure">Aventure / Road Trip</option>
+          <option value="safari">Safari Terrain</option>
+          <option value="expedition">Expédition</option>
+        </optgroup>
+        <optgroup label="💃 Lilly's Girls">
+          <option value="show">Show / Animation</option>
+          <option value="prestation">Prestation Artistique</option>
+        </optgroup>
+        <optgroup label="📋 Interne">
+          <option value="reunion">Réunion d'équipe</option>
+          <option value="formation">Formation</option>
+          <option value="autre">Autre</option>
+        </optgroup>
       </select>
     </div>
     <div class="btn-row">
