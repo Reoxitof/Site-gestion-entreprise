@@ -516,8 +516,7 @@ app.post('/api/commandes/:id/payer', admin, async (req, res) => {
       const montantEntreprise = Math.round(Number(prix_final) * 0.20 * 100) / 100;
       await getPool().query(
         `INSERT INTO ec_comptes (type, categorie, description, montant, date, reference, commande_id, created_by)
-         VALUES ('recette', 'evenement', $1, $2, $3, $4, $5, $6)
-         ON CONFLICT DO NOTHING`,
+         VALUES ('recette', 'evenement', $1, $2, $3, $4, $5, $6)`,
         [
           `Paiement — ${cmd.client_nom} (${cmd.type_prestation})`,
           Number(prix_final),
@@ -530,8 +529,7 @@ app.post('/api/commandes/:id/payer', admin, async (req, res) => {
       // Enregistrer aussi la part entreprise séparément
       await getPool().query(
         `INSERT INTO ec_comptes (type, categorie, description, montant, date, reference, commande_id, created_by)
-         VALUES ('recette', 'caisse_entreprise', $1, $2, $3, $4, $5, $6)
-         ON CONFLICT DO NOTHING`,
+         VALUES ('recette', 'caisse_entreprise', $1, $2, $3, $4, $5, $6)`,
         [
           `Part entreprise (20%) — ${cmd.client_nom}`,
           montantEntreprise,
