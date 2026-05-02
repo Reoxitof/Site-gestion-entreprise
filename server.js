@@ -285,6 +285,10 @@ app.get('/api/stats', auth, async (req, res) => {
 
 /* ═══ PAGES ═══ */
 app.get('/login', (req, res) => res.sendFile(path.join(__dirname, 'public', 'login.html')));
+app.get('/dashboard', (req, res) => {
+  if (!req.session?.user) return res.redirect('/login');
+  res.sendFile(path.join(__dirname, 'public', 'index.html'));
+});
 app.get('*', (req, res) => res.sendFile(path.join(__dirname, 'public', req.session?.user ? 'index.html' : 'login.html')));
 
 /* ═══ START ═══ */
