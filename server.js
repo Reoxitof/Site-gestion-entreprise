@@ -227,7 +227,7 @@ app.get('*', (req, res) => res.sendFile(path.join(__dirname, 'public', req.sessi
 
 /* ═══ START ═══ */
 app.listen(PORT, '0.0.0.0', () => {
-  console.log(`[ELITE CORP] Port ${PORT} OK`);
+  console.log(`[ELITE CORP v2] Port ${PORT} OK`);
   initDB();
 });
 
