@@ -176,6 +176,23 @@ app.post('/api/login', async (req, res) => {
 app.post('/api/logout', (req, res) => req.session.destroy(() => res.json({ success: true })));
 app.get('/api/me', auth, (req, res) => res.json({ user: req.session.user }));
 
+/* Changer son propre mot de passe */
+app.put('/api/me/password', auth, async (req, res) => {
+  try {
+    const { current_password, new_password } = req.body;
+    if (!current_password || !new_password) return res.status(400).json({ error: 'Champs manquants' });
+    if (new_password.length < 6) return res.status(400).json({ error: 'Mot de passe trop court (6 caractères min)' });
+    const r = await getPool().query('SELECT * FROM ec_users WHERE id=$1', [req.session.user.id]);
+    const u = r.rows[0];
+    if (!u || !(await bcrypt.compare(current_password, u.password_hash))) {
+      return res.status(401).json({ error: 'Mot de passe actuel incorrect' });
+    }
+    const hash = await bcrypt.hash(new_password, 12);
+    await getPool().query('UPDATE ec_users SET password_hash=$1 WHERE id=$2', [hash, req.session.user.id]);
+    res.json({ success: true });
+  } catch(e) { res.status(500).json({ error: e.message }); }
+});
+
 /* ═══ EMPLOYES ═══ */
 app.get('/api/employes', auth, async (req, res) => {
   try { res.json((await getPool().query('SELECT id,username,nom,prenom,poste,role,actif,created_at FROM ec_users ORDER BY nom')).rows); }

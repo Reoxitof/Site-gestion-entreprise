@@ -153,12 +153,13 @@
     <div class="sidebar-logo-title">ELITE <span>CORP.</span></div>
     <div class="sidebar-logo-sub">Panel de Gestion</div>
   </div>
-  <div class="sidebar-user">
+  <div class="sidebar-user" onclick="openModal('modalProfil')" style="cursor:pointer;transition:background 0.2s;" onmouseover="this.style.background='rgba(201,168,76,0.07)'" onmouseout="this.style.background='transparent'" title="Mon profil">
     <div class="sidebar-avatar" id="sidebarAvatar">?</div>
-    <div>
+    <div style="flex:1;min-width:0;">
       <div class="sidebar-user-name" id="sidebarName">—</div>
       <div class="sidebar-user-role" id="sidebarRole">—</div>
     </div>
+    <i class="fa-solid fa-pen-to-square" style="font-size:11px;color:var(--gold);opacity:0.6;flex-shrink:0;"></i>
   </div>
   <nav class="sidebar-nav">
     <div class="sidebar-section">Principal</div>
@@ -700,6 +701,44 @@
   </div>
 </div>
 
+<!-- Modal Profil -->
+<div class="modal-overlay" id="modalProfil">
+  <div class="modal" style="max-width:440px;">
+    <button class="modal-close" onclick="closeModal('modalProfil')"><i class="fa-solid fa-xmark"></i></button>
+    <div class="modal-title">MON PROFIL</div>
+
+    <!-- Infos -->
+    <div style="display:flex;align-items:center;gap:16px;padding:16px;background:rgba(201,168,76,0.06);border:1px solid var(--border);border-radius:12px;margin-bottom:20px;">
+      <div style="width:52px;height:52px;border-radius:50%;background:linear-gradient(135deg,var(--gold-dim),var(--gold));display:flex;align-items:center;justify-content:center;font-family:'Anton',sans-serif;font-size:22px;color:#000;flex-shrink:0;" id="profilAvatar">?</div>
+      <div>
+        <div style="font-family:'Anton',sans-serif;font-size:16px;letter-spacing:1px;color:var(--white);" id="profilNom">—</div>
+        <div style="font-size:11px;font-weight:700;color:var(--gold);letter-spacing:1px;" id="profilPoste">—</div>
+        <div style="font-size:10px;color:var(--white-dim);margin-top:2px;" id="profilUsername">—</div>
+      </div>
+    </div>
+
+    <!-- Changer mot de passe -->
+    <div style="font-size:10px;font-weight:800;letter-spacing:2px;text-transform:uppercase;color:var(--gold);margin-bottom:12px;"><i class="fa-solid fa-lock"></i> Changer le mot de passe</div>
+    <div class="form-group">
+      <label>Mot de passe actuel</label>
+      <input class="input-field" id="profilMdpActuel" type="password" placeholder="••••••••" autocomplete="current-password"/>
+    </div>
+    <div class="form-group">
+      <label>Nouveau mot de passe</label>
+      <input class="input-field" id="profilMdpNew" type="password" placeholder="••••••••" autocomplete="new-password"/>
+    </div>
+    <div class="form-group">
+      <label>Confirmer le nouveau mot de passe</label>
+      <input class="input-field" id="profilMdpConfirm" type="password" placeholder="••••••••" autocomplete="new-password"/>
+    </div>
+    <div id="profilError" style="display:none;background:rgba(226,64,64,0.12);border:1px solid rgba(226,64,64,0.3);border-radius:8px;padding:10px 14px;font-size:12px;font-weight:700;color:#ff7b7b;margin-bottom:12px;"></div>
+    <div class="btn-row">
+      <button class="btn btn-gold" onclick="saveProfil()"><i class="fa-solid fa-floppy-disk"></i> Enregistrer</button>
+      <button class="btn btn-outline" onclick="closeModal('modalProfil')">Annuler</button>
+    </div>
+  </div>
+</div>
+
 <!-- Toast -->
 <div class="toast" id="toast"></div>
 
@@ -782,7 +821,6 @@ function showToast(msg, ok = true) {
 }
 
 /* ── MODAL ── */
-function openModal(id) { document.getElementById(id).classList.add('open'); }
 function closeModal(id) { document.getElementById(id).classList.remove('open'); }
 document.addEventListener('click', e => { if (e.target.classList.contains('modal-overlay')) e.target.classList.remove('open'); });
 
@@ -790,6 +828,49 @@ document.addEventListener('click', e => { if (e.target.classList.contains('modal
 async function doLogout() {
   await fetch('/api/logout', { method: 'POST' });
   window.location.href = '/login';
+}
+
+/* ── PROFIL ── */
+function openModal(id) {
+  document.getElementById(id).classList.add('open');
+  if (id === 'modalProfil' && currentUser) {
+    document.getElementById('profilAvatar').textContent = (currentUser.prenom[0]||'?').toUpperCase();
+    document.getElementById('profilNom').textContent = currentUser.prenom + ' ' + currentUser.nom;
+    document.getElementById('profilPoste').textContent = currentUser.poste;
+    document.getElementById('profilUsername').textContent = '@' + currentUser.username;
+    document.getElementById('profilMdpActuel').value = '';
+    document.getElementById('profilMdpNew').value = '';
+    document.getElementById('profilMdpConfirm').value = '';
+    document.getElementById('profilError').style.display = 'none';
+  }
+}
+
+async function saveProfil() {
+  const actuel = document.getElementById('profilMdpActuel').value;
+  const newMdp = document.getElementById('profilMdpNew').value;
+  const confirm = document.getElementById('profilMdpConfirm').value;
+  const errEl = document.getElementById('profilError');
+  errEl.style.display = 'none';
+
+  if (!actuel || !newMdp || !confirm) { errEl.textContent = 'Remplis tous les champs.'; errEl.style.display = 'block'; return; }
+  if (newMdp.length < 6) { errEl.textContent = 'Le nouveau mot de passe doit faire au moins 6 caractères.'; errEl.style.display = 'block'; return; }
+  if (newMdp !== confirm) { errEl.textContent = 'Les mots de passe ne correspondent pas.'; errEl.style.display = 'block'; return; }
+
+  try {
+    const r = await fetch('/api/me/password', {
+      method: 'PUT',
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({ current_password: actuel, new_password: newMdp })
+    });
+    const data = await r.json();
+    if (data.success) {
+      showToast('✅ Mot de passe modifié');
+      closeModal('modalProfil');
+    } else {
+      errEl.textContent = data.error || 'Erreur';
+      errEl.style.display = 'block';
+    }
+  } catch(e) { errEl.textContent = 'Erreur réseau.'; errEl.style.display = 'block'; }
 }
 </script>
 
