@@ -368,6 +368,41 @@ app.put('/api/commandes/:id', auth, async (req, res) => {
        client_contact=COALESCE($9,client_contact), updated_at=NOW() WHERE id=$10`,
       [statut||null, note_interne||null, assigned_to||null, priorite||null, budget||null, budget_estime||null, lieu||null, date_evenement||null, client_contact||null, req.params.id]
     );
+
+    // Auto-ajout au planning quand statut passe à "confirme"
+    if (statut === 'confirme') {
+      try {
+        const cmdRes = await getPool().query('SELECT * FROM ec_commandes WHERE id=$1', [req.params.id]);
+        const cmd = cmdRes.rows[0];
+        if (cmd && cmd.date_evenement) {
+          // Vérifier si un événement planning existe déjà pour cette commande
+          const existing = await getPool().query(
+            `SELECT id FROM ec_planning WHERE titre LIKE $1`,
+            [`[CMD#${cmd.id}]%`]
+          );
+          if (existing.rows.length === 0) {
+            const dateDebut = new Date(cmd.date_evenement);
+            const dateFin = new Date(dateDebut.getTime() + 4 * 60 * 60 * 1000); // +4h par défaut
+            await getPool().query(
+              `INSERT INTO ec_planning (titre, description, date_debut, date_fin, type, couleur, created_by)
+               VALUES ($1, $2, $3, $4, $5, $6, $7)`,
+              [
+                `[CMD#${cmd.id}] ${cmd.client_nom}`,
+                `${cmd.type_prestation}${cmd.lieu ? ' — ' + cmd.lieu : ''}`,
+                dateDebut.toISOString(),
+                dateFin.toISOString(),
+                'evenement',
+                '#c9a84c',
+                req.session.user.id
+              ]
+            );
+          }
+        }
+      } catch(planErr) {
+        console.error('[PLANNING AUTO] Erreur:', planErr.message);
+      }
+    }
+
     res.json({ success: true });
   } catch(e) { res.status(500).json({ error: e.message }); }
 });
