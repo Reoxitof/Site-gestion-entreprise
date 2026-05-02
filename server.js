@@ -339,9 +339,14 @@ app.get('/api/stats', requireAuth, async (req, res) => {
 /* ═══════════════════════════════════════════
    PAGES
 ═══════════════════════════════════════════ */
+
+// Healthcheck Sliplane — doit répondre 200 sur /
+app.get('/health', (req, res) => res.status(200).json({ status: 'ok', service: 'Elite Corp. Panel' }));
+
 app.get('/login', (req, res) => res.sendFile(path.join(__dirname, 'public', 'login.html')));
+
 app.get('*', (req, res) => {
-  if (!req.session?.user) return res.redirect('/login');
+  if (!req.session?.user) return res.sendFile(path.join(__dirname, 'public', 'login.html'));
   res.sendFile(path.join(__dirname, 'public', 'index.html'));
 });
 
