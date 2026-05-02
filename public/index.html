@@ -454,32 +454,53 @@
           <option>Directeur Général</option>
           <option>Directeur de Division</option>
           <option>Coordinateur</option>
+          <option>Directeur</option>
         </optgroup>
         <optgroup label="🛡️ Penny's Elite Security">
           <option>Chef de la Sécurité</option>
+          <option>Responsable Sécurité</option>
           <option>Agent de Sécurité</option>
           <option>Agent VIP / Escorte</option>
           <option>Convoyeur</option>
+          <option>Agent de Protection Rapprochée</option>
+          <option>Superviseur Sécurité</option>
         </optgroup>
         <optgroup label="🎉 Événementiel">
           <option>Responsable Événementiel</option>
           <option>Organisateur d'Événements</option>
           <option>Hôte / Hôtesse</option>
+          <option>Régisseur</option>
+          <option>Technicien Son / Lumière</option>
+          <option>Décorateur</option>
         </optgroup>
         <optgroup label="✈️ Elite Tourisme">
           <option>Guide Touristique</option>
           <option>Chauffeur VIP</option>
           <option>Concierge</option>
+          <option>Agent de Voyage</option>
+          <option>Coordinateur Tourisme</option>
         </optgroup>
         <optgroup label="🏔️ Elite Aventure">
           <option>Guide Aventure</option>
           <option>Pilote / Conducteur</option>
           <option>Expert Terrain</option>
+          <option>Instructeur</option>
+          <option>Coordinateur Aventure</option>
         </optgroup>
         <optgroup label="💃 Lilly's Girls">
           <option>Responsable Artistique</option>
           <option>Animatrice</option>
           <option>Coordinatrice Spectacle</option>
+          <option>Danseuse / Performeuse</option>
+          <option>Chorégraphe</option>
+        </optgroup>
+        <optgroup label="⚙️ Support Interne">
+          <option>Comptable</option>
+          <option>Responsable RH</option>
+          <option>Assistant Administratif</option>
+          <option>Chargé de Communication</option>
+          <option>Informaticien</option>
+          <option>Stagiaire</option>
         </optgroup>
       </select>
     </div>
@@ -1334,13 +1355,50 @@ async function loadEmployes() {
 }
 
 async function editPoste(id, currentPoste, nom) {
-  const newPoste = prompt(`Nouveau poste pour ${nom} :`, currentPoste);
-  if (!newPoste || newPoste.trim() === currentPoste) return;
+  const postes = [
+    '── Direction ──','Directeur Général','Directeur de Division','Coordinateur','Directeur',
+    '── Sécurité ──','Chef de la Sécurité','Responsable Sécurité','Agent de Sécurité','Agent VIP / Escorte','Convoyeur','Agent de Protection Rapprochée','Superviseur Sécurité',
+    '── Événementiel ──','Responsable Événementiel','Organisateur d\'Événements','Hôte / Hôtesse','Régisseur','Technicien Son / Lumière','Décorateur',
+    '── Tourisme ──','Guide Touristique','Chauffeur VIP','Concierge','Agent de Voyage','Coordinateur Tourisme',
+    '── Aventure ──','Guide Aventure','Pilote / Conducteur','Expert Terrain','Instructeur','Coordinateur Aventure',
+    '── Lilly\'s Girls ──','Responsable Artistique','Animatrice','Coordinatrice Spectacle','Danseuse / Performeuse','Chorégraphe',
+    '── Support ──','Comptable','Responsable RH','Assistant Administratif','Chargé de Communication','Informaticien','Stagiaire'
+  ];
+  const separators = postes.filter(p => p.startsWith('──'));
+  const opts = postes.map(p => separators.includes(p)
+    ? `<option disabled style="color:var(--white-dim);font-size:10px;">${p}</option>`
+    : `<option value="${p}" ${p === currentPoste ? 'selected' : ''}>${p}</option>`
+  ).join('');
+
+  // Créer un mini modal inline
+  const existing = document.getElementById('editPosteModal');
+  if (existing) existing.remove();
+  const div = document.createElement('div');
+  div.id = 'editPosteModal';
+  div.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.7);z-index:500;display:flex;align-items:center;justify-content:center;padding:20px;';
+  div.innerHTML = `<div style="background:#111118;border:1px solid rgba(201,168,76,0.3);border-radius:16px;padding:24px;width:min(400px,100%);box-shadow:0 20px 60px rgba(0,0,0,0.5);">
+    <div style="font-family:'Anton',sans-serif;font-size:18px;letter-spacing:2px;color:var(--white);margin-bottom:6px;">MODIFIER LE POSTE</div>
+    <div style="font-size:12px;color:var(--white-dim);margin-bottom:16px;">${nom}</div>
+    <select id="editPosteSelect" style="width:100%;padding:10px 14px;border-radius:10px;border:1px solid rgba(201,168,76,0.3);background:#08040d;color:white;font-size:13px;font-weight:600;margin-bottom:16px;">${opts}</select>
+    <div style="display:flex;gap:8px;">
+      <button onclick="confirmEditPoste(${id})" style="flex:1;padding:10px;border-radius:10px;border:none;background:linear-gradient(135deg,#c9a84c,#8b6914);color:#000;font-weight:900;cursor:pointer;">✅ Confirmer</button>
+      <button onclick="document.getElementById('editPosteModal').remove()" style="padding:10px 16px;border-radius:10px;border:1px solid rgba(255,255,255,0.1);background:transparent;color:var(--white-dim);cursor:pointer;">Annuler</button>
+    </div>
+  </div>`;
+  document.body.appendChild(div);
+  div.addEventListener('click', e => { if (e.target === div) div.remove(); });
+}
+
+async function confirmEditPoste(id) {
+  const sel = document.getElementById('editPosteSelect');
+  if (!sel) return;
+  const newPoste = sel.value;
+  document.getElementById('editPosteModal')?.remove();
   try {
     const r = await fetch('/api/employes/' + id, {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ poste: newPoste.trim() })
+      body: JSON.stringify({ poste: newPoste })
     });
     const d = await r.json();
     if (d.success) { showToast('✅ Poste mis à jour'); loadEmployes(); }
