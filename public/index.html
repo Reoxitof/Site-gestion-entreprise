@@ -1690,7 +1690,12 @@ async function deleteCommande(id) {
 
 let _cmdDetailData = [];
 function openCmdDetail(id) {
-  fetch('/api/commandes').then(r => r.json()).then(data => {
+  // Charger les employés si pas encore fait (nécessaire pour le dropdown d'assignation)
+  const empPromise = (isAdmin() && !window._allEmployes)
+    ? fetch('/api/employes').then(r => r.json()).then(emp => { window._allEmployes = emp; })
+    : Promise.resolve();
+
+  Promise.all([fetch('/api/commandes').then(r => r.json()), empPromise]).then(([data]) => {
     _cmdDetailData = data;
     const c = data.find(x => x.id === id);
     if (!c) return;
@@ -1764,7 +1769,7 @@ function openCmdDetail(id) {
       ${isAdmin() ? renderAssignBlock(c) : ''}
       ${isAdmin() ? renderStatutButtons(c) : ''}`;
     openModal('modalCommandeDetail');
-  });
+  }).catch(e => console.error(e));
 }
 
 function renderAssignBlock(c) {
@@ -1772,7 +1777,6 @@ function renderAssignBlock(c) {
     .filter(e => e.actif && e.role !== 'admin')
     .map(e => `<option value="${e.id}" ${c.assigned_to == e.id ? 'selected' : ''}>${e.prenom} ${e.nom} — ${e.poste}</option>`)
     .join('');
-  const current = c.assigned_nom ? `${c.assigned_nom}` : '—';
   return `<div style="background:rgba(201,168,76,0.06);border:1px solid rgba(201,168,76,0.2);border-radius:8px;padding:12px;margin-bottom:10px;">
     <div style="font-size:9px;font-weight:800;letter-spacing:1px;text-transform:uppercase;color:var(--gold);margin-bottom:8px;"><i class="fa-solid fa-user-tie"></i> Assigné à</div>
     <div style="display:flex;gap:8px;align-items:center;">
