@@ -1363,6 +1363,8 @@ async function resetPassword(id, nom) {
     else showToast('❌ ' + (d.error || 'Erreur'), false);
   } catch(e) { showToast('❌ Erreur réseau', false); }
 }
+
+async function saveEmploye() {
   const prenom = document.getElementById('empPrenom').value.trim();
   const nom = document.getElementById('empNom').value.trim();
   const username = document.getElementById('empUsername').value.trim();
