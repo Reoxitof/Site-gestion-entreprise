@@ -835,7 +835,7 @@ let planningData = [];
 /* ── HELPER RÔLES ── */
 const DIRECTION_POSTES = ['Directeur Général', 'Directeur de Division', 'Coordinateur'];
 function isAdmin() {
-  return isAdmin() || currentUser?.role === 'direction' || DIRECTION_POSTES.includes(currentUser?.poste);
+  return currentUser?.role === 'admin' || currentUser?.role === 'direction' || DIRECTION_POSTES.includes(currentUser?.poste);
 }
 
 /* ── DATE UTILS (force UTC pour éviter décalage fuseau) ── */
