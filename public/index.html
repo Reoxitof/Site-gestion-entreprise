@@ -750,6 +750,19 @@ let calYear = new Date().getFullYear();
 let calMonth = new Date().getMonth();
 let planningData = [];
 
+/* ── DATE UTILS (force UTC pour éviter décalage fuseau) ── */
+function fmtDate(isoStr, opts) {
+  if (!isoStr) return '—';
+  // Forcer l'interprétation en UTC en ajoutant Z si absent
+  const s = isoStr.endsWith('Z') || isoStr.includes('+') ? isoStr : isoStr.replace(' ', 'T') + 'Z';
+  return new Date(s).toLocaleDateString('fr-FR', { ...opts, timeZone: 'UTC' });
+}
+function fmtDateTime(isoStr, opts) {
+  if (!isoStr) return '—';
+  const s = isoStr.endsWith('Z') || isoStr.includes('+') ? isoStr : isoStr.replace(' ', 'T') + 'Z';
+  return new Date(s).toLocaleString('fr-FR', { ...opts, timeZone: 'UTC' });
+}
+
 /* ── INIT ── */
 async function init() {
   try {
@@ -912,7 +925,7 @@ async function loadDashboard() {
           <div onclick="showTab('planning')" style="background:rgba(201,168,76,0.06);border:1px solid var(--border);border-radius:10px;padding:14px;cursor:pointer;transition:border-color 0.2s;" onmouseover="this.style.borderColor='var(--gold)'" onmouseout="this.style.borderColor='var(--border)'">
             <div style="font-size:10px;font-weight:800;letter-spacing:1px;color:var(--gold);text-transform:uppercase;margin-bottom:4px;">${e.type}</div>
             <div style="font-size:13px;font-weight:800;color:var(--white);margin-bottom:6px;">${e.titre}</div>
-            <div style="font-size:11px;color:var(--white-dim);">${new Date(e.date_debut).toLocaleDateString('fr-FR',{weekday:'short',day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'})}</div>
+            <div style="font-size:11px;color:var(--white-dim);">${fmtDate(e.date_debut,{weekday:'short',day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'})}</div>
           </div>`).join('') + '</div>';
     }
   } catch(e) { console.error(e); }
@@ -984,7 +997,7 @@ function renderPlanningList() {
           <div style="width:4px;height:44px;border-radius:2px;background:${e.couleur || 'var(--gold)'};flex-shrink:0;"></div>
           <div>
             <div style="font-size:13px;font-weight:800;color:var(--white);">${e.titre}</div>
-            <div style="font-size:11px;color:var(--white-dim);">${new Date(e.date_debut).toLocaleDateString('fr-FR',{weekday:'short',day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'})} → ${new Date(e.date_fin).toLocaleDateString('fr-FR',{day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'})}</div>
+            <div style="font-size:11px;color:var(--white-dim);">${fmtDate(e.date_debut,{weekday:'short',day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'})} → ${fmtDate(e.date_fin,{day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'})}</div>
             ${e.description ? '<div style="font-size:11px;color:var(--white-dim);margin-top:2px;">' + e.description + '</div>' : ''}
           </div>
         </div>
@@ -1227,7 +1240,7 @@ async function loadAnnonces() {
             <div class="annonce-contenu">${a.contenu}</div>
             <div class="annonce-meta">
               <span><i class="fa-solid fa-user"></i> ${a.auteur_nom || 'Admin'}</span>
-              <span><i class="fa-solid fa-clock"></i> ${new Date(a.created_at).toLocaleDateString('fr-FR',{day:'numeric',month:'short',year:'numeric'})}</span>
+              <span><i class="fa-solid fa-clock"></i> ${fmtDate(a.created_at,{day:'numeric',month:'short',year:'numeric'})}</span>
             </div>
           </div>
           ${currentUser?.role === 'admin' ? `<button class="btn btn-danger" style="padding:6px 10px;font-size:10px;flex-shrink:0;" onclick="deleteAnnonce(${a.id})"><i class="fa-solid fa-trash"></i></button>` : ''}
@@ -1440,7 +1453,7 @@ async function loadCommandes() {
           <div class="cmd-card-type">${c.type_prestation.length>40?c.type_prestation.slice(0,40)+'…':c.type_prestation}</div>
           <div class="cmd-card-meta">
             <span class="cmd-prio ${c.priorite}">${c.priorite}</span>
-            ${c.date_evenement?'<span><i class="fa-solid fa-calendar"></i> '+new Date(c.date_evenement).toLocaleDateString('fr-FR',{day:'numeric',month:'short'})+'</span>':''}
+            ${c.date_evenement?'<span><i class="fa-solid fa-calendar"></i> '+fmtDate(c.date_evenement,{day:'numeric',month:'short'})+'</span>':''}
             ${budgetDisplay?'<span><i class="fa-solid fa-dollar-sign"></i> '+budgetDisplay+'</span>':''}
           </div>
         </div>`;
@@ -1457,7 +1470,7 @@ async function loadCommandes() {
           <td style="font-weight:800;color:var(--white);">${c.client_nom}</td>
           <td>${divEmoji[c.division]||''} ${c.division}</td>
           <td style="max-width:160px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;" title="${c.type_prestation}">${c.type_prestation}</td>
-          <td>${c.date_evenement?new Date(c.date_evenement).toLocaleDateString('fr-FR',{day:'numeric',month:'short',year:'numeric'}):'—'}</td>
+          <td>${c.date_evenement?fmtDate(c.date_evenement,{day:'numeric',month:'short',year:'numeric'}):'—'}</td>
           <td><span class="cmd-prio ${c.priorite}">${c.priorite}</span></td>
           <td><span class="badge ${c.statut==='nouveau'?'badge-blue':c.statut==='termine'?'badge-green':'badge-gold'}">${c.statut.replace('_',' ')}</span></td>
           <td>${c.assigned_nom||'—'}</td>
@@ -1502,7 +1515,7 @@ function openCmdDetail(id) {
         </div>
         <div style="background:var(--bg);border:1px solid var(--border);border-radius:8px;padding:12px;">
           <div style="font-size:9px;font-weight:800;letter-spacing:1px;text-transform:uppercase;color:var(--white-dim);margin-bottom:4px;">Date événement</div>
-          <div style="font-size:12px;font-weight:700;color:var(--white);">${c.date_evenement?new Date(c.date_evenement).toLocaleDateString('fr-FR',{weekday:'short',day:'numeric',month:'long',year:'numeric',hour:'2-digit',minute:'2-digit'}):'—'}</div>
+          <div style="font-size:12px;font-weight:700;color:var(--white);">${c.date_evenement?fmtDate(c.date_evenement,{weekday:'short',day:'numeric',month:'long',year:'numeric',hour:'2-digit',minute:'2-digit'}):'—'}</div>
         </div>
         <div style="background:var(--bg);border:1px solid var(--border);border-radius:8px;padding:12px;">
           <div style="font-size:9px;font-weight:800;letter-spacing:1px;text-transform:uppercase;color:var(--white-dim);margin-bottom:4px;">Lieu</div>
