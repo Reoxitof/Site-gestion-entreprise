@@ -94,14 +94,6 @@ async function initDB() {
   }
 }
 
-/* ═══ ROUTE URGENCE — réactiver admin ═══ */
-app.get('/emergency-reactivate-admin', async (req, res) => {
-  try {
-    await getPool().query("UPDATE ec_users SET actif=true, role='admin' WHERE username='admin'");
-    res.send('<h2 style="font-family:sans-serif;color:green;">✅ Compte admin réactivé. <a href="/login">Se connecter</a></h2>');
-  } catch(e) { res.status(500).send('Erreur: ' + e.message); }
-});
-
 /* ═══ AUTH ═══ */
 const auth = (req, res, next) => req.session?.user ? next() : res.status(401).json({ error: 'Non connecte' });
 const admin = (req, res, next) => req.session?.user?.role === 'admin' ? next() : res.status(403).json({ error: 'Acces refuse' });
