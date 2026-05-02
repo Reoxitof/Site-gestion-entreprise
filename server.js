@@ -162,8 +162,10 @@ async function initDB() {
 }
 
 /* ═══ AUTH ═══ */
+const DIRECTION_POSTES = ['Directeur Général', 'Directeur de Division', 'Coordinateur'];
 const auth = (req, res, next) => req.session?.user ? next() : res.status(401).json({ error: 'Non connecte' });
-const admin = (req, res, next) => req.session?.user?.role === 'admin' ? next() : res.status(403).json({ error: 'Acces refuse' });
+const isAdminOrDirection = (user) => user?.role === 'admin' || user?.role === 'direction' || DIRECTION_POSTES.includes(user?.poste);
+const admin = (req, res, next) => isAdminOrDirection(req.session?.user) ? next() : res.status(403).json({ error: 'Acces refuse' });
 
 /* ═══ ROUTES AUTH ═══ */
 app.post('/api/login', async (req, res) => {

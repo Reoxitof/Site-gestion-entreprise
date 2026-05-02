@@ -832,6 +832,12 @@ let calYear = new Date().getFullYear();
 let calMonth = new Date().getMonth();
 let planningData = [];
 
+/* ── HELPER RÔLES ── */
+const DIRECTION_POSTES = ['Directeur Général', 'Directeur de Division', 'Coordinateur'];
+function isAdmin() {
+  return isAdmin() || currentUser?.role === 'direction' || DIRECTION_POSTES.includes(currentUser?.poste);
+}
+
 /* ── DATE UTILS (force UTC pour éviter décalage fuseau) ── */
 function fmtDate(isoStr, opts) {
   if (!isoStr) return '—';
@@ -853,18 +859,18 @@ async function init() {
     if (!data.user) { window.location.href = '/login'; return; }
     currentUser = data.user;
     document.getElementById('sidebarName').textContent = data.user.prenom + ' ' + data.user.nom;
-    document.getElementById('sidebarRole').textContent = data.user.role === 'admin' ? 'Administrateur' : data.user.poste;
+    document.getElementById('sidebarRole').textContent = isAdmin() ? 'Direction / Admin' : data.user.poste;
     document.getElementById('sidebarAvatar').textContent = (data.user.prenom[0] || '?').toUpperCase();
-    if (data.user.role !== 'admin') {
+    if (!isAdmin()) {
       document.querySelectorAll('.admin-only').forEach(el => el.style.display = 'none');
     }
-    // Accès recrutement : admin + postes de direction/responsables
+    // Accès recrutement : direction + postes responsables
     const POSTES_RECRUTEMENT = [
       'Directeur Général', 'Directeur de Division', 'Coordinateur',
       'Chef de la Sécurité', 'Responsable Événementiel', 'Responsable Artistique',
       'Guide Touristique', 'Guide Aventure'
     ];
-    const canRecruit = data.user.role === 'admin' || POSTES_RECRUTEMENT.includes(data.user.poste);
+    const canRecruit = isAdmin() || POSTES_RECRUTEMENT.includes(data.user.poste);
     if (!canRecruit) {
       document.querySelectorAll('.recrutement-access').forEach(el => el.style.display = 'none');
     }
@@ -875,7 +881,7 @@ async function init() {
     renderCalDayNames();
     loadCalendar();
     // Charger la liste des employés pour le dropdown d'assignation
-    if (data.user.role === 'admin') {
+    if (isAdmin()) {
       fetch('/api/employes').then(r => r.json()).then(emp => { window._allEmployes = emp; }).catch(() => {});
     }
   } catch(e) { window.location.href = '/login'; }
@@ -904,11 +910,11 @@ function showTab(name) {
   document.getElementById('topbarTitle').textContent = tabTitles[name] || name.toUpperCase();
   currentTab = name;
   if (name === 'dashboard') loadDashboard();
-  if (name === 'presences') { loadMyPresences(); if (currentUser?.role === 'admin') loadAllPresences(); }
+  if (name === 'presences') { loadMyPresences(); if (isAdmin()) loadAllPresences(); }
   if (name === 'planning') loadCalendar();
   if (name === 'employes') loadEmployes();
   if (name === 'annonces') loadAnnonces();
-  if (name === 'commandes') { loadCommandes(); if (currentUser?.role === 'admin' && !window._allEmployes) fetch('/api/employes').then(r=>r.json()).then(emp=>{window._allEmployes=emp;}).catch(()=>{}); }
+  if (name === 'commandes') { loadCommandes(); if (isAdmin() && !window._allEmployes) fetch('/api/employes').then(r=>r.json()).then(emp=>{window._allEmployes=emp;}).catch(()=>{}); }
 }
 
 /* ── TOAST ── */
@@ -1115,7 +1121,7 @@ function renderPlanningList() {
         </div>
         <div style="display:flex;align-items:center;gap:8px;">
           <span class="badge badge-gold">${e.type}</span>
-          ${currentUser?.role === 'admin' ? '<button class="btn btn-danger" style="padding:6px 10px;font-size:10px;" onclick="deletePlanning(' + e.id + ')"><i class="fa-solid fa-trash"></i></button>' : ''}
+          ${isAdmin() ? '<button class="btn btn-danger" style="padding:6px 10px;font-size:10px;" onclick="deletePlanning(' + e.id + ')"><i class="fa-solid fa-trash"></i></button>' : ''}
         </div>
       </div>
       <!-- Disponibilité -->
@@ -1127,7 +1133,7 @@ function renderPlanningList() {
         <button class="dispo-btn" data-id="${e.id}" data-val="retard" onclick="setDispo(${e.id},'retard')" style="padding:5px 14px;border-radius:999px;border:1px solid rgba(63,167,214,0.4);background:rgba(63,167,214,0.1);color:#3fa7d6;font-size:11px;font-weight:800;cursor:pointer;transition:all 0.2s;">⏰ RETARD</button>
         <span class="dispo-label" id="dispo-label-${e.id}" style="font-size:11px;font-weight:700;color:var(--white-dim);"></span>
       </div>
-      ${currentUser?.role === 'admin' ? `<div id="dispo-list-${e.id}" style="margin-top:8px;"></div>` : ''}
+      ${isAdmin() ? `<div id="dispo-list-${e.id}" style="margin-top:8px;"></div>` : ''}
     </div>`).join('');
 
   // Charger les dispos de chaque événement
@@ -1141,7 +1147,7 @@ async function loadDispo(planId) {
     updateDispoUI(planId, me?.statut || null);
 
     // Liste complète (admin)
-    if (currentUser?.role === 'admin') {
+    if (isAdmin()) {
       const all = await fetch('/api/disponibilites/' + planId).then(r => r.json());
       const el = document.getElementById('dispo-list-' + planId);
       if (!el || !all.length) return;
@@ -1171,7 +1177,7 @@ async function setDispo(planId, statut) {
     await fetch('/api/disponibilites', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({ planning_id: planId, statut }) });
     updateDispoUI(planId, statut);
     showToast('✅ Disponibilité enregistrée');
-    if (currentUser?.role === 'admin') loadDispo(planId);
+    if (isAdmin()) loadDispo(planId);
   } catch(e) { showToast('❌ Erreur', false); }
 }
 
@@ -1355,7 +1361,7 @@ async function loadAnnonces() {
               <span><i class="fa-solid fa-clock"></i> ${fmtDate(a.created_at,{day:'numeric',month:'short',year:'numeric'})}</span>
             </div>
           </div>
-          ${currentUser?.role === 'admin' ? `<button class="btn btn-danger" style="padding:6px 10px;font-size:10px;flex-shrink:0;" onclick="deleteAnnonce(${a.id})"><i class="fa-solid fa-trash"></i></button>` : ''}
+          ${isAdmin() ? `<button class="btn btn-danger" style="padding:6px 10px;font-size:10px;flex-shrink:0;" onclick="deleteAnnonce(${a.id})"><i class="fa-solid fa-trash"></i></button>` : ''}
         </div>
       </div>`).join('');
   } catch(e) { console.error(e); }
@@ -1658,7 +1664,7 @@ async function loadCommandes() {
           <td>${c.assigned_nom||'—'}</td>
           <td style="display:flex;gap:6px;">
             <button class="btn btn-outline" style="padding:5px 10px;font-size:10px;" onclick="openCmdDetail(${c.id})"><i class="fa-solid fa-eye"></i></button>
-            ${currentUser?.role==='admin'?'<button class="btn btn-danger" style="padding:5px 10px;font-size:10px;" onclick="deleteCommande('+c.id+')"><i class="fa-solid fa-trash"></i></button>':''}
+            ${isAdmin()?'<button class="btn btn-danger" style="padding:5px 10px;font-size:10px;" onclick="deleteCommande('+c.id+')"><i class="fa-solid fa-trash"></i></button>':''}
           </td>
         </tr>`;
       }).join('');
@@ -1754,9 +1760,9 @@ function openCmdDetail(id) {
         </div>
       </div>
       ${c.description?'<div style="background:var(--bg);border:1px solid var(--border);border-radius:8px;padding:12px;margin-bottom:10px;"><div style="font-size:9px;font-weight:800;letter-spacing:1px;text-transform:uppercase;color:var(--white-dim);margin-bottom:6px;">Description</div><div style="font-size:12px;color:var(--white-dim);line-height:1.6;">'+c.description+'</div></div>':''}
-      ${c.note_interne&&currentUser?.role==='admin'?'<div style="background:rgba(240,144,48,0.06);border:1px solid rgba(240,144,48,0.2);border-radius:8px;padding:12px;margin-bottom:10px;"><div style="font-size:9px;font-weight:800;letter-spacing:1px;text-transform:uppercase;color:#f09030;margin-bottom:6px;">Note interne</div><div style="font-size:12px;color:var(--white-dim);line-height:1.6;">'+c.note_interne+'</div></div>':''}
-      ${currentUser?.role==='admin' ? renderAssignBlock(c) : ''}
-      ${currentUser?.role==='admin' ? renderStatutButtons(c) : ''}`;
+      ${c.note_interne&&isAdmin()?'<div style="background:rgba(240,144,48,0.06);border:1px solid rgba(240,144,48,0.2);border-radius:8px;padding:12px;margin-bottom:10px;"><div style="font-size:9px;font-weight:800;letter-spacing:1px;text-transform:uppercase;color:#f09030;margin-bottom:6px;">Note interne</div><div style="font-size:12px;color:var(--white-dim);line-height:1.6;">'+c.note_interne+'</div></div>':''}
+      ${isAdmin() ? renderAssignBlock(c) : ''}
+      ${isAdmin() ? renderStatutButtons(c) : ''}`;
     openModal('modalCommandeDetail');
   });
 }
@@ -1928,8 +1934,8 @@ function openCmdDetail(id) {
         </div>
       </div>
       ${c.description?'<div style="background:var(--bg);border:1px solid var(--border);border-radius:8px;padding:12px;margin-bottom:10px;"><div style="font-size:9px;font-weight:800;letter-spacing:1px;text-transform:uppercase;color:var(--white-dim);margin-bottom:6px;">Description</div><div style="font-size:12px;color:var(--white-dim);line-height:1.6;">'+c.description+'</div></div>':''}
-      ${c.note_interne&&currentUser?.role==='admin'?'<div style="background:rgba(240,144,48,0.06);border:1px solid rgba(240,144,48,0.2);border-radius:8px;padding:12px;margin-bottom:10px;"><div style="font-size:9px;font-weight:800;letter-spacing:1px;text-transform:uppercase;color:#f09030;margin-bottom:6px;">Note interne</div><div style="font-size:12px;color:var(--white-dim);line-height:1.6;">'+c.note_interne+'</div></div>':''}
-      ${currentUser?.role==='admin'?`<div style="margin-top:14px;"><div style="font-size:10px;font-weight:800;letter-spacing:1px;text-transform:uppercase;color:var(--white-dim);margin-bottom:8px;">Changer le statut</div><div style="display:flex;gap:8px;flex-wrap:wrap;"><button class="btn btn-outline" style="font-size:11px;padding:7px 14px;" onclick="updateCmdStatut(${c.id},'nouveau')">📥 Nouveau</button><button class="btn btn-outline" style="font-size:11px;padding:7px 14px;" onclick="updateCmdStatut(${c.id},'en_cours')">⚙️ En cours</button><button class="btn btn-outline" style="font-size:11px;padding:7px 14px;" onclick="updateCmdStatut(${c.id},'confirme')">✅ Confirmé</button><button class="btn btn-green" style="font-size:11px;padding:7px 14px;" onclick="updateCmdStatut(${c.id},'termine')">🏁 Terminé</button></div></div>`:''}`;
+      ${c.note_interne&&isAdmin()?'<div style="background:rgba(240,144,48,0.06);border:1px solid rgba(240,144,48,0.2);border-radius:8px;padding:12px;margin-bottom:10px;"><div style="font-size:9px;font-weight:800;letter-spacing:1px;text-transform:uppercase;color:#f09030;margin-bottom:6px;">Note interne</div><div style="font-size:12px;color:var(--white-dim);line-height:1.6;">'+c.note_interne+'</div></div>':''}
+      ${isAdmin()?`<div style="margin-top:14px;"><div style="font-size:10px;font-weight:800;letter-spacing:1px;text-transform:uppercase;color:var(--white-dim);margin-bottom:8px;">Changer le statut</div><div style="display:flex;gap:8px;flex-wrap:wrap;"><button class="btn btn-outline" style="font-size:11px;padding:7px 14px;" onclick="updateCmdStatut(${c.id},'nouveau')">📥 Nouveau</button><button class="btn btn-outline" style="font-size:11px;padding:7px 14px;" onclick="updateCmdStatut(${c.id},'en_cours')">⚙️ En cours</button><button class="btn btn-outline" style="font-size:11px;padding:7px 14px;" onclick="updateCmdStatut(${c.id},'confirme')">✅ Confirmé</button><button class="btn btn-green" style="font-size:11px;padding:7px 14px;" onclick="updateCmdStatut(${c.id},'termine')">🏁 Terminé</button></div></div>`:''}`;
     openModal('modalCommandeDetail');
   });
 }
