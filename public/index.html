@@ -1968,7 +1968,7 @@ async function confirmerPaiement() {
       html += `<div style="background:rgba(240,144,48,0.08);border:1px solid rgba(240,144,48,0.25);border-radius:10px;padding:14px;font-size:12px;color:#f09030;">⚠️ Aucun employé marqué présent à la date de l'événement. Vérifiez les présences.</div>`;
     }
     document.getElementById('partageContent').innerHTML = html;
-    openModal('modalPartage');
+    // Ne pas ouvrir le modal partage ici — il s'affichera à la fin (statut terminé)
     loadCommandes();
   } catch(e) { showToast('❌ Erreur réseau', false); }
 }
@@ -1977,6 +1977,40 @@ async function updateCmdStatut(id, statut) {
   await fetch('/api/commandes/'+id, { method:'PUT', headers:{'Content-Type':'application/json'}, body:JSON.stringify({statut}) });
   showToast('✅ Statut mis à jour');
   closeModal('modalCommandeDetail');
+
+  // Afficher le partage des gains uniquement quand l'événement est terminé
+  if (statut === 'termine') {
+    try {
+      const r = await fetch('/api/commandes');
+      const data = await r.json();
+      const c = data.find(x => x.id == id);
+      if (c) {
+        const partage = JSON.parse(c.paiement_partage || '[]');
+        const prixFinal = parseFloat(c.prix_final) || 0;
+        let html = `<div style="text-align:center;margin-bottom:16px;">
+          <div style="font-family:'Anton',sans-serif;font-size:36px;color:#a78bfa;">${prixFinal.toLocaleString('fr-FR')} $</div>
+          <div style="font-size:11px;color:var(--white-dim);margin-top:4px;">reçus — partagés entre ${partage.length} employé${partage.length>1?'s':''}</div>
+        </div>`;
+        if (partage.length) {
+          const parPersonne = partage[0].montant;
+          html += `<div style="background:rgba(167,139,250,0.08);border:1px solid rgba(167,139,250,0.25);border-radius:10px;padding:14px;">
+            <div style="font-size:10px;font-weight:800;letter-spacing:2px;text-transform:uppercase;color:#a78bfa;margin-bottom:10px;">PART PAR PERSONNE : ${Number(parPersonne).toLocaleString('fr-FR')} $</div>
+            <div style="display:flex;flex-direction:column;gap:8px;">
+              ${partage.map(p => `<div style="display:flex;align-items:center;justify-content:space-between;">
+                <div><div style="font-size:12px;font-weight:700;color:var(--white);">👤 ${p.nom}</div><div style="font-size:10px;color:var(--white-dim);">${p.poste}</div></div>
+                <div style="font-family:'Anton',sans-serif;font-size:18px;color:#a78bfa;">${Number(p.montant).toLocaleString('fr-FR')} $</div>
+              </div>`).join('')}
+            </div>
+          </div>`;
+        } else if (prixFinal > 0) {
+          html += `<div style="background:rgba(240,144,48,0.08);border:1px solid rgba(240,144,48,0.25);border-radius:10px;padding:14px;font-size:12px;color:#f09030;">⚠️ Aucun employé marqué présent à la date de l'événement. Vérifiez les présences.</div>`;
+        }
+        document.getElementById('partageContent').innerHTML = html;
+        openModal('modalPartage');
+      }
+    } catch(e) {}
+  }
+
   loadCommandes();
 }
 
