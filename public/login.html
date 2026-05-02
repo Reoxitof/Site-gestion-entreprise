@@ -56,7 +56,13 @@
     try {
       const r = await fetch('/api/login', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({ username, password }) });
       const data = await r.json();
-      if (data.success) { setTimeout(() => { window.location.replace('/dashboard'); }, 200); }
+      if (data.success) {
+        if (data.must_reset_password) {
+          setTimeout(() => { window.location.replace('/reset-password'); }, 200);
+        } else {
+          setTimeout(() => { window.location.replace('/dashboard'); }, 200);
+        }
+      }
       else { err.textContent = data.error || 'Identifiants invalides.'; err.style.display = 'block'; }
     } catch(e) { err.textContent = 'Erreur réseau.'; err.style.display = 'block'; }
   }

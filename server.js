@@ -148,6 +148,7 @@ async function initDB() {
     await getPool().query(`ALTER TABLE ec_commandes ADD COLUMN IF NOT EXISTS budget_estime NUMERIC DEFAULT 0`);
     await getPool().query(`ALTER TABLE ec_commandes ADD COLUMN IF NOT EXISTS prix_final NUMERIC DEFAULT 0`);
     await getPool().query(`ALTER TABLE ec_commandes ADD COLUMN IF NOT EXISTS paiement_partage TEXT DEFAULT '[]'`);
+    await getPool().query(`ALTER TABLE ec_users ADD COLUMN IF NOT EXISTS must_reset_password BOOLEAN DEFAULT false`);
 
     // Table fiches de paye
     await getPool().query(`CREATE TABLE IF NOT EXISTS ec_fiches_paye (
@@ -258,7 +259,7 @@ app.post('/api/login', loginLimiter, async (req, res) => {
     const u = r.rows[0];
     if (!u || !(await bcrypt.compare(password, u.password_hash))) return res.status(401).json({ error: 'Identifiants invalides' });
     req.session.user = { id: u.id, username: u.username, nom: u.nom, prenom: u.prenom, poste: u.poste, role: u.role };
-    res.json({ success: true, user: req.session.user });
+    res.json({ success: true, user: req.session.user, must_reset_password: !!u.must_reset_password });
   } catch(e) { res.status(500).json({ error: e.message }); }
 });
 app.post('/api/logout', (req, res) => req.session.destroy(() => res.json({ success: true })));
@@ -266,6 +267,7 @@ app.get('/api/me', auth, (req, res) => res.json({ user: req.session.user }));
 app.get('/mes-tickets', auth, (req, res) => res.sendFile(path.join(__dirname, 'public', 'mes-tickets.html')));
 app.get('/fiches-paye', auth, (req, res) => res.sendFile(path.join(__dirname, 'public', 'fiches-paye.html')));
 app.get('/livre-comptes', admin, (req, res) => res.sendFile(path.join(__dirname, 'public', 'livre-comptes.html')));
+app.get('/reset-password', auth, (req, res) => res.sendFile(path.join(__dirname, 'public', 'reset-password.html')));
 
 /* Changer son propre mot de passe */
 app.put('/api/me/password', auth, async (req, res) => {
@@ -279,7 +281,10 @@ app.put('/api/me/password', auth, async (req, res) => {
       return res.status(401).json({ error: 'Mot de passe actuel incorrect' });
     }
     const hash = await bcrypt.hash(new_password, 12);
-    await getPool().query('UPDATE ec_users SET password_hash=$1 WHERE id=$2', [hash, req.session.user.id]);
+    await getPool().query(
+      'UPDATE ec_users SET password_hash=$1, must_reset_password=false WHERE id=$2',
+      [hash, req.session.user.id]
+    );
     res.json({ success: true });
   } catch(e) { res.status(500).json({ error: e.message }); }
 });
@@ -342,7 +347,10 @@ app.post('/api/employes/:id/reset-password', admin, async (req, res) => {
     const { new_password } = req.body;
     if (!new_password || new_password.length < 6) return res.status(400).json({ error: 'Mot de passe trop court (6 min)' });
     const hash = await bcrypt.hash(new_password, 12);
-    await getPool().query('UPDATE ec_users SET password_hash=$1 WHERE id=$2', [hash, req.params.id]);
+    await getPool().query(
+      'UPDATE ec_users SET password_hash=$1, must_reset_password=true WHERE id=$2',
+      [hash, req.params.id]
+    );
     res.json({ success: true });
   } catch(e) { res.status(500).json({ error: e.message }); }
 });
@@ -580,7 +588,6 @@ app.post('/api/commandes/:id/payer', admin, async (req, res) => {
     if (!cmd) return res.status(404).json({ error: 'Commande introuvable' });
 
     // Trouver les employés présents sur la date de l'événement
-    const PART_ENTREPRISE = 0.20; // 20% réservé pour l'entreprise
     let partage = [];
     if (cmd.date_evenement) {
       const dateStr = new Date(cmd.date_evenement).toISOString().split('T')[0];
@@ -592,37 +599,16 @@ app.post('/api/commandes/:id/payer', admin, async (req, res) => {
       );
       const presents = presRes.rows;
       const montantTotal = Number(prix_final);
-      const montantEntreprise = Math.round(montantTotal * PART_ENTREPRISE * 100) / 100;
-      const montantEmployes = Math.round((montantTotal - montantEntreprise) * 100) / 100;
-
-      // Part entreprise toujours incluse en premier
-      partage.push({
-        user_id: null,
-        nom: '🏢 Elite Corp',
-        poste: 'Caisse entreprise',
-        montant: montantEntreprise,
-        entreprise: true
-      });
 
       if (presents.length > 0) {
-        const montantParPersonne = Math.round((montantEmployes / presents.length) * 100) / 100;
-        partage = partage.concat(presents.map(p => ({
+        const montantParPersonne = Math.round((montantTotal / presents.length) * 100) / 100;
+        partage = presents.map(p => ({
           user_id: p.user_id,
           nom: p.prenom + ' ' + p.nom,
           poste: p.poste,
           montant: montantParPersonne
-        })));
+        }));
       }
-    } else {
-      // Pas de date — juste la part entreprise
-      const montantEntreprise = Math.round(Number(prix_final) * PART_ENTREPRISE * 100) / 100;
-      partage.push({
-        user_id: null,
-        nom: '🏢 Elite Corp',
-        poste: 'Caisse entreprise',
-        montant: montantEntreprise,
-        entreprise: true
-      });
     }
 
     await getPool().query(
@@ -632,7 +618,6 @@ app.post('/api/commandes/:id/payer', admin, async (req, res) => {
 
     // Auto-enregistrer la recette dans le livre de comptes
     try {
-      const montantEntreprise = Math.round(Number(prix_final) * 0.20 * 100) / 100;
       await getPool().query(
         `INSERT INTO ec_comptes (type, categorie, description, montant, date, reference, commande_id, created_by)
          VALUES ('recette', 'evenement', $1, $2, $3, $4, $5, $6)`,
@@ -641,19 +626,6 @@ app.post('/api/commandes/:id/payer', admin, async (req, res) => {
           Number(prix_final),
           cmd.date_evenement ? new Date(cmd.date_evenement).toISOString().split('T')[0] : new Date().toISOString().split('T')[0],
           `CMD#${cmd.id}`,
-          cmd.id,
-          req.session.user.id
-        ]
-      );
-      // Enregistrer aussi la part entreprise séparément
-      await getPool().query(
-        `INSERT INTO ec_comptes (type, categorie, description, montant, date, reference, commande_id, created_by)
-         VALUES ('recette', 'caisse_entreprise', $1, $2, $3, $4, $5, $6)`,
-        [
-          `Part entreprise (20%) — ${cmd.client_nom}`,
-          montantEntreprise,
-          cmd.date_evenement ? new Date(cmd.date_evenement).toISOString().split('T')[0] : new Date().toISOString().split('T')[0],
-          `CMD#${cmd.id}-ENT`,
           cmd.id,
           req.session.user.id
         ]
