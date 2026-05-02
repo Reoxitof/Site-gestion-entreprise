@@ -1816,10 +1816,10 @@ async function assignCommande(cmdId) {
 function renderStatutButtons(c) {
   const prixFinal = parseFloat(c.prix_final)||0;
   const estime = parseFloat(c.budget_estime)||0;
-  const dir = isAdmin(); // direction ou admin
+  const dir = isAdmin();
 
-  // Ordre des statuts (sens unique pour non-direction)
-  const statutOrder = ['nouveau', 'en_cours', 'confirme', 'paye', 'termine'];
+  // Nouvel ordre : nouveau → en_cours → paye → confirme → termine
+  const statutOrder = ['nouveau', 'en_cours', 'paye', 'confirme', 'termine'];
   const currentIdx = statutOrder.indexOf(c.statut);
 
   // Bloc édition infos (direction uniquement, statut nouveau)
@@ -1847,23 +1847,29 @@ function renderStatutButtons(c) {
       <button class="btn btn-gold" style="margin-top:10px;font-size:11px;padding:7px 16px;" onclick="saveInfosCommande(${c.id})"><i class="fa-solid fa-floppy-disk"></i> Sauvegarder</button>
     </div>` : '';
 
-  // Boutons d'avancement
+  // Bouton avancement (sens unique : nouveau→en_cours→paye→confirme→termine)
   let avanceBtn = '';
   if (c.statut === 'nouveau') {
     avanceBtn = `<button class="btn btn-outline" style="font-size:11px;padding:8px 16px;" onclick="ouvrirDevis(${c.id},${estime})"><i class="fa-solid fa-file-invoice-dollar"></i> ⚙️ Mettre en cours</button>`;
   } else if (c.statut === 'en_cours') {
-    avanceBtn = `<button class="btn btn-gold" style="font-size:11px;padding:8px 16px;" onclick="updateCmdStatut(${c.id},'confirme')"><i class="fa-solid fa-check"></i> ✅ Confirmer le devis</button>`;
-  } else if (c.statut === 'confirme') {
     avanceBtn = `<button class="btn" style="font-size:11px;padding:8px 16px;background:rgba(167,139,250,0.15);border:1px solid rgba(167,139,250,0.4);color:#a78bfa;" onclick="ouvrirPaiement(${c.id},${prixFinal||estime})"><i class="fa-solid fa-money-bill-wave"></i> 💰 Marquer payé</button>`;
   } else if (c.statut === 'paye') {
+    avanceBtn = `<button class="btn btn-gold" style="font-size:11px;padding:8px 16px;" onclick="updateCmdStatut(${c.id},'confirme')"><i class="fa-solid fa-check"></i> ✅ Confirmer</button>`;
+  } else if (c.statut === 'confirme') {
     avanceBtn = `<button class="btn btn-green" style="font-size:11px;padding:8px 16px;" onclick="updateCmdStatut(${c.id},'termine')"><i class="fa-solid fa-flag-checkered"></i> 🏁 Terminer</button>`;
   }
 
-  // Bouton retour arrière — direction uniquement
-  const retourBtn = (dir && c.statut !== 'nouveau') ? `
-    <button class="btn btn-outline" style="font-size:11px;padding:8px 16px;opacity:0.6;" onclick="updateCmdStatut(${c.id},'nouveau')">↩ Remettre en nouveau</button>` : '';
+  // Boutons retour arrière — direction uniquement, vers chaque statut précédent
+  let retourBtns = '';
+  if (dir && currentIdx > 0) {
+    const retourOptions = statutOrder.slice(0, currentIdx);
+    const labels = { nouveau:'📥 Nouveau', en_cours:'⚙️ En cours', paye:'💰 Payé', confirme:'✅ Confirmé', termine:'🏁 Terminé' };
+    retourBtns = retourOptions.reverse().map(s =>
+      `<button class="btn btn-outline" style="font-size:11px;padding:7px 14px;opacity:0.7;" onclick="updateCmdStatut(${c.id},'${s}')">↩ ${labels[s]}</button>`
+    ).join('');
+  }
 
-  // Message pour non-direction sur statuts avancés
+  // Message cadenas pour non-direction sur statuts avancés
   const lockMsg = (!dir && currentIdx >= 2) ? `
     <div style="font-size:11px;color:var(--white-dim);padding:8px 12px;background:rgba(255,255,255,0.04);border-radius:8px;border:1px solid var(--border);">
       <i class="fa-solid fa-lock" style="color:var(--gold);margin-right:6px;"></i>Retour en arrière réservé à la direction.
@@ -1874,7 +1880,7 @@ function renderStatutButtons(c) {
     ${editBlock}
     <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;">
       ${avanceBtn}
-      ${retourBtn}
+      ${retourBtns}
       ${lockMsg}
     </div>
   </div>`;
