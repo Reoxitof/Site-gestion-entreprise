@@ -908,6 +908,7 @@ function showTab(name) {
   if (name === 'planning') loadCalendar();
   if (name === 'employes') loadEmployes();
   if (name === 'annonces') loadAnnonces();
+  if (name === 'commandes') { loadCommandes(); if (currentUser?.role === 'admin' && !window._allEmployes) fetch('/api/employes').then(r=>r.json()).then(emp=>{window._allEmployes=emp;}).catch(()=>{}); }
 }
 
 /* ── TOAST ── */
