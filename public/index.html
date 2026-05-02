@@ -1299,22 +1299,70 @@ async function loadEmployes() {
     const data = await fetch('/api/employes').then(r => r.json());
     const tbody = document.getElementById('employesTable');
     if (!data.length) { tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;color:var(--white-dim);">Aucun employé.</td></tr>'; return; }
-    tbody.innerHTML = data.map(e => `
-      <tr>
-        <td style="font-weight:800;color:var(--white);">${e.prenom} ${e.nom}</td>
-        <td style="font-family:monospace;font-size:11px;color:var(--white-dim);">${e.username}</td>
-        <td>${e.poste}</td>
-        <td><span class="badge ${e.role === 'admin' ? 'badge-gold' : 'badge-dim'}">${e.role === 'admin' ? 'Admin' : 'Employé'}</span></td>
-        <td><span class="badge ${e.actif ? 'badge-green' : 'badge-red'}">${e.actif ? 'Actif' : 'Inactif'}</span></td>
-        <td style="display:flex;gap:6px;align-items:center;">
-          ${e.actif ? `<button class="btn btn-danger" style="padding:5px 10px;font-size:10px;" onclick="desactiverEmploye(${e.id})"><i class="fa-solid fa-user-slash"></i> Désactiver</button>` : ''}
+    tbody.innerHTML = data.map(e => {
+      const roleBadge = e.role === 'admin' ? 'badge-gold' : (e.role === 'direction' ? 'badge-blue' : 'badge-dim');
+      const roleLabel = e.role === 'admin' ? 'Admin' : (e.role === 'direction' ? 'Direction' : 'Employé');
+      // Identifiant visible uniquement pour admin/direction
+      const identifiantCell = isAdmin()
+        ? `<td style="font-family:monospace;font-size:11px;color:var(--white-dim);">${e.username}</td>`
+        : `<td style="font-size:11px;color:var(--white-dim);">••••••</td>`;
+      // Poste éditable inline
+      const posteCell = isAdmin()
+        ? `<td>
+            <div style="display:flex;align-items:center;gap:6px;">
+              <span id="posteLabel_${e.id}">${e.poste}</span>
+              <button onclick="editPoste(${e.id},'${e.poste.replace(/'/g,"\\'")}','${e.nom}')" style="background:none;border:none;color:var(--gold);cursor:pointer;font-size:11px;" title="Modifier le poste"><i class="fa-solid fa-pen"></i></button>
+            </div>
+          </td>`
+        : `<td>${e.poste}</td>`;
+      // Actions : reset password + supprimer (admin only)
+      const actions = isAdmin() ? `
+        <td style="display:flex;gap:6px;align-items:center;flex-wrap:wrap;">
+          <button class="btn btn-outline" style="padding:5px 10px;font-size:10px;border-color:rgba(76,138,240,0.4);color:#4c8af0;" onclick="resetPassword(${e.id},'${e.prenom} ${e.nom}')"><i class="fa-solid fa-key"></i> Reset MDP</button>
           <button class="btn btn-danger" style="padding:5px 10px;font-size:10px;background:rgba(139,0,0,0.25);border-color:rgba(139,0,0,0.5);" onclick="supprimerEmploye(${e.id},'${e.prenom} ${e.nom}')"><i class="fa-solid fa-trash"></i> Supprimer</button>
-        </td>
-      </tr>`).join('');
+        </td>` : `<td style="color:var(--white-dim);font-size:11px;">—</td>`;
+      return `<tr>
+        <td style="font-weight:800;color:var(--white);">${e.prenom} ${e.nom}</td>
+        ${identifiantCell}
+        ${posteCell}
+        <td><span class="badge ${roleBadge}">${roleLabel}</span></td>
+        <td><span class="badge ${e.actif ? 'badge-green' : 'badge-red'}">${e.actif ? 'Actif' : 'Inactif'}</span></td>
+        ${actions}
+      </tr>`;
+    }).join('');
   } catch(e) { console.error(e); }
 }
 
-async function saveEmploye() {
+async function editPoste(id, currentPoste, nom) {
+  const newPoste = prompt(`Nouveau poste pour ${nom} :`, currentPoste);
+  if (!newPoste || newPoste.trim() === currentPoste) return;
+  try {
+    const r = await fetch('/api/employes/' + id, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ poste: newPoste.trim() })
+    });
+    const d = await r.json();
+    if (d.success) { showToast('✅ Poste mis à jour'); loadEmployes(); }
+    else showToast('❌ ' + (d.error || 'Erreur'), false);
+  } catch(e) { showToast('❌ Erreur réseau', false); }
+}
+
+async function resetPassword(id, nom) {
+  const newPass = prompt(`Nouveau mot de passe pour ${nom} :\n(minimum 6 caractères)`);
+  if (!newPass) return;
+  if (newPass.length < 6) { showToast('❌ Mot de passe trop court (6 min)', false); return; }
+  try {
+    const r = await fetch('/api/employes/' + id + '/reset-password', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ new_password: newPass })
+    });
+    const d = await r.json();
+    if (d.success) showToast('✅ Mot de passe réinitialisé');
+    else showToast('❌ ' + (d.error || 'Erreur'), false);
+  } catch(e) { showToast('❌ Erreur réseau', false); }
+}
   const prenom = document.getElementById('empPrenom').value.trim();
   const nom = document.getElementById('empNom').value.trim();
   const username = document.getElementById('empUsername').value.trim();
@@ -1328,13 +1376,6 @@ async function saveEmploye() {
     if (data.id) { showToast('✅ Employé créé'); closeModal('modalEmploye'); loadEmployes(); }
     else showToast('❌ ' + (data.error || 'Erreur'), false);
   } catch(e) { showToast('❌ Erreur réseau', false); }
-}
-
-async function desactiverEmploye(id) {
-  if (!confirm('Désactiver cet employé ?')) return;
-  await fetch('/api/employes/' + id, { method: 'PUT', headers: {'Content-Type':'application/json'}, body: JSON.stringify({ actif: false }) });
-  showToast('✅ Employé désactivé');
-  loadEmployes();
 }
 
 async function supprimerEmploye(id, nom) {

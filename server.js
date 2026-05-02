@@ -336,6 +336,17 @@ app.delete('/api/employes/:id', admin, async (req, res) => {
   } catch(e) { res.status(500).json({ error: e.message }); }
 });
 
+// Reset mot de passe d'un employé (direction uniquement)
+app.post('/api/employes/:id/reset-password', admin, async (req, res) => {
+  try {
+    const { new_password } = req.body;
+    if (!new_password || new_password.length < 6) return res.status(400).json({ error: 'Mot de passe trop court (6 min)' });
+    const hash = await bcrypt.hash(new_password, 12);
+    await getPool().query('UPDATE ec_users SET password_hash=$1 WHERE id=$2', [hash, req.params.id]);
+    res.json({ success: true });
+  } catch(e) { res.status(500).json({ error: e.message }); }
+});
+
 /* ═══ PRESENCES ═══ */
 app.get('/api/presences', auth, async (req, res) => {
   try {
