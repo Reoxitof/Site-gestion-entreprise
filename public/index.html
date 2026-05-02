@@ -384,6 +384,10 @@
             <option value="aventure">🏔️ Elite Aventure</option>
             <option value="lillys">💃 Lilly's Girls</option>
           </select>
+          <div style="position:relative;">
+            <i class="fa-solid fa-magnifying-glass" style="position:absolute;left:10px;top:50%;transform:translateY(-50%);color:var(--white-dim);font-size:12px;pointer-events:none;"></i>
+            <input class="input-field" id="cmdSearch" placeholder="Rechercher client, prestation..." style="width:220px;padding-left:30px;" oninput="loadCommandes()" autocomplete="off">
+          </div>
           <button class="btn btn-gold" onclick="openModal('modalCommande')"><i class="fa-solid fa-plus"></i> Nouvelle commande</button>
           <button class="btn btn-outline admin-only" onclick="openTarifs()" style="border-color:rgba(201,168,76,0.4);color:var(--gold);"><i class="fa-solid fa-tags"></i> Tarifs</button>
         </div>
@@ -1609,9 +1613,12 @@ async function saveTarifs() {
 async function loadCommandes() {
   if (!allTarifs.length) await loadTarifs();
   const division = document.getElementById('cmdFilterDiv')?.value || '';
+  const search = document.getElementById('cmdSearch')?.value?.trim() || '';
   try {
-    let url = '/api/commandes';
-    if (division) url += '?division=' + division;
+    const params = new URLSearchParams();
+    if (division) params.set('division', division);
+    if (search) params.set('search', search);
+    const url = '/api/commandes' + (params.toString() ? '?' + params.toString() : '');
     const data = await fetch(url).then(r => r.json());
     const stats = { nouveau:0, en_cours:0, confirme:0, paye:0, termine:0 };
     data.forEach(c => { if (stats[c.statut] !== undefined) stats[c.statut]++; });

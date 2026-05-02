@@ -4,23 +4,44 @@ const path = require('path');
 const session = require('express-session');
 const bcrypt = require('bcryptjs');
 const { Pool } = require('pg');
+const rateLimit = require('express-rate-limit');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
 
+/* ═══ HEALTH CHECK (avant tout middleware) ═══ */
+app.get('/health', (req, res) => res.status(200).json({ status: 'ok', time: new Date().toISOString() }));
+
+/* ═══ RATE LIMITING ═══ */
+const loginLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 10, // max 10 tentatives par IP
+  message: { error: 'Trop de tentatives. Réessaie dans 15 minutes.' },
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+const apiLimiter = rateLimit({
+  windowMs: 60 * 1000, // 1 minute
+  max: 200, // max 200 requêtes/min par IP
+  message: { error: 'Trop de requêtes.' },
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+
 /* ═══ MIDDLEWARE ═══ */
-app.use(express.json());
+app.use(express.json({ limit: '2mb' }));
 app.use(express.urlencoded({ extended: true }));
+app.use('/api/', apiLimiter);
 app.use(express.static(path.join(__dirname, 'public')));
 app.use(session({
   secret: process.env.SESSION_SECRET || 'elitecorp2026',
   resave: false,
   saveUninitialized: false,
-  cookie: { 
+  cookie: {
     maxAge: 604800000,
     httpOnly: true,
     sameSite: 'lax',
-    secure: false
+    secure: process.env.NODE_ENV === 'production'
   }
 }));
 
@@ -38,7 +59,8 @@ function getPool() {
       password: String(process.env.PG_PASSWORD || process.env.POSTGRES_PASSWORD || ''),
       ssl: false,
       connectionTimeoutMillis: 10000,
-      max: 5
+      max: 15,
+      idleTimeoutMillis: 30000
     });
     console.log('[DB] Pool cree, host:', process.env.PG_HOST || process.env.POSTGRES_HOST || 'postgres-ghzw.internal');
   }
@@ -197,7 +219,7 @@ const isAdminOrDirection = (user) => user?.role === 'admin' || user?.role === 'd
 const admin = (req, res, next) => isAdminOrDirection(req.session?.user) ? next() : res.status(403).json({ error: 'Acces refuse' });
 
 /* ═══ ROUTES AUTH ═══ */
-app.post('/api/login', async (req, res) => {
+app.post('/api/login', loginLimiter, async (req, res) => {
   try {
     const { username, password } = req.body;
     if (!username || !password) return res.status(400).json({ error: 'Champs manquants' });
@@ -363,7 +385,7 @@ app.get('/api/commandes/mes-tickets', auth, async (req, res) => {
 
 app.get('/api/commandes', auth, async (req, res) => {
   try {
-    const { statut, division } = req.query;
+    const { statut, division, search } = req.query;
     let q = `SELECT c.*, u.nom as assigned_nom, u.prenom as assigned_prenom,
              cr.nom as createur_nom FROM ec_commandes c
              LEFT JOIN ec_users u ON c.assigned_to = u.id
@@ -372,7 +394,8 @@ app.get('/api/commandes', auth, async (req, res) => {
     const params = [];
     if (statut) { params.push(statut); q += ` AND c.statut=$${params.length}`; }
     if (division) { params.push(division); q += ` AND c.division=$${params.length}`; }
-    q += ' ORDER BY c.created_at DESC';
+    if (search) { params.push(`%${search.toLowerCase()}%`); q += ` AND (LOWER(c.client_nom) LIKE $${params.length} OR LOWER(c.type_prestation) LIKE $${params.length} OR LOWER(c.lieu) LIKE $${params.length})`; }
+    q += ' ORDER BY c.created_at DESC LIMIT 200';
     res.json((await getPool().query(q, params)).rows);
   } catch(e) { res.status(500).json({ error: e.message }); }
 });

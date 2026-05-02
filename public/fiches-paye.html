@@ -240,6 +240,8 @@ function renderFiches(fiches, mondayStr) {
     const payBtn = (isDir && f.statut === 'en_attente') ?
       `<button class="btn btn-green" style="font-size:11px;padding:7px 14px;" onclick="ouvrirPaiement(${f.id},'${f.prenom} ${f.nom}',${f.montant_total})"><i class="fa-solid fa-money-bill-wave"></i> Payer</button>` : '';
 
+    const exportBtn = `<button class="btn btn-outline" style="font-size:11px;padding:7px 14px;" onclick="exportFiche(${f.id})"><i class="fa-solid fa-file-pdf"></i> PDF</button>`;
+
     const payeInfo = f.statut === 'paye' ?
       `<div style="font-size:10px;color:var(--green);margin-top:4px;"><i class="fa-solid fa-check-circle"></i> Payé${f.paye_le?' le '+new Date(f.paye_le).toLocaleDateString('fr-FR',{day:'numeric',month:'short',year:'numeric'}):''}</div>` : '';
 
@@ -256,7 +258,7 @@ function renderFiches(fiches, mondayStr) {
         <div style="text-align:right;">
           <div class="fiche-montant">${Number(f.montant_total).toLocaleString('fr-FR')} $</div>
           <span class="badge ${f.statut==='paye'?'badge-paid':'badge-wait'}">${f.statut==='paye'?'✅ Payé':'⏳ En attente'}</span>
-          <div style="margin-top:8px;">${payBtn}</div>
+          <div style="margin-top:8px;display:flex;gap:6px;">${payBtn}${exportBtn}</div>
         </div>
       </div>
       ${evtsHtml}
@@ -331,6 +333,57 @@ function showToast(msg, ok = true) {
 async function logout() {
   await fetch('/api/logout', { method: 'POST' });
   window.location.href = '/login';
+}
+
+function exportFiche(id) {
+  const f = allFiches.find(x => x.id === id);
+  if (!f) return;
+  let evts = [];
+  try { evts = JSON.parse(f.details || '[]'); } catch(e) {}
+  const semDebut = new Date(f.semaine_debut).toLocaleDateString('fr-FR', {day:'numeric',month:'long',year:'numeric'});
+  const semFin = new Date(f.semaine_fin).toLocaleDateString('fr-FR', {day:'numeric',month:'long',year:'numeric'});
+  const evtsRows = evts.map(e => `
+    <tr>
+      <td>${e.client_nom}</td>
+      <td>${e.type_prestation}</td>
+      <td>${e.lieu||'—'}</td>
+      <td>${e.date_evenement ? new Date(e.date_evenement).toLocaleDateString('fr-FR') : '—'}</td>
+      <td style="text-align:right;font-weight:bold;">+${Number(e.montant).toLocaleString('fr-FR')} $</td>
+    </tr>`).join('');
+  const html = `<!DOCTYPE html><html lang="fr"><head><meta charset="UTF-8">
+    <title>Fiche de paye — ${f.prenom} ${f.nom}</title>
+    <style>
+      body{font-family:Arial,sans-serif;max-width:700px;margin:40px auto;color:#111;font-size:13px;}
+      h1{font-size:22px;margin-bottom:4px;}
+      .header{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:30px;border-bottom:2px solid #c9a84c;padding-bottom:16px;}
+      .logo{font-size:24px;font-weight:900;letter-spacing:3px;color:#c9a84c;}
+      .badge{display:inline-block;padding:4px 12px;border-radius:999px;font-size:11px;font-weight:bold;background:${f.statut==='paye'?'#d4edda':'#fff3cd'};color:${f.statut==='paye'?'#155724':'#856404'};border:1px solid ${f.statut==='paye'?'#c3e6cb':'#ffc107'};}
+      table{width:100%;border-collapse:collapse;margin-top:20px;}
+      th{background:#f5f5f5;padding:8px 12px;text-align:left;font-size:11px;text-transform:uppercase;letter-spacing:1px;border-bottom:2px solid #ddd;}
+      td{padding:8px 12px;border-bottom:1px solid #eee;}
+      .total{font-size:20px;font-weight:900;color:#c9a84c;text-align:right;margin-top:20px;padding-top:12px;border-top:2px solid #c9a84c;}
+      .footer{margin-top:40px;font-size:11px;color:#888;text-align:center;}
+      @media print{body{margin:20px;}}
+    </style></head><body>
+    <div class="header">
+      <div><div class="logo">ELITE CORP.</div><div style="font-size:11px;color:#888;margin-top:4px;">Panel de Gestion</div></div>
+      <div style="text-align:right;">
+        <div style="font-size:11px;color:#888;">Fiche de paye</div>
+        <div style="font-weight:bold;">${semDebut} → ${semFin}</div>
+        <div style="margin-top:6px;"><span class="badge">${f.statut==='paye'?'✅ Payé':'⏳ En attente'}</span></div>
+      </div>
+    </div>
+    <h1>${f.prenom} ${f.nom}</h1>
+    <div style="color:#666;margin-bottom:20px;">${f.poste}</div>
+    ${evts.length ? `<table><thead><tr><th>Client</th><th>Prestation</th><th>Lieu</th><th>Date</th><th style="text-align:right;">Montant</th></tr></thead><tbody>${evtsRows}</tbody></table>` : '<p style="color:#888;font-style:italic;">Aucun événement cette semaine.</p>'}
+    <div class="total">TOTAL : ${Number(f.montant_total).toLocaleString('fr-FR')} $</div>
+    ${f.statut==='paye'&&f.paye_le?`<div style="margin-top:12px;font-size:12px;color:#666;">Payé le ${new Date(f.paye_le).toLocaleDateString('fr-FR',{day:'numeric',month:'long',year:'numeric'})}</div>`:''}
+    <div class="footer">Elite Corp. — Document généré le ${new Date().toLocaleDateString('fr-FR',{day:'numeric',month:'long',year:'numeric'})}</div>
+    <script>window.onload=()=>{window.print();}<\/script>
+  </body></html>`;
+  const w = window.open('', '_blank');
+  w.document.write(html);
+  w.document.close();
 }
 
 document.getElementById('modalPayer').addEventListener('click', function(e) {
