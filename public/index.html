@@ -305,21 +305,69 @@
 
 <!-- Modal Planning -->
 <div class="modal-overlay" id="modalPlanning">
-  <div class="modal">
+  <div class="modal" style="max-width:580px;">
     <button class="modal-close" onclick="closeModal('modalPlanning')"><i class="fa-solid fa-xmark"></i></button>
     <div class="modal-title">NOUVEL ÉVÉNEMENT</div>
-    <div class="form-group"><label>Titre</label><input class="input-field" id="planTitre" placeholder="Soirée VIP Galaxy"/></div>
-    <div class="form-group"><label>Description</label><textarea class="input-field" id="planDesc" placeholder="Détails de l'événement..."></textarea></div>
-    <div class="grid-2">
-      <div class="form-group"><label>Début</label><input class="input-field" id="planDebut" type="datetime-local"/></div>
-      <div class="form-group"><label>Fin</label><input class="input-field" id="planFin" type="datetime-local"/></div>
+    <div class="form-group"><label>Titre</label><input class="input-field" id="planTitre" placeholder="Ex: Soirée VIP Galaxy"/></div>
+    <div class="form-group"><label>Description</label><textarea class="input-field" id="planDesc" placeholder="Détails de l'événement..." style="min-height:60px;"></textarea></div>
+
+    <!-- Sélecteur date/heure custom -->
+    <div class="grid-2" style="margin-bottom:14px;">
+      <div class="form-group">
+        <label>Début</label>
+        <div style="position:relative;">
+          <input class="input-field" id="planDebutDisplay" placeholder="JJ/MM/AAAA HH:MM" readonly style="cursor:pointer;" onclick="openDatePicker('debut')"/>
+          <i class="fa-solid fa-calendar" style="position:absolute;right:12px;top:50%;transform:translateY(-50%);color:var(--gold);pointer-events:none;"></i>
+        </div>
+        <input type="hidden" id="planDebut"/>
+      </div>
+      <div class="form-group">
+        <label>Fin</label>
+        <div style="position:relative;">
+          <input class="input-field" id="planFinDisplay" placeholder="JJ/MM/AAAA HH:MM" readonly style="cursor:pointer;" onclick="openDatePicker('fin')"/>
+          <i class="fa-solid fa-calendar" style="position:absolute;right:12px;top:50%;transform:translateY(-50%);color:var(--gold);pointer-events:none;"></i>
+        </div>
+        <input type="hidden" id="planFin"/>
+      </div>
     </div>
+
+    <!-- Picker inline -->
+    <div id="datePickerWrap" style="display:none;background:var(--bg);border:1px solid var(--border);border-radius:14px;padding:16px;margin-bottom:14px;">
+      <div style="font-size:10px;font-weight:800;letter-spacing:2px;text-transform:uppercase;color:var(--gold);margin-bottom:12px;" id="pickerLabel">SÉLECTIONNER LA DATE</div>
+      <!-- Navigation mois -->
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;">
+        <button type="button" class="btn btn-outline" style="padding:5px 10px;" onclick="pickerPrevMonth()"><i class="fa-solid fa-chevron-left"></i></button>
+        <span style="font-family:'Anton',sans-serif;font-size:15px;letter-spacing:2px;color:var(--gold);" id="pickerMonthLabel"></span>
+        <button type="button" class="btn btn-outline" style="padding:5px 10px;" onclick="pickerNextMonth()"><i class="fa-solid fa-chevron-right"></i></button>
+      </div>
+      <!-- Jours -->
+      <div style="display:grid;grid-template-columns:repeat(7,1fr);gap:2px;margin-bottom:8px;" id="pickerDayNames"></div>
+      <div style="display:grid;grid-template-columns:repeat(7,1fr);gap:2px;" id="pickerGrid"></div>
+      <!-- Heure -->
+      <div style="display:flex;align-items:center;gap:12px;margin-top:14px;padding-top:12px;border-top:1px solid var(--border);">
+        <i class="fa-solid fa-clock" style="color:var(--gold);"></i>
+        <span style="font-size:11px;font-weight:700;color:var(--white-dim);">HEURE :</span>
+        <input type="number" id="pickerHour" min="0" max="23" value="20" class="input-field" style="width:70px;text-align:center;"/>
+        <span style="color:var(--gold);font-weight:800;">:</span>
+        <input type="number" id="pickerMin" min="0" max="59" value="0" step="5" class="input-field" style="width:70px;text-align:center;"/>
+      </div>
+      <!-- Validation -->
+      <div style="display:flex;gap:8px;margin-top:12px;">
+        <button type="button" class="btn btn-gold" style="flex:1;" onclick="confirmDatePicker()"><i class="fa-solid fa-check"></i> Valider</button>
+        <button type="button" class="btn btn-outline" onclick="closeDatePicker()">Annuler</button>
+      </div>
+    </div>
+
     <div class="form-group"><label>Type</label>
       <select class="input-field" id="planType">
-        <option value="evenement">Événement</option>
-        <option value="service">Service</option>
-        <option value="reunion">Réunion</option>
-        <option value="formation">Formation</option>
+        <option value="service">🛡️ Service de sécurité</option>
+        <option value="soiree">🎉 Soirée / Événement</option>
+        <option value="patrouille">🚔 Patrouille</option>
+        <option value="reunion">📋 Réunion d'équipe</option>
+        <option value="formation">🎓 Formation</option>
+        <option value="mission">⚡ Mission spéciale</option>
+        <option value="garde">🔒 Garde / Surveillance</option>
+        <option value="autre">📌 Autre</option>
       </select>
     </div>
     <div class="btn-row">
@@ -634,6 +682,85 @@ async function setDispo(planId, statut) {
 
 function calPrev() { calMonth--; if (calMonth < 0) { calMonth = 11; calYear--; } loadCalendar(); }
 function calNext() { calMonth++; if (calMonth > 11) { calMonth = 0; calYear++; } loadCalendar(); }
+
+/* ── DATE PICKER CUSTOM ── */
+let pickerTarget = null; // 'debut' ou 'fin'
+let pickerYear = new Date().getFullYear();
+let pickerMonth = new Date().getMonth();
+let pickerSelectedDay = null;
+const MOIS_PICKER = ['Janvier','Février','Mars','Avril','Mai','Juin','Juillet','Août','Septembre','Octobre','Novembre','Décembre'];
+
+function openDatePicker(target) {
+  pickerTarget = target;
+  pickerYear = new Date().getFullYear();
+  pickerMonth = new Date().getMonth();
+  pickerSelectedDay = null;
+  document.getElementById('pickerLabel').textContent = target === 'debut' ? 'SÉLECTIONNER LA DATE DE DÉBUT' : 'SÉLECTIONNER LA DATE DE FIN';
+  document.getElementById('pickerHour').value = target === 'debut' ? 20 : 23;
+  document.getElementById('pickerMin').value = 0;
+  document.getElementById('datePickerWrap').style.display = 'block';
+  renderPickerCalendar();
+}
+
+function closeDatePicker() {
+  document.getElementById('datePickerWrap').style.display = 'none';
+  pickerTarget = null;
+}
+
+function pickerPrevMonth() { pickerMonth--; if (pickerMonth < 0) { pickerMonth = 11; pickerYear--; } renderPickerCalendar(); }
+function pickerNextMonth() { pickerMonth++; if (pickerMonth > 11) { pickerMonth = 0; pickerYear++; } renderPickerCalendar(); }
+
+function renderPickerCalendar() {
+  document.getElementById('pickerMonthLabel').textContent = MOIS_PICKER[pickerMonth] + ' ' + pickerYear;
+  const namesEl = document.getElementById('pickerDayNames');
+  namesEl.innerHTML = ['Lu','Ma','Me','Je','Ve','Sa','Di'].map(d =>
+    `<div style="text-align:center;font-size:9px;font-weight:800;color:var(--white-dim);padding:4px 0;">${d}</div>`
+  ).join('');
+
+  const grid = document.getElementById('pickerGrid');
+  const firstDay = new Date(pickerYear, pickerMonth, 1);
+  let startDow = firstDay.getDay(); startDow = startDow === 0 ? 6 : startDow - 1;
+  const daysInMonth = new Date(pickerYear, pickerMonth + 1, 0).getDate();
+  const today = new Date();
+  let html = '';
+  for (let i = 0; i < startDow; i++) html += '<div></div>';
+  for (let d = 1; d <= daysInMonth; d++) {
+    const isToday = d === today.getDate() && pickerMonth === today.getMonth() && pickerYear === today.getFullYear();
+    const isSelected = d === pickerSelectedDay;
+    html += `<div onclick="pickerSelectDay(${d})" style="
+      text-align:center;padding:7px 2px;border-radius:8px;cursor:pointer;font-size:12px;font-weight:700;
+      background:${isSelected ? 'var(--gold)' : isToday ? 'rgba(201,168,76,0.15)' : 'transparent'};
+      color:${isSelected ? '#000' : isToday ? 'var(--gold)' : 'var(--white)'};
+      border:1px solid ${isSelected ? 'var(--gold)' : isToday ? 'rgba(201,168,76,0.4)' : 'transparent'};
+      transition:all 0.15s;
+    " onmouseover="this.style.background='${isSelected ? 'var(--gold)' : 'rgba(201,168,76,0.1)'}'" onmouseout="this.style.background='${isSelected ? 'var(--gold)' : isToday ? 'rgba(201,168,76,0.15)' : 'transparent'}'">${d}</div>`;
+  }
+  grid.innerHTML = html;
+}
+
+function pickerSelectDay(d) {
+  pickerSelectedDay = d;
+  renderPickerCalendar();
+}
+
+function confirmDatePicker() {
+  if (!pickerSelectedDay) { showToast('❌ Sélectionne un jour', false); return; }
+  const h = String(document.getElementById('pickerHour').value || 0).padStart(2,'0');
+  const m = String(document.getElementById('pickerMin').value || 0).padStart(2,'0');
+  const mo = String(pickerMonth + 1).padStart(2,'0');
+  const d = String(pickerSelectedDay).padStart(2,'0');
+  const isoVal = `${pickerYear}-${mo}-${d}T${h}:${m}`;
+  const displayVal = `${d}/${mo}/${pickerYear} ${h}:${m}`;
+  if (pickerTarget === 'debut') {
+    document.getElementById('planDebut').value = isoVal;
+    document.getElementById('planDebutDisplay').value = displayVal;
+  } else {
+    document.getElementById('planFin').value = isoVal;
+    document.getElementById('planFinDisplay').value = displayVal;
+  }
+  closeDatePicker();
+  showToast('✅ Date sélectionnée');
+}
 
 async function savePlanning() {
   const titre = document.getElementById('planTitre').value.trim();
