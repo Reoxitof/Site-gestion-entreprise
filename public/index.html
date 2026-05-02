@@ -627,10 +627,31 @@
     <div class="grid-2">
       <div class="form-group"><label>Date souhaitée</label>
         <div style="position:relative;">
-          <input class="input-field" id="cmdDateDisplay" placeholder="JJ/MM/AAAA HH:MM" readonly style="cursor:pointer;" onclick="openDatePicker('cmdDate')"/>
+          <input class="input-field" id="cmdDateDisplay" placeholder="JJ/MM/AAAA HH:MM" readonly style="cursor:pointer;" onclick="cmdTogglePicker()"/>
           <i class="fa-solid fa-calendar" style="position:absolute;right:12px;top:50%;transform:translateY(-50%);color:var(--gold);pointer-events:none;"></i>
         </div>
         <input type="hidden" id="cmdDate"/>
+        <!-- Mini picker intégré -->
+        <div id="cmdPickerWrap" style="display:none;background:var(--bg);border:1px solid var(--border);border-radius:12px;padding:14px;margin-top:6px;">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;">
+            <button type="button" class="btn btn-outline" style="padding:4px 10px;" onclick="cmdPickerPrev()"><i class="fa-solid fa-chevron-left"></i></button>
+            <span style="font-family:'Anton',sans-serif;font-size:14px;letter-spacing:2px;color:var(--gold);" id="cmdPickerMonthLabel"></span>
+            <button type="button" class="btn btn-outline" style="padding:4px 10px;" onclick="cmdPickerNext()"><i class="fa-solid fa-chevron-right"></i></button>
+          </div>
+          <div style="display:grid;grid-template-columns:repeat(7,1fr);gap:2px;margin-bottom:4px;" id="cmdPickerDayNames"></div>
+          <div style="display:grid;grid-template-columns:repeat(7,1fr);gap:2px;" id="cmdPickerGrid"></div>
+          <div style="display:flex;align-items:center;gap:10px;margin-top:12px;padding-top:10px;border-top:1px solid var(--border);">
+            <i class="fa-solid fa-clock" style="color:var(--gold);"></i>
+            <span style="font-size:11px;font-weight:700;color:var(--white-dim);">HEURE :</span>
+            <input type="number" id="cmdPickerH" min="0" max="23" value="20" class="input-field" style="width:64px;text-align:center;padding:6px;"/>
+            <span style="color:var(--gold);font-weight:800;">:</span>
+            <input type="number" id="cmdPickerM" min="0" max="59" value="0" step="5" class="input-field" style="width:64px;text-align:center;padding:6px;"/>
+          </div>
+          <div style="display:flex;gap:8px;margin-top:10px;">
+            <button type="button" class="btn btn-gold" style="flex:1;" onclick="cmdPickerConfirm()"><i class="fa-solid fa-check"></i> Valider</button>
+            <button type="button" class="btn btn-outline" onclick="cmdPickerClear()"><i class="fa-solid fa-xmark"></i></button>
+          </div>
+        </div>
       </div>
       <div class="form-group"><label>Lieu</label><input class="input-field" id="cmdLieu" placeholder="Ex: Galaxy, Blaine County..."/></div>
     </div>
@@ -1279,6 +1300,74 @@ init();
 ══════════════════════════════════════════ */
 let allTarifs = [];
 let selectedPrestations = [];
+
+/* ── MINI DATE PICKER COMMANDE ── */
+let cmdPickerYear = new Date().getFullYear();
+let cmdPickerMonth = new Date().getMonth();
+let cmdPickerDay = null;
+const CMD_MOIS = ['Janvier','Février','Mars','Avril','Mai','Juin','Juillet','Août','Septembre','Octobre','Novembre','Décembre'];
+
+function cmdTogglePicker() {
+  const wrap = document.getElementById('cmdPickerWrap');
+  if (wrap.style.display === 'none') {
+    cmdPickerYear = new Date().getFullYear();
+    cmdPickerMonth = new Date().getMonth();
+    cmdPickerDay = null;
+    cmdRenderPicker();
+    wrap.style.display = 'block';
+  } else {
+    wrap.style.display = 'none';
+  }
+}
+
+function cmdPickerPrev() { cmdPickerMonth--; if (cmdPickerMonth < 0) { cmdPickerMonth = 11; cmdPickerYear--; } cmdRenderPicker(); }
+function cmdPickerNext() { cmdPickerMonth++; if (cmdPickerMonth > 11) { cmdPickerMonth = 0; cmdPickerYear++; } cmdRenderPicker(); }
+
+function cmdRenderPicker() {
+  document.getElementById('cmdPickerMonthLabel').textContent = CMD_MOIS[cmdPickerMonth] + ' ' + cmdPickerYear;
+  const namesEl = document.getElementById('cmdPickerDayNames');
+  namesEl.innerHTML = ['Lu','Ma','Me','Je','Ve','Sa','Di'].map(d =>
+    `<div style="text-align:center;font-size:9px;font-weight:800;color:var(--white-dim);padding:3px 0;">${d}</div>`
+  ).join('');
+  const grid = document.getElementById('cmdPickerGrid');
+  const firstDay = new Date(cmdPickerYear, cmdPickerMonth, 1);
+  let startDow = firstDay.getDay(); startDow = startDow === 0 ? 6 : startDow - 1;
+  const daysInMonth = new Date(cmdPickerYear, cmdPickerMonth + 1, 0).getDate();
+  const today = new Date();
+  let html = '';
+  for (let i = 0; i < startDow; i++) html += '<div></div>';
+  for (let d = 1; d <= daysInMonth; d++) {
+    const isToday = d === today.getDate() && cmdPickerMonth === today.getMonth() && cmdPickerYear === today.getFullYear();
+    const isSel = d === cmdPickerDay;
+    html += `<div onclick="cmdPickerSelectDay(${d})" style="text-align:center;padding:6px 2px;border-radius:7px;cursor:pointer;font-size:12px;font-weight:700;
+      background:${isSel?'var(--gold)':isToday?'rgba(201,168,76,0.15)':'transparent'};
+      color:${isSel?'#000':isToday?'var(--gold)':'var(--white)'};
+      border:1px solid ${isSel?'var(--gold)':isToday?'rgba(201,168,76,0.4)':'transparent'};
+      transition:all 0.15s;" onmouseover="if(!${isSel})this.style.background='rgba(201,168,76,0.1)'" onmouseout="if(!${isSel})this.style.background='${isToday?'rgba(201,168,76,0.15)':'transparent'}'">${d}</div>`;
+  }
+  grid.innerHTML = html;
+}
+
+function cmdPickerSelectDay(d) { cmdPickerDay = d; cmdRenderPicker(); }
+
+function cmdPickerConfirm() {
+  if (!cmdPickerDay) { showToast('❌ Sélectionne un jour', false); return; }
+  const h = String(document.getElementById('cmdPickerH').value || 0).padStart(2,'0');
+  const m = String(document.getElementById('cmdPickerM').value || 0).padStart(2,'0');
+  const mo = String(cmdPickerMonth + 1).padStart(2,'0');
+  const d = String(cmdPickerDay).padStart(2,'0');
+  document.getElementById('cmdDate').value = `${cmdPickerYear}-${mo}-${d}T${h}:${m}`;
+  document.getElementById('cmdDateDisplay').value = `${d}/${mo}/${cmdPickerYear} ${h}:${m}`;
+  document.getElementById('cmdPickerWrap').style.display = 'none';
+  showToast('✅ Date sélectionnée');
+}
+
+function cmdPickerClear() {
+  cmdPickerDay = null;
+  document.getElementById('cmdDate').value = '';
+  document.getElementById('cmdDateDisplay').value = '';
+  document.getElementById('cmdPickerWrap').style.display = 'none';
+}
 
 async function loadTarifs() {
   try { allTarifs = await fetch('/api/tarifs').then(r => r.json()); }
