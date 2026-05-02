@@ -1881,7 +1881,6 @@ async function updateCmdStatut(id, statut) {
   } catch(e) { console.error(e); }
 }
 
-let _cmdDetailData = [];
 function openCmdDetail(id) {
   fetch('/api/commandes').then(r => r.json()).then(data => {
     _cmdDetailData = data;
