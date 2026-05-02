@@ -1481,7 +1481,12 @@ async function confirmEditPoste(id) {
       body: JSON.stringify({ poste: newPoste })
     });
     const d = await r.json();
-    if (d.success) { showToast('✅ Poste mis à jour'); loadEmployes(); }
+    if (d.success) {
+      showToast('✅ Poste mis à jour');
+      // Forcer rechargement sans cache
+      window._allEmployes = null;
+      loadEmployes();
+    }
     else showToast('❌ ' + (d.error || 'Erreur'), false);
   } catch(e) { showToast('❌ Erreur réseau', false); }
 }
