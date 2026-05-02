@@ -96,7 +96,11 @@ async function initDB() {
 
 /* ═══ AUTH ═══ */
 const auth = (req, res, next) => req.session?.user ? next() : res.status(401).json({ error: 'Non connecte' });
-const admin = (req, res, next) => req.session?.user?.role === 'admin' ? next() : res.status(403).json({ error: 'Acces refuse' });
+const admin = (req, res, next) => {
+  console.log('[AUTH] role:', req.session?.user?.role, 'session:', !!req.session?.user);
+  if (req.session?.user?.role === 'admin') return next();
+  return res.status(403).json({ error: 'Acces refuse' });
+};
 
 /* ═══ ROUTES AUTH ═══ */
 app.post('/api/login', async (req, res) => {
