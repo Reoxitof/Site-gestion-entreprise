@@ -179,6 +179,7 @@ app.post('/api/login', async (req, res) => {
 });
 app.post('/api/logout', (req, res) => req.session.destroy(() => res.json({ success: true })));
 app.get('/api/me', auth, (req, res) => res.json({ user: req.session.user }));
+app.get('/mes-tickets', auth, (req, res) => res.sendFile(path.join(__dirname, 'public', 'mes-tickets.html')));
 
 /* Changer son propre mot de passe */
 app.put('/api/me/password', auth, async (req, res) => {
@@ -309,6 +310,24 @@ app.put('/api/tarifs/:id', admin, async (req, res) => {
 });
 
 /* ═══ COMMANDES ÉVÉNEMENTS ═══ */
+
+/* Tickets assignés à l'employé connecté (statut >= confirmé) */
+app.get('/api/commandes/mes-tickets', auth, async (req, res) => {
+  try {
+    const statutsVisibles = ['confirme', 'paye', 'termine'];
+    const r = await getPool().query(
+      `SELECT c.id, c.client_nom, c.client_contact, c.division, c.type_prestation,
+              c.description, c.date_evenement, c.lieu, c.statut, c.priorite,
+              c.prestations_ids, c.budget_estime, c.prix_final
+       FROM ec_commandes c
+       WHERE c.assigned_to = $1 AND c.statut = ANY($2)
+       ORDER BY c.date_evenement ASC NULLS LAST`,
+      [req.session.user.id, statutsVisibles]
+    );
+    res.json(r.rows);
+  } catch(e) { res.status(500).json({ error: e.message }); }
+});
+
 app.get('/api/commandes', auth, async (req, res) => {
   try {
     const { statut, division } = req.query;
