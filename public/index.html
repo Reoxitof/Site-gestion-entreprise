@@ -1689,13 +1689,17 @@ async function deleteCommande(id) {
 }
 
 let _cmdDetailData = [];
-function openCmdDetail(id) {
-  // Charger les employés si pas encore fait (nécessaire pour le dropdown d'assignation)
-  const empPromise = (isAdmin() && !window._allEmployes)
-    ? fetch('/api/employes').then(r => r.json()).then(emp => { window._allEmployes = emp; })
-    : Promise.resolve();
-
-  Promise.all([fetch('/api/commandes').then(r => r.json()), empPromise]).then(([data]) => {
+async function openCmdDetail(id) {
+  try {
+    // Charger employés si admin et pas encore chargés
+    if (isAdmin() && !window._allEmployes) {
+      try {
+        const er = await fetch('/api/employes');
+        window._allEmployes = await er.json();
+      } catch(e) { window._allEmployes = []; }
+    }
+    const r = await fetch('/api/commandes');
+    const data = await r.json();
     _cmdDetailData = data;
     const c = data.find(x => x.id === id);
     if (!c) return;
@@ -1769,12 +1773,12 @@ function openCmdDetail(id) {
       ${isAdmin() ? renderAssignBlock(c) : ''}
       ${isAdmin() ? renderStatutButtons(c) : ''}`;
     openModal('modalCommandeDetail');
-  }).catch(e => console.error(e));
+  } catch(e) { console.error(e); showToast('Erreur chargement ticket', false); }
 }
 
 function renderAssignBlock(c) {
   const opts = (window._allEmployes || [])
-    .filter(e => e.actif && e.role !== 'admin')
+    .filter(e => e.actif)
     .map(e => `<option value="${e.id}" ${c.assigned_to == e.id ? 'selected' : ''}>${e.prenom} ${e.nom} — ${e.poste}</option>`)
     .join('');
   return `<div style="background:rgba(201,168,76,0.06);border:1px solid rgba(201,168,76,0.2);border-radius:8px;padding:12px;margin-bottom:10px;">
