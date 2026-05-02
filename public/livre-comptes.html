@@ -86,6 +86,7 @@ tbody td{padding:12px 16px;font-size:13px;}
   <div class="topbar-right">
     <a href="/dashboard" class="btn"><i class="fa-solid fa-arrow-left"></i> Dashboard</a>
     <button class="btn btn-gold" onclick="openModal()"><i class="fa-solid fa-plus"></i> Nouvelle entrée</button>
+    <button class="btn btn-outline" onclick="exportCSV()"><i class="fa-solid fa-file-csv"></i> Export CSV</button>
     <button class="btn" onclick="logout()"><i class="fa-solid fa-right-from-bracket"></i></button>
   </div>
 </div>
@@ -369,6 +370,15 @@ function showToast(msg, ok = true) {
 async function logout() {
   await fetch('/api/logout', { method: 'POST' });
   window.location.href = '/login';
+}
+
+function exportCSV() {
+  const debut = document.getElementById('filterDebut').value;
+  const fin = document.getElementById('filterFin').value;
+  const params = new URLSearchParams();
+  if (debut) params.set('date_debut', debut);
+  if (fin) params.set('date_fin', fin);
+  window.location.href = '/api/comptes/export-csv' + (params.toString() ? '?' + params.toString() : '');
 }
 
 document.getElementById('modalEntree').addEventListener('click', function(e) {

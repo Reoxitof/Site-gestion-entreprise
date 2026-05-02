@@ -1782,6 +1782,25 @@ async function openCmdDetail(id) {
       ${isAdmin() && c.statut === 'confirme' ? renderAssignBlock(c) : ''}
       ${isAdmin() ? renderStatutButtons(c) : ''}`;
     openModal('modalCommandeDetail');
+
+    // Charger et afficher l'historique
+    try {
+      const histRes = await fetch(`/api/commandes/${id}/historique`);
+      const hist = await histRes.json();
+      if (hist.length) {
+        const histHtml = `<div style="margin-top:14px;border-top:1px solid var(--border);padding-top:14px;">
+      <div style="font-size:10px;font-weight:800;letter-spacing:1px;text-transform:uppercase;color:var(--white-dim);margin-bottom:10px;"><i class="fa-solid fa-clock-rotate-left"></i> Historique</div>
+      <div style="display:flex;flex-direction:column;gap:6px;">
+        ${hist.map(h => `<div style="display:flex;align-items:flex-start;gap:10px;font-size:11px;">
+          <div style="color:var(--white-dim);white-space:nowrap;">${new Date(h.created_at).toLocaleDateString('fr-FR',{day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'})}</div>
+          <div><span style="color:var(--white);font-weight:700;">${h.prenom||''} ${h.nom||''}</span> — ${h.details}</div>
+        </div>`).join('')}
+      </div>
+    </div>`;
+        const content = document.getElementById('cmdDetailContent');
+        if (content) content.innerHTML += histHtml;
+      }
+    } catch(e) {}
   } catch(e) { console.error(e); showToast('Erreur chargement ticket', false); }
 }
 

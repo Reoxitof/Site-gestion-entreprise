@@ -9,6 +9,28 @@ const rateLimit = require('express-rate-limit');
 const app = express();
 const PORT = process.env.PORT || 3000;
 
+/* ═══ SANITISATION ═══ */
+function sanitizeStr(val, maxLen = 500) {
+  if (val === null || val === undefined) return '';
+  return String(val).trim().slice(0, maxLen);
+}
+function sanitizeNum(val, min = 0, max = 9999999) {
+  const n = parseFloat(val);
+  if (isNaN(n)) return null;
+  return Math.min(Math.max(n, min), max);
+}
+
+/* ═══ CACHE MÉMOIRE 30s ═══ */
+const _cache = {};
+function getCache(key) {
+  const entry = _cache[key];
+  if (!entry) return null;
+  if (Date.now() - entry.ts > 30000) { delete _cache[key]; return null; }
+  return entry.data;
+}
+function setCache(key, data) { _cache[key] = { data, ts: Date.now() }; }
+function clearCache(key) { delete _cache[key]; }
+
 /* ═══ HEALTH CHECK (avant tout middleware) ═══ */
 app.get('/health', (req, res) => res.status(200).json({ status: 'ok', time: new Date().toISOString() }));
 
@@ -167,6 +189,15 @@ async function initDB() {
       actif BOOLEAN DEFAULT true,
       updated_at TIMESTAMP DEFAULT NOW()
     )`);
+
+    await getPool().query(`CREATE TABLE IF NOT EXISTS ec_commandes_historique (
+      id SERIAL PRIMARY KEY,
+      commande_id INTEGER REFERENCES ec_commandes(id) ON DELETE CASCADE,
+      user_id INTEGER REFERENCES ec_users(id),
+      action TEXT NOT NULL,
+      details TEXT DEFAULT '',
+      created_at TIMESTAMP DEFAULT NOW()
+    )`);
     // Insérer les tarifs par défaut si la table est vide
     const tc = await getPool().query('SELECT COUNT(*) FROM ec_tarifs');
     if (parseInt(tc.rows[0].count) === 0) {
@@ -255,18 +286,29 @@ app.put('/api/me/password', auth, async (req, res) => {
 
 /* ═══ EMPLOYES ═══ */
 app.get('/api/employes', auth, async (req, res) => {
-  try { res.json((await getPool().query('SELECT id,username,nom,prenom,poste,role,actif,created_at FROM ec_users ORDER BY nom')).rows); }
+  try {
+    const cached = getCache('employes');
+    if (cached) return res.json(cached);
+    const rows = (await getPool().query('SELECT id,username,nom,prenom,poste,role,actif,created_at FROM ec_users ORDER BY nom')).rows;
+    setCache('employes', rows);
+    res.json(rows);
+  }
   catch(e) { res.status(500).json({ error: e.message }); }
 });
 app.post('/api/employes', admin, async (req, res) => {
   try {
-    const { username, password, nom, prenom, poste, role } = req.body;
+    const { username, password, role } = req.body;
+    const nom = sanitizeStr(req.body.nom, 100);
+    const prenom = sanitizeStr(req.body.prenom, 100);
+    const poste = sanitizeStr(req.body.poste, 100);
     if (!username || !password || !nom || !prenom) return res.status(400).json({ error: 'Champs manquants' });
+    if (!/^[a-z0-9_]{3,32}$/.test(username)) return res.status(400).json({ error: 'Identifiant invalide (3-32 caractères, lettres minuscules, chiffres, underscore)' });
     const h = await bcrypt.hash(password, 12);
     const r = await getPool().query(
       `INSERT INTO ec_users (username,password_hash,nom,prenom,poste,role) VALUES ($1,$2,$3,$4,$5,$6) RETURNING id,username,nom,prenom,poste,role`,
       [username.toLowerCase(), h, nom, prenom, poste || 'Employe', role || 'employe']
     );
+    clearCache('employes');
     res.json(r.rows[0]);
   } catch(e) {
     if (e.code === '23505') return res.status(400).json({ error: 'Identifiant deja pris' });
@@ -278,6 +320,7 @@ app.put('/api/employes/:id', admin, async (req, res) => {
     const { nom, prenom, poste, role, actif } = req.body;
     await getPool().query('UPDATE ec_users SET nom=$1,prenom=$2,poste=$3,role=$4,actif=$5 WHERE id=$6',
       [nom, prenom, poste, role, actif !== undefined ? actif : true, req.params.id]);
+    clearCache('employes');
     res.json({ success: true });
   } catch(e) { res.status(500).json({ error: e.message }); }
 });
@@ -288,6 +331,7 @@ app.delete('/api/employes/:id', admin, async (req, res) => {
     await getPool().query('DELETE FROM ec_disponibilites WHERE user_id=$1', [id]);
     await getPool().query('DELETE FROM ec_presences WHERE user_id=$1', [id]);
     await getPool().query('DELETE FROM ec_users WHERE id=$1', [id]);
+    clearCache('employes');
     res.json({ success: true });
   } catch(e) { res.status(500).json({ error: e.message }); }
 });
@@ -350,7 +394,11 @@ app.delete('/api/planning/:id', admin, async (req, res) => {
 /* ═══ TARIFS ═══ */
 app.get('/api/tarifs', auth, async (req, res) => {
   try {
-    res.json((await getPool().query('SELECT * FROM ec_tarifs WHERE actif=true ORDER BY division,label')).rows);
+    const cached = getCache('tarifs');
+    if (cached) return res.json(cached);
+    const rows = (await getPool().query('SELECT * FROM ec_tarifs WHERE actif=true ORDER BY division,label')).rows;
+    setCache('tarifs', rows);
+    res.json(rows);
   } catch(e) { res.status(500).json({ error: e.message }); }
 });
 app.put('/api/tarifs/:id', admin, async (req, res) => {
@@ -360,6 +408,7 @@ app.put('/api/tarifs/:id', admin, async (req, res) => {
       'UPDATE ec_tarifs SET prix=$1, label=COALESCE($2,label), unite=COALESCE($3,unite), updated_at=NOW() WHERE id=$4',
       [prix, label || null, unite || null, req.params.id]
     );
+    clearCache('tarifs');
     res.json({ success: true });
   } catch(e) { res.status(500).json({ error: e.message }); }
 });
@@ -401,7 +450,18 @@ app.get('/api/commandes', auth, async (req, res) => {
 });
 app.post('/api/commandes', auth, async (req, res) => {
   try {
-    const { client_nom, client_contact, division, type_prestation, prestations_ids, description, date_evenement, lieu, budget, budget_estime, priorite, note_interne } = req.body;
+    const client_nom = sanitizeStr(req.body.client_nom, 200);
+    const client_contact = sanitizeStr(req.body.client_contact, 200);
+    const division = sanitizeStr(req.body.division, 50);
+    const type_prestation = sanitizeStr(req.body.type_prestation, 300);
+    const { prestations_ids } = req.body;
+    const description = sanitizeStr(req.body.description, 2000);
+    const { date_evenement } = req.body;
+    const lieu = sanitizeStr(req.body.lieu, 300);
+    const { budget } = req.body;
+    const budget_estime = sanitizeNum(req.body.budget_estime, 0, 9999999) ?? 0;
+    const { priorite } = req.body;
+    const note_interne = sanitizeStr(req.body.note_interne, 2000);
     if (!client_nom || !type_prestation) return res.status(400).json({ error: 'Champs manquants' });
     const r = await getPool().query(
       `INSERT INTO ec_commandes (client_nom,client_contact,division,type_prestation,prestations_ids,description,date_evenement,lieu,budget,budget_estime,priorite,note_interne,created_by)
@@ -413,7 +473,11 @@ app.post('/api/commandes', auth, async (req, res) => {
 });
 app.put('/api/commandes/:id', auth, async (req, res) => {
   try {
-    const { statut, note_interne, assigned_to, priorite, budget, budget_estime, lieu, date_evenement, client_contact } = req.body;
+    const { statut, assigned_to, priorite, budget, date_evenement } = req.body;
+    const note_interne = sanitizeStr(req.body.note_interne, 2000) || null;
+    const lieu = sanitizeStr(req.body.lieu, 300) || null;
+    const client_contact = sanitizeStr(req.body.client_contact, 200) || null;
+    const budget_estime = req.body.budget_estime !== undefined ? sanitizeNum(req.body.budget_estime, 0, 9999999) : null;
     await getPool().query(
       `UPDATE ec_commandes SET statut=COALESCE($1,statut), note_interne=COALESCE($2,note_interne),
        assigned_to=COALESCE($3,assigned_to), priorite=COALESCE($4,priorite),
@@ -422,7 +486,6 @@ app.put('/api/commandes/:id', auth, async (req, res) => {
        client_contact=COALESCE($9,client_contact), updated_at=NOW() WHERE id=$10`,
       [statut||null, note_interne||null, assigned_to||null, priorite||null, budget||null, budget_estime||null, lieu||null, date_evenement||null, client_contact||null, req.params.id]
     );
-
     // Auto-ajout au planning quand statut passe à "confirme"
     if (statut === 'confirme') {
       try {
@@ -457,12 +520,40 @@ app.put('/api/commandes/:id', auth, async (req, res) => {
       }
     }
 
+    // Log historique
+    try {
+      const changes = [];
+      if (statut) changes.push(`statut → ${statut}`);
+      if (assigned_to) changes.push(`assigné → employé #${assigned_to}`);
+      if (client_contact) changes.push('contact mis à jour');
+      if (lieu) changes.push('lieu mis à jour');
+      if (date_evenement) changes.push('date mise à jour');
+      if (changes.length > 0) {
+        await getPool().query(
+          `INSERT INTO ec_commandes_historique (commande_id, user_id, action, details) VALUES ($1,$2,$3,$4)`,
+          [req.params.id, req.session.user.id, 'modification', changes.join(', ')]
+        );
+      }
+    } catch(histErr) { console.error('[HISTORIQUE]', histErr.message); }
+
     res.json({ success: true });
   } catch(e) { res.status(500).json({ error: e.message }); }
 });
 app.delete('/api/commandes/:id', admin, async (req, res) => {
   try { await getPool().query('DELETE FROM ec_commandes WHERE id=$1', [req.params.id]); res.json({ success: true }); }
   catch(e) { res.status(500).json({ error: e.message }); }
+});
+
+app.get('/api/commandes/:id/historique', auth, async (req, res) => {
+  try {
+    const r = await getPool().query(
+      `SELECT h.*, u.nom, u.prenom FROM ec_commandes_historique h
+       LEFT JOIN ec_users u ON h.user_id = u.id
+       WHERE h.commande_id = $1 ORDER BY h.created_at DESC LIMIT 50`,
+      [req.params.id]
+    );
+    res.json(r.rows);
+  } catch(e) { res.status(500).json({ error: e.message }); }
 });
 
 /* Passer une commande en "payé" et calculer le partage */
@@ -589,12 +680,15 @@ app.get('/api/comptes', admin, async (req, res) => {
 // Ajouter une entrée manuelle
 app.post('/api/comptes', admin, async (req, res) => {
   try {
-    const { type, categorie, description, montant, date, reference, commande_id } = req.body;
-    if (!description || !montant || !type) return res.status(400).json({ error: 'Champs manquants' });
+    const { type, categorie, date, commande_id } = req.body;
+    const description = sanitizeStr(req.body.description, 500);
+    const reference = sanitizeStr(req.body.reference, 200);
+    const montant = sanitizeNum(req.body.montant, 0, 9999999);
+    if (!description || montant === null || !type) return res.status(400).json({ error: 'Champs manquants' });
     const r = await getPool().query(
       `INSERT INTO ec_comptes (type, categorie, description, montant, date, reference, commande_id, created_by)
        VALUES ($1,$2,$3,$4,$5,$6,$7,$8) RETURNING *`,
-      [type, categorie||'autre', description, Math.abs(Number(montant)), date||new Date().toISOString().split('T')[0], reference||'', commande_id||null, req.session.user.id]
+      [type, categorie||'autre', description, Math.abs(montant), date||new Date().toISOString().split('T')[0], reference||'', commande_id||null, req.session.user.id]
     );
     res.json({ success: true, entry: r.rows[0] });
   } catch(e) { res.status(500).json({ error: e.message }); }
@@ -605,6 +699,35 @@ app.delete('/api/comptes/:id', admin, async (req, res) => {
   try {
     await getPool().query('DELETE FROM ec_comptes WHERE id=$1', [req.params.id]);
     res.json({ success: true });
+  } catch(e) { res.status(500).json({ error: e.message }); }
+});
+
+// Export CSV livre de comptes
+app.get('/api/comptes/export-csv', admin, async (req, res) => {
+  try {
+    const { date_debut, date_fin } = req.query;
+    let q = `SELECT c.type, c.categorie, c.description, c.montant, c.date, c.reference,
+             u.nom as createur_nom, cmd.client_nom as commande_client
+             FROM ec_comptes c
+             LEFT JOIN ec_users u ON c.created_by = u.id
+             LEFT JOIN ec_commandes cmd ON c.commande_id = cmd.id
+             WHERE 1=1`;
+    const params = [];
+    if (date_debut) { params.push(date_debut); q += ` AND c.date >= $${params.length}`; }
+    if (date_fin) { params.push(date_fin); q += ` AND c.date <= $${params.length}`; }
+    q += ' ORDER BY c.date DESC';
+    const rows = (await getPool().query(q, params)).rows;
+    const header = 'Date,Type,Catégorie,Description,Montant,Référence,Ajouté par,Commande\n';
+    const csv = header + rows.map(r =>
+      [r.date?.toISOString?.()?.split('T')[0] || r.date, r.type, r.categorie,
+       `"${(r.description||'').replace(/"/g,'""')}"`, r.montant,
+       `"${(r.reference||'').replace(/"/g,'""')}"`,
+       r.createur_nom || '', r.commande_client || ''].join(',')
+    ).join('\n');
+    const stamp = new Date().toISOString().split('T')[0];
+    res.setHeader('Content-Type', 'text/csv; charset=utf-8');
+    res.setHeader('Content-Disposition', `attachment; filename="comptes-${stamp}.csv"`);
+    res.send('\uFEFF' + csv); // BOM pour Excel
   } catch(e) { res.status(500).json({ error: e.message }); }
 });
 
