@@ -1994,11 +1994,11 @@ async function updateCmdStatut(id, statut) {
         if (partage.length) {
           const parPersonne = partage[0].montant;
           html += `<div style="background:rgba(167,139,250,0.08);border:1px solid rgba(167,139,250,0.25);border-radius:10px;padding:14px;">
-            <div style="font-size:10px;font-weight:800;letter-spacing:2px;text-transform:uppercase;color:#a78bfa;margin-bottom:10px;">PART PAR PERSONNE : ${Number(parPersonne).toLocaleString('fr-FR')} $</div>
+            <div style="font-size:10px;font-weight:800;letter-spacing:2px;text-transform:uppercase;color:#a78bfa;margin-bottom:10px;">RÉPARTITION</div>
             <div style="display:flex;flex-direction:column;gap:8px;">
-              ${partage.map(p => `<div style="display:flex;align-items:center;justify-content:space-between;">
-                <div><div style="font-size:12px;font-weight:700;color:var(--white);">👤 ${p.nom}</div><div style="font-size:10px;color:var(--white-dim);">${p.poste}</div></div>
-                <div style="font-family:'Anton',sans-serif;font-size:18px;color:#a78bfa;">${Number(p.montant).toLocaleString('fr-FR')} $</div>
+              ${partage.map(p => `<div style="display:flex;align-items:center;justify-content:space-between;${p.entreprise?'background:rgba(201,168,76,0.08);border:1px solid rgba(201,168,76,0.2);border-radius:8px;padding:8px;':''}">
+                <div><div style="font-size:12px;font-weight:700;color:${p.entreprise?'var(--gold)':'var(--white)'};">${p.nom}</div><div style="font-size:10px;color:var(--white-dim);">${p.poste}</div></div>
+                <div style="font-family:'Anton',sans-serif;font-size:18px;color:${p.entreprise?'var(--gold)':'#a78bfa'};">${Number(p.montant).toLocaleString('fr-FR')} $</div>
               </div>`).join('')}
             </div>
           </div>`;

@@ -424,6 +424,7 @@ app.post('/api/commandes/:id/payer', admin, async (req, res) => {
     if (!cmd) return res.status(404).json({ error: 'Commande introuvable' });
 
     // Trouver les employés présents sur la date de l'événement
+    const PART_ENTREPRISE = 0.20; // 20% réservé pour l'entreprise
     let partage = [];
     if (cmd.date_evenement) {
       const dateStr = new Date(cmd.date_evenement).toISOString().split('T')[0];
@@ -434,15 +435,38 @@ app.post('/api/commandes/:id/payer', admin, async (req, res) => {
         [dateStr]
       );
       const presents = presRes.rows;
+      const montantTotal = Number(prix_final);
+      const montantEntreprise = Math.round(montantTotal * PART_ENTREPRISE * 100) / 100;
+      const montantEmployes = Math.round((montantTotal - montantEntreprise) * 100) / 100;
+
+      // Part entreprise toujours incluse en premier
+      partage.push({
+        user_id: null,
+        nom: '🏢 Elite Corp',
+        poste: 'Caisse entreprise',
+        montant: montantEntreprise,
+        entreprise: true
+      });
+
       if (presents.length > 0) {
-        const montantParPersonne = Math.round((Number(prix_final) / presents.length) * 100) / 100;
-        partage = presents.map(p => ({
+        const montantParPersonne = Math.round((montantEmployes / presents.length) * 100) / 100;
+        partage = partage.concat(presents.map(p => ({
           user_id: p.user_id,
           nom: p.prenom + ' ' + p.nom,
           poste: p.poste,
           montant: montantParPersonne
-        }));
+        })));
       }
+    } else {
+      // Pas de date — juste la part entreprise
+      const montantEntreprise = Math.round(Number(prix_final) * PART_ENTREPRISE * 100) / 100;
+      partage.push({
+        user_id: null,
+        nom: '🏢 Elite Corp',
+        poste: 'Caisse entreprise',
+        montant: montantEntreprise,
+        entreprise: true
+      });
     }
 
     await getPool().query(
