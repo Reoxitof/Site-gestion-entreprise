@@ -167,6 +167,7 @@
     <div class="sidebar-section">Gestion</div>
     <button class="nav-btn admin-only" onclick="showTab('employes')"><i class="fa-solid fa-users"></i> Employés</button>
     <button class="nav-btn" onclick="showTab('annonces')"><i class="fa-solid fa-bullhorn"></i> Annonces</button>
+    <button class="nav-btn admin-only" onclick="showTab('recrutement')"><i class="fa-solid fa-user-tie"></i> Recrutement</button>
   </nav>
   <div class="sidebar-bottom">
     <button class="btn-logout" onclick="doLogout()"><i class="fa-solid fa-right-from-bracket"></i> Déconnexion</button>
@@ -262,6 +263,85 @@
         <button class="btn btn-gold admin-only" onclick="openModal('modalAnnonce')"><i class="fa-solid fa-plus"></i> Nouvelle annonce</button>
       </div>
       <div id="annoncesList"><div style="color:var(--white-dim);font-size:12px;">Chargement...</div></div>
+    </div>
+
+    <!-- ═══ TAB: RECRUTEMENT ═══ -->
+    <div class="tab-content" id="tab-recrutement">
+      <style>
+        .recr-grid { display: grid; grid-template-columns: 300px 1fr; gap: 20px; }
+        @media(max-width:900px){ .recr-grid { grid-template-columns: 1fr; } }
+        .recr-question-list { display: flex; flex-direction: column; gap: 6px; }
+        .recr-q-btn { display: flex; align-items: center; gap: 10px; padding: 10px 14px; background: rgba(255,255,255,0.02); border: 1px solid var(--border); border-radius: 10px; cursor: pointer; transition: all 0.2s; text-align: left; color: var(--white-dim); font-size: 12px; font-weight: 600; }
+        .recr-q-btn:hover { border-color: var(--gold); color: var(--white); background: rgba(201,168,76,0.05); }
+        .recr-q-btn.active { border-color: var(--gold); background: rgba(201,168,76,0.1); color: var(--gold); }
+        .recr-q-num { width: 24px; height: 24px; border-radius: 50%; background: rgba(201,168,76,0.15); color: var(--gold); font-size: 10px; font-weight: 900; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+        .recr-q-btn.done .recr-q-num { background: rgba(76,175,125,0.2); color: #4caf7d; }
+        .recr-q-btn.done { border-color: rgba(76,175,125,0.3); }
+        .recr-panel { background: var(--card); border: 1px solid var(--border); border-radius: var(--radius); padding: 28px; }
+        .recr-category { font-size: 10px; font-weight: 800; letter-spacing: 2px; text-transform: uppercase; color: var(--gold); margin-bottom: 8px; }
+        .recr-question { font-family: 'Anton', sans-serif; font-size: 20px; letter-spacing: 1px; color: var(--white); margin-bottom: 20px; line-height: 1.3; }
+        .recr-answer-box { background: var(--bg); border: 1px solid var(--border); border-radius: 10px; padding: 16px; margin-bottom: 16px; }
+        .recr-answer-label { font-size: 10px; font-weight: 800; letter-spacing: 2px; text-transform: uppercase; color: var(--white-dim); margin-bottom: 8px; }
+        .recr-answer-text { font-size: 13px; color: var(--white-dim); line-height: 1.7; }
+        .recr-answer-text strong { color: var(--gold); }
+        .recr-score { display: flex; gap: 8px; margin-top: 16px; flex-wrap: wrap; }
+        .recr-score-btn { padding: 8px 16px; border-radius: 999px; border: 1px solid; font-size: 11px; font-weight: 800; cursor: pointer; transition: all 0.2s; background: transparent; }
+        .recr-score-btn.excellent { border-color: rgba(76,175,125,0.5); color: #4caf7d; }
+        .recr-score-btn.excellent:hover, .recr-score-btn.excellent.sel { background: rgba(76,175,125,0.2); }
+        .recr-score-btn.bien { border-color: rgba(201,168,76,0.5); color: var(--gold); }
+        .recr-score-btn.bien:hover, .recr-score-btn.bien.sel { background: rgba(201,168,76,0.2); }
+        .recr-score-btn.moyen { border-color: rgba(240,144,48,0.5); color: #f09030; }
+        .recr-score-btn.moyen:hover, .recr-score-btn.moyen.sel { background: rgba(240,144,48,0.2); }
+        .recr-score-btn.insuffisant { border-color: rgba(226,64,64,0.5); color: #ff7b7b; }
+        .recr-score-btn.insuffisant:hover, .recr-score-btn.insuffisant.sel { background: rgba(226,64,64,0.2); }
+        .recr-note-input { width: 100%; margin-top: 12px; }
+        .recr-progress { height: 4px; background: rgba(201,168,76,0.15); border-radius: 999px; margin-bottom: 20px; overflow: hidden; }
+        .recr-progress-fill { height: 100%; background: linear-gradient(90deg, var(--gold-dim), var(--gold)); border-radius: 999px; transition: width 0.4s ease; }
+        .recr-summary { background: var(--card); border: 1px solid var(--border); border-radius: var(--radius); padding: 28px; }
+        .recr-summary-score { font-family: 'Anton', sans-serif; font-size: 56px; letter-spacing: 4px; color: var(--gold); text-align: center; }
+        .recr-summary-label { text-align: center; font-size: 12px; font-weight: 700; letter-spacing: 2px; color: var(--white-dim); text-transform: uppercase; margin-bottom: 24px; }
+        .recr-result-row { display: flex; justify-content: space-between; align-items: center; padding: 10px 0; border-bottom: 1px solid rgba(201,168,76,0.08); font-size: 12px; }
+        .recr-result-row:last-child { border-bottom: none; }
+      </style>
+
+      <!-- Header -->
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;flex-wrap:wrap;gap:12px;">
+        <div>
+          <div class="section-label">Entretien d'embauche</div>
+          <div style="font-family:'Anton',sans-serif;font-size:24px;letter-spacing:3px;color:var(--white);">RECRUTEMENT <span style="color:var(--gold);">ELITE CORP.</span></div>
+        </div>
+        <div style="display:flex;gap:10px;flex-wrap:wrap;">
+          <select class="input-field" id="recrPosteFilter" style="width:220px;" onchange="recrFilterPoste()">
+            <option value="">Toutes les questions</option>
+            <option value="securite">🛡️ Penny's Elite Security</option>
+            <option value="evenementiel">🎉 Événementiel</option>
+            <option value="tourisme">✈️ Elite Tourisme</option>
+            <option value="aventure">🏔️ Elite Aventure</option>
+            <option value="lillys">💃 Lilly's Girls</option>
+            <option value="general">🏢 Questions Générales</option>
+          </select>
+          <button class="btn btn-gold admin-only" onclick="recrReset()"><i class="fa-solid fa-rotate-left"></i> Réinitialiser</button>
+          <button class="btn btn-outline" onclick="recrShowSummary()"><i class="fa-solid fa-chart-bar"></i> Résumé</button>
+        </div>
+      </div>
+
+      <!-- Barre de progression -->
+      <div class="recr-progress"><div class="recr-progress-fill" id="recrProgressBar" style="width:0%"></div></div>
+
+      <div class="recr-grid">
+        <!-- Liste questions -->
+        <div>
+          <div class="card-title"><i class="fa-solid fa-list-check"></i> Questions</div>
+          <div class="recr-question-list" id="recrQuestionList"></div>
+        </div>
+        <!-- Panel question active -->
+        <div id="recrMainPanel">
+          <div class="recr-panel" style="text-align:center;padding:60px 20px;">
+            <i class="fa-solid fa-clipboard-question" style="font-size:48px;color:var(--gold);opacity:0.3;margin-bottom:16px;"></i>
+            <div style="font-size:14px;color:var(--white-dim);">Sélectionne une question pour commencer l'entretien</div>
+          </div>
+        </div>
+      </div>
     </div>
 
   </div><!-- /content -->
@@ -912,6 +992,206 @@ async function deleteAnnonce(id) {
 
 /* ── START ── */
 init();
+</script>
+
+<script>
+/* ══════════════════════════════════════════
+   RECRUTEMENT — Questions & Réponses
+══════════════════════════════════════════ */
+
+const RECR_QUESTIONS = [
+  // ── GÉNÉRALES ──
+  { id:1, cat:'general', catLabel:'🏢 Général', q:'Qu\'est-ce qu\'Elite Corp. et quelles sont ses divisions ?', rep:`<strong>Elite Corp.</strong> est une entreprise d'Event Planning & Services basée à Blaine County / Orange County. Elle regroupe 4 filiales :<br><br>
+    • <strong>Penny's Elite Security</strong> — Sécurité des événements, escorte VIP, convois<br>
+    • <strong>Elite Aventure</strong> — Road trips, safaris, expéditions, aventures<br>
+    • <strong>Elite Tourisme</strong> — Conciergerie, transferts VIP, guide touristique<br>
+    • <strong>Lilly's Girls</strong> — Animations, shows, prestations artistiques`, keywords:['elite corp','divisions','filiales'] },
+
+  { id:2, cat:'general', catLabel:'🏢 Général', q:'Quelles sont les valeurs fondamentales de la Charte Elite Corp. ?', rep:`La Charte Elite Corp. repose sur <strong>9 piliers</strong> :<br><br>
+    1. <strong>Loyauté</strong> — Les intérêts de la structure avant tout<br>
+    2. <strong>Respect & Discipline</strong> — Hiérarchie respectée, aucun conflit<br>
+    3. <strong>Professionnalisme</strong> — Sérieux, efficacité, maîtrise<br>
+    4. <strong>Coordination des filiales</strong> — Collaboration entre divisions<br>
+    5. <strong>Confidentialité</strong> — Opérations strictement confidentielles<br>
+    6. <strong>Image</strong> — Chaque membre représente Elite Corp.<br>
+    7. <strong>Autorité</strong> — Décisions de la maison mère appliquées<br>
+    8. <strong>Responsabilité</strong> — Signaler les problèmes rapidement<br>
+    9. <strong>Objectif commun</strong> — Développer et faire prospérer Elite Corp.`, keywords:['charte','valeurs','loyauté','discipline'] },
+
+  { id:3, cat:'general', catLabel:'🏢 Général', q:'Que risque un membre qui ne respecte pas la Charte ?', rep:`Tout manquement peut entraîner des <strong>sanctions pouvant aller jusqu\'à l\'exclusion</strong>. La hiérarchie est souveraine dans ses décisions. Aucun conflit ne doit nuire à l\'organisation.`, keywords:['sanction','exclusion','charte'] },
+
+  { id:4, cat:'general', catLabel:'🏢 Général', q:'Pourquoi veux-tu rejoindre Elite Corp. ?', rep:`Réponse attendue : motivation sincère, connaissance de l\'entreprise, alignement avec les valeurs. <strong>Points positifs</strong> : citer les divisions, la charte, l\'ambition de contribuer. <strong>Points négatifs</strong> : réponse vague, intérêt uniquement financier.`, keywords:['motivation','rejoindre'] },
+
+  { id:5, cat:'general', catLabel:'🏢 Général', q:'Comment gères-tu un conflit avec un collègue ou supérieur ?', rep:`Réponse attendue : <strong>en privé, avec respect, en remontant à la hiérarchie si nécessaire</strong>. Jamais en public, jamais de drama. La Charte stipule que les conflits ne doivent pas nuire à l\'organisation.`, keywords:['conflit','collègue','hiérarchie'] },
+
+  // ── SÉCURITÉ ──
+  { id:6, cat:'securite', catLabel:'🛡️ Penny\'s Elite Security', q:'Quelles sont les missions de Penny\'s Elite Security ?', rep:`<strong>4 missions principales</strong> :<br><br>
+    • <strong>Sécurité des événements</strong> — Contrôle d\'accès, gestion des foules, prévention<br>
+    • <strong>Escorte de danseuses</strong> — Protection avant, pendant et après les prestations<br>
+    • <strong>Protection VIP</strong> — Sécurité rapprochée, analyse des risques, discrétion<br>
+    • <strong>Convois sécurisés</strong> — Planification et mise en place d\'itinéraires optimisés`, keywords:['sécurité','penny','missions'] },
+
+  { id:7, cat:'securite', catLabel:'🛡️ Penny\'s Elite Security', q:'Un client VIP est menacé lors d\'un événement. Quelle est ta réaction ?', rep:`<strong>Protocole attendu</strong> :<br>1. Sécuriser immédiatement le client (extraction si nécessaire)<br>2. Alerter le chef de la sécurité<br>3. Identifier et neutraliser la menace<br>4. Ne jamais agir seul sans communication équipe<br>5. Rapport post-incident obligatoire`, keywords:['vip','menace','protocole','réaction'] },
+
+  { id:8, cat:'securite', catLabel:'🛡️ Penny\'s Elite Security', q:'Qu\'est-ce que la discrétion signifie dans ton rôle d\'agent ?', rep:`La discrétion signifie : <strong>présence efficace et invisible quand il le faut</strong>. Ne pas divulguer les informations sur les clients, les opérations ou les itinéraires. Confidentialité absolue — pilier de la Charte Elite Corp.`, keywords:['discrétion','confidentialité','agent'] },
+
+  { id:9, cat:'securite', catLabel:'🛡️ Penny\'s Elite Security', q:'Comment assures-tu la sécurité d\'un convoi ?', rep:`<strong>Éléments attendus</strong> :<br>• Reconnaissance préalable de l\'itinéraire<br>• Communication constante entre véhicules<br>• Véhicule de tête + véhicule de queue<br>• Plan B en cas d\'incident<br>• Matériel adapté et professionnel`, keywords:['convoi','sécurité','itinéraire'] },
+
+  // ── ÉVÉNEMENTIEL ──
+  { id:10, cat:'evenementiel', catLabel:'🎉 Événementiel', q:'Comment organises-tu un événement de A à Z pour Elite Corp. ?', rep:`<strong>Étapes clés</strong> :<br>1. Brief client — besoins, budget, date<br>2. Coordination avec les filiales concernées (sécurité, animation, tourisme)<br>3. Logistique — lieu, prestataires, matériel<br>4. Briefing équipe avant l\'événement<br>5. Gestion en temps réel le jour J<br>6. Débriefing post-événement`, keywords:['organisation','événement','logistique'] },
+
+  { id:11, cat:'evenementiel', catLabel:'🎉 Événementiel', q:'Un événement tourne mal (incident, retard, problème technique). Comment réagis-tu ?', rep:`<strong>Réponse attendue</strong> : garder son calme, informer immédiatement la hiérarchie, activer le plan de contingence, communiquer avec le client de façon professionnelle. <strong>Jamais de panique visible</strong> devant les clients.`, keywords:['incident','crise','événement','réaction'] },
+
+  // ── TOURISME ──
+  { id:12, cat:'tourisme', catLabel:'✈️ Elite Tourisme', q:'Qu\'est-ce qu\'Elite Tourisme propose comme services ?', rep:`Elite Tourisme propose :<br>• <strong>Guide touristique</strong> à Los Santos et Blaine County<br>• <strong>Transferts VIP</strong> avec chauffeurs professionnels<br>• <strong>Conciergerie</strong> — réservations, accès exclusifs, services sur-mesure<br>• <strong>Carnet d\'adresses</strong> — restaurants, clubs, boutiques sélectionnés`, keywords:['tourisme','services','conciergerie'] },
+
+  { id:13, cat:'tourisme', catLabel:'✈️ Elite Tourisme', q:'Un client VIP demande une expérience exclusive à Los Santos. Comment procèdes-tu ?', rep:`<strong>Démarche attendue</strong> :<br>1. Écouter les attentes précises du client<br>2. Proposer des options sur-mesure (carnet d\'adresses Elite)<br>3. Coordonner avec les autres filiales si besoin (sécurité, aventure)<br>4. Accompagnement personnalisé tout au long<br>5. Suivi satisfaction post-prestation`, keywords:['client','vip','expérience','tourisme'] },
+
+  // ── AVENTURE ──
+  { id:14, cat:'aventure', catLabel:'🏔️ Elite Aventure', q:'Quelles prestations propose Elite Aventure ?', rep:`Elite Aventure propose :<br>• <strong>Balades & Road Trips</strong> — 4x4, SUV, motos, buggys<br>• <strong>Gestion d\'événements</strong> sur tout type de terrain<br>• <strong>Safari</strong> (sans animaux) — exploration tout-terrain<br>• <strong>Aventures sous-marines</strong> — sous-marins privatisés<br>• <strong>Convois extrêmes</strong> — montagnes, canyons, déserts`, keywords:['aventure','prestations','road trip'] },
+
+  { id:15, cat:'aventure', catLabel:'🏔️ Elite Aventure', q:'La sécurité est-elle une priorité dans les aventures ? Comment l\'assures-tu ?', rep:`<strong>Oui, absolument</strong>. Chaque aventure est planifiée dans les moindres détails pour la sécurité. Éléments attendus :<br>• Reconnaissance du terrain<br>• Matériel adapté et vérifié<br>• Coordination avec Penny's Elite Security si nécessaire<br>• Assistance 24/7 disponible<br>• Briefing sécurité obligatoire avant chaque sortie`, keywords:['sécurité','aventure','terrain'] },
+
+  // ── LILLY'S GIRLS ──
+  { id:16, cat:'lillys', catLabel:'💃 Lilly\'s Girls', q:'Quel est le rôle de Lilly\'s Girls au sein d\'Elite Corp. ?', rep:`Lilly's Girls est la division <strong>animation et spectacle</strong> d\'Elite Corp. Elle renforce l\'attractivité des événements avec :<br>• Des <strong>shows et chorégraphies</strong> professionnelles<br>• Des <strong>prestations artistiques</strong> pour soirées privées et événements extérieurs<br>• Une équipe de sécurité dédiée pour la protection des animatrices<br>• <strong>Discrétion et professionnalisme</strong> garantis`, keywords:['lilly','animation','show'] },
+
+  { id:17, cat:'lillys', catLabel:'💃 Lilly\'s Girls', q:'Comment garantis-tu la sécurité et la discrétion lors d\'une prestation Lilly\'s Girls ?', rep:`<strong>Éléments attendus</strong> :<br>• Coordination avec Penny's Elite Security pour l\'escorte<br>• Confidentialité sur les clients et les lieux<br>• Aucune information partagée en dehors de l\'équipe<br>• Présence sécurité avant, pendant et après la prestation<br>• Respect de l\'image Elite Corp. en toutes circonstances`, keywords:['sécurité','discrétion','lilly'] },
+];
+
+let recrScores = {};
+let recrNotes = {};
+let recrCurrentId = null;
+let recrFiltered = [...RECR_QUESTIONS];
+
+function recrFilterPoste() {
+  const val = document.getElementById('recrPosteFilter').value;
+  recrFiltered = val ? RECR_QUESTIONS.filter(q => q.cat === val) : [...RECR_QUESTIONS];
+  recrRenderList();
+  recrCurrentId = null;
+  document.getElementById('recrMainPanel').innerHTML = `<div class="recr-panel" style="text-align:center;padding:60px 20px;">
+    <i class="fa-solid fa-clipboard-question" style="font-size:48px;color:var(--gold);opacity:0.3;margin-bottom:16px;"></i>
+    <div style="font-size:14px;color:var(--white-dim);">Sélectionne une question pour commencer</div>
+  </div>`;
+}
+
+function recrRenderList() {
+  const el = document.getElementById('recrQuestionList');
+  const done = recrFiltered.filter(q => recrScores[q.id]).length;
+  document.getElementById('recrProgressBar').style.width = (recrFiltered.length ? (done/recrFiltered.length*100) : 0) + '%';
+  el.innerHTML = recrFiltered.map((q,i) => `
+    <button class="recr-q-btn ${recrScores[q.id] ? 'done' : ''} ${recrCurrentId === q.id ? 'active' : ''}" onclick="recrShowQuestion(${q.id})">
+      <div class="recr-q-num">${recrScores[q.id] ? '<i class="fa-solid fa-check" style="font-size:9px;"></i>' : (i+1)}</div>
+      <div style="flex:1;min-width:0;">
+        <div style="font-size:9px;color:var(--gold);font-weight:800;letter-spacing:1px;text-transform:uppercase;margin-bottom:2px;">${q.catLabel}</div>
+        <div style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${q.q}</div>
+      </div>
+    </button>`).join('');
+}
+
+function recrShowQuestion(id) {
+  recrCurrentId = id;
+  const q = RECR_QUESTIONS.find(x => x.id === id);
+  if (!q) return;
+  recrRenderList();
+  const score = recrScores[id] || null;
+  const note = recrNotes[id] || '';
+  const scoreLabels = { excellent: '⭐ Excellent', bien: '✅ Bien', moyen: '⚠️ Moyen', insuffisant: '❌ Insuffisant' };
+  document.getElementById('recrMainPanel').innerHTML = `
+    <div class="recr-panel">
+      <div class="recr-category">${q.catLabel}</div>
+      <div class="recr-question">${q.q}</div>
+      <div class="recr-answer-box">
+        <div class="recr-answer-label"><i class="fa-solid fa-key"></i> Réponse attendue</div>
+        <div class="recr-answer-text">${q.rep}</div>
+      </div>
+      <div class="recr-answer-label" style="margin-top:16px;"><i class="fa-solid fa-star"></i> Évaluation du candidat</div>
+      <div class="recr-score">
+        ${['excellent','bien','moyen','insuffisant'].map(s => `
+          <button class="recr-score-btn ${s} ${score === s ? 'sel' : ''}" onclick="recrSetScore(${id},'${s}')">${scoreLabels[s]}</button>
+        `).join('')}
+      </div>
+      <textarea class="input-field recr-note-input" placeholder="Notes sur la réponse du candidat..." rows="3" onchange="recrSetNote(${id},this.value)">${note}</textarea>
+      <div class="btn-row" style="margin-top:12px;">
+        ${id > 1 ? `<button class="btn btn-outline" onclick="recrShowQuestion(${id-1})"><i class="fa-solid fa-chevron-left"></i> Précédent</button>` : ''}
+        ${id < RECR_QUESTIONS.length ? `<button class="btn btn-gold" onclick="recrShowQuestion(${id+1})">Suivant <i class="fa-solid fa-chevron-right"></i></button>` : `<button class="btn btn-gold" onclick="recrShowSummary()"><i class="fa-solid fa-chart-bar"></i> Voir le résumé</button>`}
+      </div>
+    </div>`;
+}
+
+function recrSetScore(id, score) {
+  recrScores[id] = score;
+  recrShowQuestion(id);
+}
+
+function recrSetNote(id, note) {
+  recrNotes[id] = note;
+}
+
+function recrReset() {
+  if (!confirm('Réinitialiser toutes les évaluations ?')) return;
+  recrScores = {}; recrNotes = {}; recrCurrentId = null;
+  recrRenderList();
+  document.getElementById('recrMainPanel').innerHTML = `<div class="recr-panel" style="text-align:center;padding:60px 20px;">
+    <i class="fa-solid fa-clipboard-question" style="font-size:48px;color:var(--gold);opacity:0.3;margin-bottom:16px;"></i>
+    <div style="font-size:14px;color:var(--white-dim);">Entretien réinitialisé</div>
+  </div>`;
+}
+
+function recrShowSummary() {
+  const total = RECR_QUESTIONS.length;
+  const evaluated = Object.keys(recrScores).length;
+  const counts = { excellent:0, bien:0, moyen:0, insuffisant:0 };
+  Object.values(recrScores).forEach(s => { if(counts[s] !== undefined) counts[s]++; });
+  const points = counts.excellent*3 + counts.bien*2 + counts.moyen*1 + counts.insuffisant*0;
+  const maxPoints = evaluated * 3;
+  const pct = maxPoints ? Math.round(points/maxPoints*100) : 0;
+  const verdict = pct >= 80 ? { label:'RECOMMANDÉ', color:'#4caf7d' } : pct >= 60 ? { label:'À CONSIDÉRER', color:'var(--gold)' } : pct >= 40 ? { label:'DOSSIER FAIBLE', color:'#f09030' } : { label:'NON RECOMMANDÉ', color:'#ff7b7b' };
+
+  document.getElementById('recrMainPanel').innerHTML = `
+    <div class="recr-summary">
+      <div class="recr-summary-score" style="color:${verdict.color};">${pct}%</div>
+      <div class="recr-summary-label">Score global — <span style="color:${verdict.color};">${verdict.label}</span></div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:20px;">
+        <div style="background:rgba(76,175,125,0.1);border:1px solid rgba(76,175,125,0.3);border-radius:10px;padding:14px;text-align:center;">
+          <div style="font-family:'Anton',sans-serif;font-size:28px;color:#4caf7d;">${counts.excellent}</div>
+          <div style="font-size:10px;color:var(--white-dim);font-weight:700;letter-spacing:1px;">EXCELLENT</div>
+        </div>
+        <div style="background:rgba(201,168,76,0.1);border:1px solid rgba(201,168,76,0.3);border-radius:10px;padding:14px;text-align:center;">
+          <div style="font-family:'Anton',sans-serif;font-size:28px;color:var(--gold);">${counts.bien}</div>
+          <div style="font-size:10px;color:var(--white-dim);font-weight:700;letter-spacing:1px;">BIEN</div>
+        </div>
+        <div style="background:rgba(240,144,48,0.1);border:1px solid rgba(240,144,48,0.3);border-radius:10px;padding:14px;text-align:center;">
+          <div style="font-family:'Anton',sans-serif;font-size:28px;color:#f09030;">${counts.moyen}</div>
+          <div style="font-size:10px;color:var(--white-dim);font-weight:700;letter-spacing:1px;">MOYEN</div>
+        </div>
+        <div style="background:rgba(226,64,64,0.1);border:1px solid rgba(226,64,64,0.3);border-radius:10px;padding:14px;text-align:center;">
+          <div style="font-family:'Anton',sans-serif;font-size:28px;color:#ff7b7b;">${counts.insuffisant}</div>
+          <div style="font-size:10px;color:var(--white-dim);font-weight:700;letter-spacing:1px;">INSUFFISANT</div>
+        </div>
+      </div>
+      <div style="font-size:11px;color:var(--white-dim);margin-bottom:12px;">${evaluated}/${total} questions évaluées</div>
+      ${Object.keys(recrNotes).filter(id => recrNotes[id]).length ? `
+        <div class="card-title" style="margin-top:16px;"><i class="fa-solid fa-note-sticky"></i> Notes</div>
+        ${Object.keys(recrNotes).filter(id => recrNotes[id]).map(id => {
+          const q = RECR_QUESTIONS.find(x => x.id == id);
+          return `<div class="recr-result-row"><div style="flex:1;"><div style="font-size:11px;font-weight:700;color:var(--white);margin-bottom:2px;">${q?.q?.slice(0,50)}...</div><div style="font-size:11px;color:var(--white-dim);">${recrNotes[id]}</div></div></div>`;
+        }).join('')}` : ''}
+      <div class="btn-row" style="margin-top:20px;">
+        <button class="btn btn-outline" onclick="recrShowQuestion(1)"><i class="fa-solid fa-rotate-left"></i> Retour aux questions</button>
+        <button class="btn btn-gold" onclick="recrReset()"><i class="fa-solid fa-trash"></i> Nouvel entretien</button>
+      </div>
+    </div>`;
+}
+
+// Init recrutement quand on ouvre l'onglet
+const _origShowTab = window.showTab;
+window.showTab = function(name, btn) {
+  _origShowTab(name, btn);
+  if (name === 'recrutement') {
+    recrFiltered = [...RECR_QUESTIONS];
+    recrRenderList();
+  }
+};
 </script>
 </body>
 </html>
