@@ -227,7 +227,7 @@ app.delete('/api/planning/:id', admin, async (req, res) => {
 });
 
 /* ═══ COMMANDES ÉVÉNEMENTS ═══ */
-app.get('/api/commandes', requireAuth, async (req, res) => {
+app.get('/api/commandes', auth, async (req, res) => {
   try {
     const { statut, division } = req.query;
     let q = `SELECT c.*, u.nom as assigned_nom, u.prenom as assigned_prenom,
@@ -243,7 +243,7 @@ app.get('/api/commandes', requireAuth, async (req, res) => {
   } catch(e) { res.status(500).json({ error: e.message }); }
 });
 
-app.post('/api/commandes', requireAuth, async (req, res) => {
+app.post('/api/commandes', auth, async (req, res) => {
   try {
     const { client_nom, client_contact, division, type_prestation, description, date_evenement, lieu, budget, priorite, note_interne } = req.body;
     if (!client_nom || !type_prestation) return res.status(400).json({ error: 'Champs manquants' });
@@ -256,7 +256,7 @@ app.post('/api/commandes', requireAuth, async (req, res) => {
   } catch(e) { res.status(500).json({ error: e.message }); }
 });
 
-app.put('/api/commandes/:id', requireAuth, async (req, res) => {
+app.put('/api/commandes/:id', auth, async (req, res) => {
   try {
     const { statut, note_interne, assigned_to, priorite, budget, lieu, date_evenement } = req.body;
     await getPool().query(
