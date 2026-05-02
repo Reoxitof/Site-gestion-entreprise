@@ -1,0 +1,820 @@
+
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Elite Corp. — Panel de Gestion</title>
+  <link href="https://fonts.googleapis.com/css2?family=Anton&family=Inter:wght@300;400;600;700;800;900&display=swap" rel="stylesheet"/>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css"/>
+  <style>
+    :root{
+      --gold:#c9a84c;--gold-light:#f0d080;--gold-dim:#8a6f2e;
+      --bg:#0a0a0f;--surface:#111118;--card:#16161f;--card-hover:#1c1c27;
+      --border:rgba(201,168,76,0.25);--border-hover:rgba(201,168,76,0.5);
+      --white:#f0ead8;--white-dim:#9a9080;
+      --green:#4caf7d;--red:#e24040;--orange:#f09030;--blue:#3fa7d6;
+      --radius:16px;--radius-sm:10px;
+    }
+    *{box-sizing:border-box;margin:0;padding:0;}
+    body{background:var(--bg);color:var(--white);font-family:'Inter',sans-serif;min-height:100vh;display:flex;}
+    ::-webkit-scrollbar{width:5px;}
+    ::-webkit-scrollbar-track{background:var(--bg);}
+    ::-webkit-scrollbar-thumb{background:var(--gold-dim);border-radius:50px;}
+  </style>
+  <style>
+    /* ── SIDEBAR ── */
+    .sidebar{width:220px;min-height:100vh;background:var(--surface);border-right:1px solid var(--border);display:flex;flex-direction:column;flex-shrink:0;position:fixed;top:0;left:0;bottom:0;z-index:100;}
+    .sidebar-logo{padding:28px 20px 20px;border-bottom:1px solid var(--border);}
+    .sidebar-logo-title{font-family:'Anton',sans-serif;font-size:20px;letter-spacing:4px;color:var(--gold);}
+    .sidebar-logo-title span{color:var(--white);}
+    .sidebar-logo-sub{font-size:9px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:var(--white-dim);margin-top:3px;}
+    .sidebar-user{padding:16px 20px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:10px;}
+    .sidebar-avatar{width:36px;height:36px;border-radius:50%;background:linear-gradient(135deg,var(--gold-dim),var(--gold));display:flex;align-items:center;justify-content:center;font-family:'Anton',sans-serif;font-size:14px;color:#000;flex-shrink:0;}
+    .sidebar-user-name{font-size:12px;font-weight:800;color:var(--white);letter-spacing:0.5px;}
+    .sidebar-user-role{font-size:9px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:var(--gold);}
+    .sidebar-nav{flex:1;padding:12px 0;overflow-y:auto;}
+    .sidebar-section{font-size:9px;font-weight:800;letter-spacing:2px;text-transform:uppercase;color:var(--white-dim);padding:12px 20px 6px;}
+    .nav-btn{display:flex;align-items:center;gap:12px;width:100%;padding:11px 20px;background:transparent;border:none;color:var(--white-dim);font-family:'Inter',sans-serif;font-size:12px;font-weight:700;letter-spacing:0.5px;cursor:pointer;transition:all 0.2s;text-align:left;}
+    .nav-btn i{width:16px;text-align:center;font-size:13px;}
+    .nav-btn:hover{color:var(--white);background:rgba(201,168,76,0.06);}
+    .nav-btn.active{color:var(--gold);background:rgba(201,168,76,0.1);border-right:2px solid var(--gold);}
+    .sidebar-bottom{padding:16px 20px;border-top:1px solid var(--border);}
+    .btn-logout{display:flex;align-items:center;gap:8px;width:100%;padding:10px 14px;background:rgba(226,64,64,0.1);border:1px solid rgba(226,64,64,0.25);border-radius:8px;color:#ff7b7b;font-family:'Inter',sans-serif;font-size:11px;font-weight:800;letter-spacing:1px;cursor:pointer;transition:all 0.2s;}
+    .btn-logout:hover{background:rgba(226,64,64,0.2);}
+  </style>
+  <style>
+    /* ── MAIN ── */
+    .main{margin-left:220px;flex:1;min-height:100vh;display:flex;flex-direction:column;}
+    .topbar{padding:18px 32px;background:var(--surface);border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;}
+    .topbar-title{font-family:'Anton',sans-serif;font-size:20px;letter-spacing:3px;color:var(--white);}
+    .topbar-title span{color:var(--gold);}
+    .topbar-date{font-size:11px;font-weight:700;letter-spacing:1px;color:var(--white-dim);}
+    .content{padding:28px 32px;flex:1;}
+    .tab-content{display:none;}
+    .tab-content.active{display:block;}
+    /* ── CARDS ── */
+    .card{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:24px;transition:border-color 0.2s;}
+    .card:hover{border-color:var(--border-hover);}
+    .card-title{font-family:'Anton',sans-serif;font-size:14px;letter-spacing:2px;color:var(--gold);margin-bottom:16px;display:flex;align-items:center;gap:10px;}
+    .card-title::after{content:'';flex:1;height:1px;background:linear-gradient(90deg,var(--border),transparent);}
+    /* ── GRID ── */
+    .grid-2{display:grid;grid-template-columns:1fr 1fr;gap:20px;}
+    .grid-3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:20px;}
+    .grid-4{display:grid;grid-template-columns:repeat(4,1fr);gap:16px;}
+    @media(max-width:1100px){.grid-4{grid-template-columns:repeat(2,1fr);}.grid-3{grid-template-columns:1fr 1fr;}}
+    @media(max-width:700px){.grid-2,.grid-3,.grid-4{grid-template-columns:1fr;}.main{margin-left:0;}.sidebar{display:none;}}
+    /* ── STAT CARDS ── */
+    .stat-card{background:var(--card);border:1px solid var(--border);border-radius:var(--radius-sm);padding:20px;position:relative;overflow:hidden;transition:all 0.2s;}
+    .stat-card::after{content:'';position:absolute;bottom:0;left:0;right:0;height:2px;background:linear-gradient(90deg,transparent,var(--gold),transparent);}
+    .stat-card:hover{border-color:var(--border-hover);transform:translateY(-2px);}
+    .stat-value{font-family:'Anton',sans-serif;font-size:36px;letter-spacing:2px;color:var(--gold);}
+    .stat-label{font-size:10px;font-weight:800;letter-spacing:2px;text-transform:uppercase;color:var(--white-dim);margin-top:4px;}
+    .stat-icon{position:absolute;top:16px;right:16px;font-size:28px;opacity:0.15;color:var(--gold);}
+    /* ── BUTTONS ── */
+    .btn{padding:10px 20px;border:none;border-radius:8px;font-family:'Inter',sans-serif;font-size:12px;font-weight:800;letter-spacing:1px;cursor:pointer;transition:all 0.2s;display:inline-flex;align-items:center;gap:8px;}
+    .btn-gold{background:linear-gradient(135deg,var(--gold-dim),var(--gold));color:#000;box-shadow:0 4px 16px rgba(201,168,76,0.25);}
+    .btn-gold:hover{transform:translateY(-1px);box-shadow:0 8px 24px rgba(201,168,76,0.4);}
+    .btn-outline{background:transparent;border:1px solid var(--border);color:var(--white-dim);}
+    .btn-outline:hover{border-color:var(--gold);color:var(--gold);}
+    .btn-danger{background:rgba(226,64,64,0.15);border:1px solid rgba(226,64,64,0.3);color:#ff7b7b;}
+    .btn-danger:hover{background:rgba(226,64,64,0.25);}
+    .btn-green{background:rgba(76,175,125,0.15);border:1px solid rgba(76,175,125,0.3);color:#4caf7d;}
+    .btn-green:hover{background:rgba(76,175,125,0.25);}
+    .btn-row{display:flex;gap:10px;flex-wrap:wrap;margin-top:14px;}
+    /* ── INPUTS ── */
+    .input-field{width:100%;padding:10px 14px;background:var(--bg);border:1px solid var(--border);border-radius:8px;color:var(--white);font-family:'Inter',sans-serif;font-size:13px;font-weight:600;outline:none;transition:border-color 0.2s;}
+    .input-field:focus{border-color:var(--gold);}
+    .form-group{display:flex;flex-direction:column;gap:6px;margin-bottom:14px;}
+    .form-group label{font-size:10px;font-weight:800;letter-spacing:1.5px;text-transform:uppercase;color:var(--white-dim);}
+    select.input-field{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%239a9080' stroke-width='2'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 12px center;padding-right:32px;}
+    textarea.input-field{resize:vertical;min-height:80px;line-height:1.5;}
+  </style>
+  <style>
+    /* ── TABLE ── */
+    .table-wrap{overflow-x:auto;border-radius:var(--radius-sm);border:1px solid var(--border);}
+    table{width:100%;border-collapse:collapse;}
+    thead tr{background:rgba(201,168,76,0.06);border-bottom:1px solid var(--border);}
+    th{padding:12px 16px;font-size:10px;font-weight:800;letter-spacing:1.5px;text-transform:uppercase;color:var(--gold);text-align:left;}
+    td{padding:12px 16px;font-size:12px;font-weight:600;color:var(--white-dim);border-bottom:1px solid rgba(201,168,76,0.08);}
+    tr:last-child td{border-bottom:none;}
+    tr:hover td{background:rgba(201,168,76,0.03);color:var(--white);}
+    /* ── BADGES ── */
+    .badge{display:inline-flex;align-items:center;gap:4px;padding:3px 10px;border-radius:999px;font-size:10px;font-weight:800;letter-spacing:1px;text-transform:uppercase;}
+    .badge-gold{background:rgba(201,168,76,0.15);border:1px solid rgba(201,168,76,0.3);color:var(--gold);}
+    .badge-green{background:rgba(76,175,125,0.15);border:1px solid rgba(76,175,125,0.3);color:#4caf7d;}
+    .badge-red{background:rgba(226,64,64,0.15);border:1px solid rgba(226,64,64,0.3);color:#ff7b7b;}
+    .badge-blue{background:rgba(63,167,214,0.15);border:1px solid rgba(63,167,214,0.3);color:#3fa7d6;}
+    .badge-dim{background:rgba(154,144,128,0.1);border:1px solid rgba(154,144,128,0.2);color:var(--white-dim);}
+    /* ── MODAL ── */
+    .modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,0.7);z-index:500;display:none;align-items:center;justify-content:center;backdrop-filter:blur(4px);}
+    .modal-overlay.open{display:flex;}
+    .modal{background:var(--card);border:1px solid var(--border);border-radius:20px;padding:32px;width:min(520px,92vw);max-height:90vh;overflow-y:auto;position:relative;}
+    .modal::before{content:'';position:absolute;top:0;left:0;right:0;height:3px;background:linear-gradient(90deg,transparent,var(--gold),transparent);border-radius:20px 20px 0 0;}
+    .modal-title{font-family:'Anton',sans-serif;font-size:18px;letter-spacing:3px;color:var(--gold);margin-bottom:20px;}
+    .modal-close{position:absolute;top:16px;right:16px;background:none;border:none;color:var(--white-dim);font-size:18px;cursor:pointer;}
+    .modal-close:hover{color:var(--white);}
+    /* ── TOAST ── */
+    .toast{position:fixed;bottom:24px;right:24px;padding:14px 22px;background:var(--card);border:1px solid var(--gold);border-radius:12px;color:var(--white);font-size:13px;font-weight:700;box-shadow:0 8px 32px rgba(0,0,0,0.5);transform:translateY(80px);opacity:0;transition:all 0.3s;z-index:999;}
+    .toast.show{transform:translateY(0);opacity:1;}
+    /* ── PLANNING CALENDAR ── */
+    .cal-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;}
+    .cal-month{font-family:'Anton',sans-serif;font-size:18px;letter-spacing:3px;color:var(--gold);}
+    .cal-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:4px;}
+    .cal-day-name{text-align:center;font-size:9px;font-weight:800;letter-spacing:1px;text-transform:uppercase;color:var(--white-dim);padding:6px 0;}
+    .cal-day{min-height:72px;background:rgba(255,255,255,0.02);border:1px solid rgba(201,168,76,0.08);border-radius:8px;padding:6px;cursor:pointer;transition:all 0.2s;}
+    .cal-day:hover{border-color:var(--border-hover);background:rgba(201,168,76,0.04);}
+    .cal-day.today{border-color:var(--gold);background:rgba(201,168,76,0.08);}
+    .cal-day.other-month{opacity:0.3;}
+    .cal-day-num{font-size:11px;font-weight:800;color:var(--white-dim);margin-bottom:4px;}
+    .cal-day.today .cal-day-num{color:var(--gold);}
+    .cal-event{font-size:9px;font-weight:700;padding:2px 5px;border-radius:4px;margin-bottom:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;background:rgba(201,168,76,0.2);color:var(--gold);}
+    /* ── PRESENCE POINTAGE ── */
+    .pointage-card{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:32px;text-align:center;max-width:400px;margin:0 auto;}
+    .pointage-time{font-family:'Anton',sans-serif;font-size:48px;letter-spacing:4px;color:var(--gold);margin:16px 0;}
+    .pointage-date{font-size:12px;font-weight:700;letter-spacing:2px;color:var(--white-dim);text-transform:uppercase;}
+    .pointage-status{font-size:13px;font-weight:800;letter-spacing:1px;margin:16px 0;padding:10px 20px;border-radius:999px;display:inline-block;}
+    .btn-pointer{width:100%;padding:18px;font-size:16px;font-weight:900;letter-spacing:2px;margin-top:16px;}
+    /* ── ANNONCES ── */
+    .annonce-item{background:var(--card);border:1px solid var(--border);border-radius:var(--radius-sm);padding:20px;margin-bottom:12px;position:relative;overflow:hidden;transition:border-color 0.2s;}
+    .annonce-item:hover{border-color:var(--border-hover);}
+    .annonce-item.urgente::before{content:'';position:absolute;left:0;top:0;bottom:0;width:3px;background:var(--red);}
+    .annonce-item.importante::before{content:'';position:absolute;left:0;top:0;bottom:0;width:3px;background:var(--orange);}
+    .annonce-item.normale::before{content:'';position:absolute;left:0;top:0;bottom:0;width:3px;background:var(--gold);}
+    .annonce-titre{font-family:'Anton',sans-serif;font-size:15px;letter-spacing:1px;color:var(--white);margin-bottom:6px;}
+    .annonce-contenu{font-size:13px;color:var(--white-dim);line-height:1.7;}
+    .annonce-meta{font-size:10px;font-weight:700;letter-spacing:1px;color:var(--white-dim);margin-top:10px;display:flex;gap:16px;}
+    /* ── SECTION TITLE ── */
+    .section-label{font-size:10px;font-weight:800;letter-spacing:3px;text-transform:uppercase;color:var(--gold);margin-bottom:6px;}
+    .section-title{font-family:'Anton',sans-serif;font-size:clamp(22px,3vw,32px);letter-spacing:3px;margin-bottom:24px;}
+    .section-title span{color:var(--gold);}
+    .gold-line{width:60px;height:2px;background:linear-gradient(90deg,transparent,var(--gold),transparent);margin-bottom:20px;}
+  </style>
+</head>
+<body>
+
+<!-- SIDEBAR -->
+<nav class="sidebar">
+  <div class="sidebar-logo">
+    <div class="sidebar-logo-title">ELITE <span>CORP.</span></div>
+    <div class="sidebar-logo-sub">Panel de Gestion</div>
+  </div>
+  <div class="sidebar-user">
+    <div class="sidebar-avatar" id="sidebarAvatar">?</div>
+    <div>
+      <div class="sidebar-user-name" id="sidebarName">—</div>
+      <div class="sidebar-user-role" id="sidebarRole">—</div>
+    </div>
+  </div>
+  <nav class="sidebar-nav">
+    <div class="sidebar-section">Principal</div>
+    <button class="nav-btn active" onclick="showTab('dashboard')"><i class="fa-solid fa-gauge"></i> Dashboard</button>
+    <button class="nav-btn" onclick="showTab('presences')"><i class="fa-solid fa-clock"></i> Présences</button>
+    <button class="nav-btn" onclick="showTab('planning')"><i class="fa-solid fa-calendar-days"></i> Planning</button>
+    <div class="sidebar-section">Gestion</div>
+    <button class="nav-btn admin-only" onclick="showTab('employes')"><i class="fa-solid fa-users"></i> Employés</button>
+    <button class="nav-btn" onclick="showTab('annonces')"><i class="fa-solid fa-bullhorn"></i> Annonces</button>
+  </nav>
+  <div class="sidebar-bottom">
+    <button class="btn-logout" onclick="doLogout()"><i class="fa-solid fa-right-from-bracket"></i> Déconnexion</button>
+  </div>
+</nav>
+
+<!-- MAIN -->
+<div class="main">
+  <div class="topbar">
+    <div>
+      <div class="topbar-title" id="topbarTitle">DASHBOARD</div>
+    </div>
+    <div class="topbar-date" id="topbarDate"></div>
+  </div>
+  <div class="content">
+
+    <!-- ═══ TAB: DASHBOARD ═══ -->
+    <div class="tab-content active" id="tab-dashboard">
+      <div class="grid-4" style="margin-bottom:24px;">
+        <div class="stat-card">
+          <div class="stat-value" id="statEmployes">—</div>
+          <div class="stat-label">Employés actifs</div>
+          <i class="fa-solid fa-users stat-icon"></i>
+        </div>
+        <div class="stat-card">
+          <div class="stat-value" id="statPresents">—</div>
+          <div class="stat-label">Présents aujourd'hui</div>
+          <i class="fa-solid fa-clock stat-icon"></i>
+        </div>
+        <div class="stat-card">
+          <div class="stat-value" id="statEvenements">—</div>
+          <div class="stat-label">Événements à venir</div>
+          <i class="fa-solid fa-calendar stat-icon"></i>
+        </div>
+        <div class="stat-card">
+          <div class="stat-value" id="statAnnonces">—</div>
+          <div class="stat-label">Annonces</div>
+          <i class="fa-solid fa-bullhorn stat-icon"></i>
+        </div>
+      </div>
+      <div class="grid-2">
+        <div class="card">
+          <div class="card-title"><i class="fa-solid fa-clock"></i> Présences du jour</div>
+          <div id="dashPresences"><div style="color:var(--white-dim);font-size:12px;">Chargement...</div></div>
+        </div>
+        <div class="card">
+          <div class="card-title"><i class="fa-solid fa-bullhorn"></i> Dernières annonces</div>
+          <div id="dashAnnonces"><div style="color:var(--white-dim);font-size:12px;">Chargement...</div></div>
+        </div>
+      </div>
+      <div class="card" style="margin-top:20px;">
+        <div class="card-title"><i class="fa-solid fa-calendar-days"></i> Prochains événements</div>
+        <div id="dashPlanning"><div style="color:var(--white-dim);font-size:12px;">Chargement...</div></div>
+      </div>
+    </div>
+
+    <!-- ═══ TAB: PRÉSENCES ═══ -->
+    <div class="tab-content" id="tab-presences">
+      <div class="grid-2" style="margin-bottom:24px;">
+        <!-- Pointage -->
+        <div class="pointage-card">
+          <div class="gold-line" style="margin:0 auto 12px;"></div>
+          <div class="section-label" style="text-align:center;">Pointage</div>
+          <div class="pointage-time" id="pointageTime">00:00:00</div>
+          <div class="pointage-date" id="pointageDate"></div>
+          <div class="pointage-status badge badge-dim" id="pointageStatus">Non pointé</div>
+          <button class="btn btn-gold btn-pointer" id="btnPointer" onclick="doPointer()">
+            <i class="fa-solid fa-fingerprint"></i> POINTER MON ARRIVÉE
+          </button>
+        </div>
+        <!-- Mon historique -->
+        <div class="card">
+          <div class="card-title"><i class="fa-solid fa-history"></i> Mon historique</div>
+          <div class="table-wrap">
+            <table>
+              <thead><tr><th>Date</th><th>Arrivée</th><th>Départ</th><th>Statut</th></tr></thead>
+              <tbody id="myPresencesTable"><tr><td colspan="4" style="text-align:center;color:var(--white-dim);">Chargement...</td></tr></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+      <!-- Toutes les présences (admin) -->
+      <div class="card admin-only" id="allPresencesCard">
+        <div class="card-title"><i class="fa-solid fa-list-check"></i> Toutes les présences</div>
+        <div style="display:flex;gap:10px;margin-bottom:14px;flex-wrap:wrap;">
+          <input class="input-field" type="date" id="filterDate" style="width:180px;" onchange="loadAllPresences()"/>
+          <button class="btn btn-gold" onclick="loadAllPresences()"><i class="fa-solid fa-search"></i> Filtrer</button>
+          <button class="btn btn-outline" onclick="document.getElementById('filterDate').value='';loadAllPresences()"><i class="fa-solid fa-xmark"></i> Tout</button>
+        </div>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>Employé</th><th>Poste</th><th>Date</th><th>Arrivée</th><th>Départ</th><th>Statut</th><th>Note</th></tr></thead>
+            <tbody id="allPresencesTable"><tr><td colspan="7" style="text-align:center;color:var(--white-dim);">Chargement...</td></tr></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- ═══ TAB: PLANNING ═══ -->
+    <div class="tab-content" id="tab-planning">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;flex-wrap:wrap;gap:12px;">
+        <div class="cal-header" style="margin:0;">
+          <button class="btn btn-outline" onclick="calPrev()"><i class="fa-solid fa-chevron-left"></i></button>
+          <div class="cal-month" style="margin:0 16px;" id="calMonthLabel">—</div>
+          <button class="btn btn-outline" onclick="calNext()"><i class="fa-solid fa-chevron-right"></i></button>
+        </div>
+        <button class="btn btn-gold admin-only" onclick="openModal('modalPlanning')"><i class="fa-solid fa-plus"></i> Nouvel événement</button>
+      </div>
+      <div class="card">
+        <div class="cal-grid" id="calDayNames"></div>
+        <div class="cal-grid" id="calGrid" style="margin-top:4px;"></div>
+      </div>
+      <div class="card" style="margin-top:20px;">
+        <div class="card-title"><i class="fa-solid fa-list"></i> Liste des événements</div>
+        <div id="planningList"><div style="color:var(--white-dim);font-size:12px;">Chargement...</div></div>
+      </div>
+    </div>
+
+    <!-- ═══ TAB: EMPLOYÉS ═══ -->
+    <div class="tab-content" id="tab-employes">
+      <div style="display:flex;justify-content:flex-end;margin-bottom:20px;">
+        <button class="btn btn-gold" onclick="openModal('modalEmploye')"><i class="fa-solid fa-user-plus"></i> Ajouter un employé</button>
+      </div>
+      <div class="card">
+        <div class="card-title"><i class="fa-solid fa-users"></i> Équipe Elite Corp.</div>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>Nom</th><th>Identifiant</th><th>Poste</th><th>Rôle</th><th>Statut</th><th>Actions</th></tr></thead>
+            <tbody id="employesTable"><tr><td colspan="6" style="text-align:center;color:var(--white-dim);">Chargement...</td></tr></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- ═══ TAB: ANNONCES ═══ -->
+    <div class="tab-content" id="tab-annonces">
+      <div style="display:flex;justify-content:flex-end;margin-bottom:20px;">
+        <button class="btn btn-gold admin-only" onclick="openModal('modalAnnonce')"><i class="fa-solid fa-plus"></i> Nouvelle annonce</button>
+      </div>
+      <div id="annoncesList"><div style="color:var(--white-dim);font-size:12px;">Chargement...</div></div>
+    </div>
+
+  </div><!-- /content -->
+</div><!-- /main -->
+
+<!-- ═══ MODALS ═══ -->
+
+<!-- Modal Employé -->
+<div class="modal-overlay" id="modalEmploye">
+  <div class="modal">
+    <button class="modal-close" onclick="closeModal('modalEmploye')"><i class="fa-solid fa-xmark"></i></button>
+    <div class="modal-title">AJOUTER UN EMPLOYÉ</div>
+    <div class="grid-2">
+      <div class="form-group"><label>Prénom</label><input class="input-field" id="empPrenom" placeholder="Jean"/></div>
+      <div class="form-group"><label>Nom</label><input class="input-field" id="empNom" placeholder="Dupont"/></div>
+    </div>
+    <div class="form-group"><label>Identifiant</label><input class="input-field" id="empUsername" placeholder="jean.dupont"/></div>
+    <div class="form-group"><label>Mot de passe</label><input class="input-field" id="empPassword" type="password" placeholder="••••••••"/></div>
+    <div class="form-group"><label>Poste</label>
+      <select class="input-field" id="empPoste">
+        <option>Agent de Sécurité</option>
+        <option>Chef de la Sécurité</option>
+        <option>Responsable Événementiel</option>
+        <option>Coordinateur</option>
+        <option>Directeur</option>
+        <option>Employé</option>
+      </select>
+    </div>
+    <div class="form-group"><label>Rôle système</label>
+      <select class="input-field" id="empRole">
+        <option value="employe">Employé</option>
+        <option value="admin">Admin</option>
+      </select>
+    </div>
+    <div class="btn-row">
+      <button class="btn btn-gold" onclick="saveEmploye()"><i class="fa-solid fa-floppy-disk"></i> Enregistrer</button>
+      <button class="btn btn-outline" onclick="closeModal('modalEmploye')">Annuler</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal Planning -->
+<div class="modal-overlay" id="modalPlanning">
+  <div class="modal">
+    <button class="modal-close" onclick="closeModal('modalPlanning')"><i class="fa-solid fa-xmark"></i></button>
+    <div class="modal-title">NOUVEL ÉVÉNEMENT</div>
+    <div class="form-group"><label>Titre</label><input class="input-field" id="planTitre" placeholder="Soirée VIP Galaxy"/></div>
+    <div class="form-group"><label>Description</label><textarea class="input-field" id="planDesc" placeholder="Détails de l'événement..."></textarea></div>
+    <div class="grid-2">
+      <div class="form-group"><label>Début</label><input class="input-field" id="planDebut" type="datetime-local"/></div>
+      <div class="form-group"><label>Fin</label><input class="input-field" id="planFin" type="datetime-local"/></div>
+    </div>
+    <div class="form-group"><label>Type</label>
+      <select class="input-field" id="planType">
+        <option value="evenement">Événement</option>
+        <option value="service">Service</option>
+        <option value="reunion">Réunion</option>
+        <option value="formation">Formation</option>
+      </select>
+    </div>
+    <div class="btn-row">
+      <button class="btn btn-gold" onclick="savePlanning()"><i class="fa-solid fa-floppy-disk"></i> Enregistrer</button>
+      <button class="btn btn-outline" onclick="closeModal('modalPlanning')">Annuler</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal Annonce -->
+<div class="modal-overlay" id="modalAnnonce">
+  <div class="modal">
+    <button class="modal-close" onclick="closeModal('modalAnnonce')"><i class="fa-solid fa-xmark"></i></button>
+    <div class="modal-title">NOUVELLE ANNONCE</div>
+    <div class="form-group"><label>Titre</label><input class="input-field" id="annTitre" placeholder="Titre de l'annonce"/></div>
+    <div class="form-group"><label>Contenu</label><textarea class="input-field" id="annContenu" placeholder="Contenu de l'annonce..." style="min-height:120px;"></textarea></div>
+    <div class="form-group"><label>Priorité</label>
+      <select class="input-field" id="annPriorite">
+        <option value="normale">Normale</option>
+        <option value="importante">Importante</option>
+        <option value="urgente">Urgente</option>
+      </select>
+    </div>
+    <div class="btn-row">
+      <button class="btn btn-gold" onclick="saveAnnonce()"><i class="fa-solid fa-floppy-disk"></i> Publier</button>
+      <button class="btn btn-outline" onclick="closeModal('modalAnnonce')">Annuler</button>
+    </div>
+  </div>
+</div>
+
+<!-- Toast -->
+<div class="toast" id="toast"></div>
+
+<script>
+/* ── STATE ── */
+let currentUser = null;
+let currentTab = 'dashboard';
+let calYear = new Date().getFullYear();
+let calMonth = new Date().getMonth();
+let planningData = [];
+
+/* ── INIT ── */
+async function init() {
+  try {
+    const r = await fetch('/api/me');
+    const data = await r.json();
+    if (!data.user) { window.location.href = '/login'; return; }
+    currentUser = data.user;
+    document.getElementById('sidebarName').textContent = data.user.prenom + ' ' + data.user.nom;
+    document.getElementById('sidebarRole').textContent = data.user.role === 'admin' ? 'Administrateur' : data.user.poste;
+    document.getElementById('sidebarAvatar').textContent = (data.user.prenom[0] || '?').toUpperCase();
+    if (data.user.role !== 'admin') {
+      document.querySelectorAll('.admin-only').forEach(el => el.style.display = 'none');
+    }
+    updateClock();
+    setInterval(updateClock, 1000);
+    updateTopbarDate();
+    loadDashboard();
+    loadMyPresences();
+    renderCalDayNames();
+    loadCalendar();
+  } catch(e) { window.location.href = '/login'; }
+}
+
+/* ── CLOCK ── */
+function updateClock() {
+  const now = new Date();
+  const h = String(now.getHours()).padStart(2,'0');
+  const m = String(now.getMinutes()).padStart(2,'0');
+  const s = String(now.getSeconds()).padStart(2,'0');
+  const el = document.getElementById('pointageTime');
+  if (el) el.textContent = h + ':' + m + ':' + s;
+  const dateEl = document.getElementById('pointageDate');
+  if (dateEl) dateEl.textContent = now.toLocaleDateString('fr-FR', {weekday:'long',year:'numeric',month:'long',day:'numeric'}).toUpperCase();
+}
+
+function updateTopbarDate() {
+  const now = new Date();
+  document.getElementById('topbarDate').textContent = now.toLocaleDateString('fr-FR', {weekday:'long',day:'numeric',month:'long',year:'numeric'}).toUpperCase();
+}
+
+/* ── TABS ── */
+const tabTitles = { dashboard:'DASHBOARD', presences:'PRÉSENCES', planning:'PLANNING', employes:'EMPLOYÉS', annonces:'ANNONCES' };
+function showTab(name) {
+  document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
+  document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
+  document.getElementById('tab-' + name).classList.add('active');
+  document.querySelectorAll('.nav-btn').forEach(b => { if (b.getAttribute('onclick') === "showTab('" + name + "')") b.classList.add('active'); });
+  document.getElementById('topbarTitle').textContent = tabTitles[name] || name.toUpperCase();
+  currentTab = name;
+  if (name === 'dashboard') loadDashboard();
+  if (name === 'presences') { loadMyPresences(); if (currentUser?.role === 'admin') loadAllPresences(); }
+  if (name === 'planning') loadCalendar();
+  if (name === 'employes') loadEmployes();
+  if (name === 'annonces') loadAnnonces();
+}
+
+/* ── TOAST ── */
+function showToast(msg, ok = true) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.style.borderColor = ok ? 'var(--gold)' : 'var(--red)';
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 3000);
+}
+
+/* ── MODAL ── */
+function openModal(id) { document.getElementById(id).classList.add('open'); }
+function closeModal(id) { document.getElementById(id).classList.remove('open'); }
+document.addEventListener('click', e => { if (e.target.classList.contains('modal-overlay')) e.target.classList.remove('open'); });
+
+/* ── LOGOUT ── */
+async function doLogout() {
+  await fetch('/api/logout', { method: 'POST' });
+  window.location.href = '/login';
+}
+</script>
+
+<script>
+/* ── DASHBOARD ── */
+async function loadDashboard() {
+  try {
+    const [stats, presences, annonces, planning] = await Promise.all([
+      fetch('/api/stats').then(r => r.json()),
+      fetch('/api/presences?date=' + new Date().toISOString().split('T')[0]).then(r => r.json()),
+      fetch('/api/annonces').then(r => r.json()),
+      fetch('/api/planning').then(r => r.json())
+    ]);
+    document.getElementById('statEmployes').textContent = stats.employes || 0;
+    document.getElementById('statPresents').textContent = stats.presents_aujourd_hui || 0;
+    document.getElementById('statEvenements').textContent = stats.evenements_a_venir || 0;
+    document.getElementById('statAnnonces').textContent = stats.annonces || 0;
+
+    // Présences du jour
+    const dp = document.getElementById('dashPresences');
+    if (!presences.length) { dp.innerHTML = '<div style="color:var(--white-dim);font-size:12px;padding:8px 0;">Aucune présence enregistrée aujourd\'hui.</div>'; }
+    else {
+      dp.innerHTML = presences.slice(0,6).map(p => `
+        <div style="display:flex;align-items:center;justify-content:space-between;padding:8px 0;border-bottom:1px solid rgba(201,168,76,0.08);">
+          <div>
+            <div style="font-size:12px;font-weight:800;color:var(--white);">${p.prenom} ${p.nom}</div>
+            <div style="font-size:10px;color:var(--white-dim);">${p.poste}</div>
+          </div>
+          <div style="text-align:right;">
+            <div style="font-size:11px;font-weight:700;color:var(--gold);">${p.heure_arrivee ? p.heure_arrivee.slice(0,5) : '—'} → ${p.heure_depart ? p.heure_depart.slice(0,5) : 'En cours'}</div>
+            <span class="badge ${p.statut === 'present' ? 'badge-green' : 'badge-red'}">${p.statut}</span>
+          </div>
+        </div>`).join('');
+    }
+
+    // Annonces
+    const da = document.getElementById('dashAnnonces');
+    if (!annonces.length) { da.innerHTML = '<div style="color:var(--white-dim);font-size:12px;padding:8px 0;">Aucune annonce.</div>'; }
+    else {
+      da.innerHTML = annonces.slice(0,3).map(a => `
+        <div style="padding:10px 0;border-bottom:1px solid rgba(201,168,76,0.08);">
+          <div style="display:flex;align-items:center;gap:8px;margin-bottom:4px;">
+            <span class="badge ${a.priorite === 'urgente' ? 'badge-red' : a.priorite === 'importante' ? 'badge-gold' : 'badge-dim'}">${a.priorite}</span>
+            <span style="font-size:12px;font-weight:800;color:var(--white);">${a.titre}</span>
+          </div>
+          <div style="font-size:11px;color:var(--white-dim);">${a.contenu.slice(0,80)}${a.contenu.length > 80 ? '...' : ''}</div>
+        </div>`).join('');
+    }
+
+    // Planning
+    const dpl = document.getElementById('dashPlanning');
+    const upcoming = planning.filter(e => new Date(e.date_debut) >= new Date()).slice(0,4);
+    if (!upcoming.length) { dpl.innerHTML = '<div style="color:var(--white-dim);font-size:12px;padding:8px 0;">Aucun événement à venir.</div>'; }
+    else {
+      dpl.innerHTML = '<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:12px;">' +
+        upcoming.map(e => `
+          <div style="background:rgba(201,168,76,0.06);border:1px solid var(--border);border-radius:10px;padding:14px;">
+            <div style="font-size:10px;font-weight:800;letter-spacing:1px;color:var(--gold);text-transform:uppercase;margin-bottom:4px;">${e.type}</div>
+            <div style="font-size:13px;font-weight:800;color:var(--white);margin-bottom:6px;">${e.titre}</div>
+            <div style="font-size:11px;color:var(--white-dim);">${new Date(e.date_debut).toLocaleDateString('fr-FR',{day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'})}</div>
+          </div>`).join('') + '</div>';
+    }
+  } catch(e) { console.error(e); }
+}
+</script>
+
+<script>
+/* ── PRÉSENCES ── */
+async function loadMyPresences() {
+  try {
+    const r = await fetch('/api/presences?user_id=' + (currentUser?.id || ''));
+    const data = await r.json();
+    const tbody = document.getElementById('myPresencesTable');
+    if (!data.length) { tbody.innerHTML = '<tr><td colspan="4" style="text-align:center;color:var(--white-dim);">Aucune présence enregistrée.</td></tr>'; return; }
+    tbody.innerHTML = data.slice(0,10).map(p => `
+      <tr>
+        <td>${new Date(p.date).toLocaleDateString('fr-FR')}</td>
+        <td style="color:var(--gold);">${p.heure_arrivee ? p.heure_arrivee.slice(0,5) : '—'}</td>
+        <td style="color:var(--white-dim);">${p.heure_depart ? p.heure_depart.slice(0,5) : '<span style="color:var(--green);">En cours</span>'}</td>
+        <td><span class="badge ${p.statut === 'present' ? 'badge-green' : 'badge-red'}">${p.statut}</span></td>
+      </tr>`).join('');
+
+    // Mettre à jour le statut de pointage
+    const today = new Date().toISOString().split('T')[0];
+    const todayP = data.find(p => p.date === today || p.date?.startsWith(today));
+    const statusEl = document.getElementById('pointageStatus');
+    const btnEl = document.getElementById('btnPointer');
+    if (todayP) {
+      if (!todayP.heure_depart) {
+        statusEl.textContent = '✅ Arrivée pointée à ' + todayP.heure_arrivee?.slice(0,5);
+        statusEl.className = 'pointage-status badge badge-green';
+        btnEl.innerHTML = '<i class="fa-solid fa-door-open"></i> POINTER MON DÉPART';
+      } else {
+        statusEl.textContent = '✅ Journée complète — ' + todayP.heure_arrivee?.slice(0,5) + ' → ' + todayP.heure_depart?.slice(0,5);
+        statusEl.className = 'pointage-status badge badge-dim';
+        btnEl.disabled = true;
+        btnEl.innerHTML = '<i class="fa-solid fa-check"></i> JOURNÉE TERMINÉE';
+      }
+    } else {
+      statusEl.textContent = 'Non pointé';
+      statusEl.className = 'pointage-status badge badge-dim';
+      btnEl.disabled = false;
+      btnEl.innerHTML = '<i class="fa-solid fa-fingerprint"></i> POINTER MON ARRIVÉE';
+    }
+  } catch(e) { console.error(e); }
+}
+
+async function loadAllPresences() {
+  try {
+    const date = document.getElementById('filterDate')?.value || '';
+    const url = '/api/presences' + (date ? '?date=' + date : '');
+    const data = await fetch(url).then(r => r.json());
+    const tbody = document.getElementById('allPresencesTable');
+    if (!data.length) { tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;color:var(--white-dim);">Aucune présence.</td></tr>'; return; }
+    tbody.innerHTML = data.map(p => `
+      <tr>
+        <td style="font-weight:800;color:var(--white);">${p.prenom} ${p.nom}</td>
+        <td>${p.poste}</td>
+        <td>${new Date(p.date).toLocaleDateString('fr-FR')}</td>
+        <td style="color:var(--gold);">${p.heure_arrivee ? p.heure_arrivee.slice(0,5) : '—'}</td>
+        <td style="color:var(--white-dim);">${p.heure_depart ? p.heure_depart.slice(0,5) : '—'}</td>
+        <td><span class="badge ${p.statut === 'present' ? 'badge-green' : 'badge-red'}">${p.statut}</span></td>
+        <td style="font-size:11px;">${p.note || '—'}</td>
+      </tr>`).join('');
+  } catch(e) { console.error(e); }
+}
+
+async function doPointer() {
+  try {
+    const r = await fetch('/api/presences/pointer', { method: 'POST' });
+    const data = await r.json();
+    if (data.action === 'arrivee') showToast('✅ Arrivée pointée à ' + data.heure.slice(0,5));
+    else if (data.action === 'depart') showToast('✅ Départ pointé à ' + data.heure.slice(0,5));
+    else showToast('ℹ️ Journée déjà complète');
+    loadMyPresences();
+  } catch(e) { showToast('❌ Erreur réseau', false); }
+}
+</script>
+
+<script>
+/* ── PLANNING / CALENDRIER ── */
+const JOURS = ['Lun','Mar','Mer','Jeu','Ven','Sam','Dim'];
+const MOIS_FR = ['Janvier','Février','Mars','Avril','Mai','Juin','Juillet','Août','Septembre','Octobre','Novembre','Décembre'];
+
+function renderCalDayNames() {
+  const grid = document.getElementById('calDayNames');
+  if (!grid) return;
+  grid.innerHTML = JOURS.map(j => `<div class="cal-day-name">${j}</div>`).join('');
+}
+
+async function loadCalendar() {
+  try {
+    const r = await fetch('/api/planning?mois=' + (calMonth + 1) + '&annee=' + calYear);
+    planningData = await r.json();
+    document.getElementById('calMonthLabel').textContent = MOIS_FR[calMonth] + ' ' + calYear;
+    renderCalendar();
+    renderPlanningList();
+  } catch(e) { console.error(e); }
+}
+
+function renderCalendar() {
+  const grid = document.getElementById('calGrid');
+  if (!grid) return;
+  const today = new Date();
+  const firstDay = new Date(calYear, calMonth, 1);
+  let startDow = firstDay.getDay();
+  startDow = startDow === 0 ? 6 : startDow - 1; // Lundi = 0
+  const daysInMonth = new Date(calYear, calMonth + 1, 0).getDate();
+  const daysInPrev = new Date(calYear, calMonth, 0).getDate();
+  let html = '';
+  let dayCount = 1;
+  let nextCount = 1;
+  const totalCells = Math.ceil((startDow + daysInMonth) / 7) * 7;
+
+  for (let i = 0; i < totalCells; i++) {
+    let dayNum, isOther = false, dateStr;
+    if (i < startDow) { dayNum = daysInPrev - startDow + i + 1; isOther = true; dateStr = calYear + '-' + String(calMonth === 0 ? 12 : calMonth).padStart(2,'0') + '-' + String(dayNum).padStart(2,'0'); }
+    else if (dayCount <= daysInMonth) { dayNum = dayCount++; dateStr = calYear + '-' + String(calMonth + 1).padStart(2,'0') + '-' + String(dayNum).padStart(2,'0'); }
+    else { dayNum = nextCount++; isOther = true; dateStr = calYear + '-' + String(calMonth + 2 > 12 ? 1 : calMonth + 2).padStart(2,'0') + '-' + String(dayNum).padStart(2,'0'); }
+
+    const isToday = !isOther && dayNum === today.getDate() && calMonth === today.getMonth() && calYear === today.getFullYear();
+    const dayEvents = planningData.filter(e => e.date_debut?.startsWith(dateStr));
+    const eventsHtml = dayEvents.slice(0,2).map(e => `<div class="cal-event" title="${e.titre}">${e.titre}</div>`).join('');
+    html += `<div class="cal-day${isOther ? ' other-month' : ''}${isToday ? ' today' : ''}">
+      <div class="cal-day-num">${dayNum}</div>${eventsHtml}
+    </div>`;
+  }
+  grid.innerHTML = html;
+}
+
+function renderPlanningList() {
+  const el = document.getElementById('planningList');
+  if (!planningData.length) { el.innerHTML = '<div style="color:var(--white-dim);font-size:12px;padding:8px 0;">Aucun événement ce mois-ci.</div>'; return; }
+  el.innerHTML = planningData.map(e => `
+    <div style="display:flex;align-items:center;justify-content:space-between;padding:12px 0;border-bottom:1px solid rgba(201,168,76,0.08);flex-wrap:wrap;gap:8px;">
+      <div style="display:flex;align-items:center;gap:12px;">
+        <div style="width:4px;height:40px;border-radius:2px;background:${e.couleur || 'var(--gold)'};flex-shrink:0;"></div>
+        <div>
+          <div style="font-size:13px;font-weight:800;color:var(--white);">${e.titre}</div>
+          <div style="font-size:11px;color:var(--white-dim);">${new Date(e.date_debut).toLocaleDateString('fr-FR',{day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'})} → ${new Date(e.date_fin).toLocaleDateString('fr-FR',{day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'})}</div>
+          ${e.description ? '<div style="font-size:11px;color:var(--white-dim);margin-top:2px;">' + e.description + '</div>' : ''}
+        </div>
+      </div>
+      <div style="display:flex;align-items:center;gap:8px;">
+        <span class="badge badge-gold">${e.type}</span>
+        ${currentUser?.role === 'admin' ? '<button class="btn btn-danger" style="padding:6px 10px;font-size:10px;" onclick="deletePlanning(' + e.id + ')"><i class="fa-solid fa-trash"></i></button>' : ''}
+      </div>
+    </div>`).join('');
+}
+
+function calPrev() { calMonth--; if (calMonth < 0) { calMonth = 11; calYear--; } loadCalendar(); }
+function calNext() { calMonth++; if (calMonth > 11) { calMonth = 0; calYear++; } loadCalendar(); }
+
+async function savePlanning() {
+  const titre = document.getElementById('planTitre').value.trim();
+  const desc = document.getElementById('planDesc').value.trim();
+  const debut = document.getElementById('planDebut').value;
+  const fin = document.getElementById('planFin').value;
+  const type = document.getElementById('planType').value;
+  if (!titre || !debut || !fin) { showToast('❌ Remplis tous les champs obligatoires', false); return; }
+  try {
+    const r = await fetch('/api/planning', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({ titre, description: desc, date_debut: debut, date_fin: fin, type }) });
+    const data = await r.json();
+    if (data.success) { showToast('✅ Événement créé'); closeModal('modalPlanning'); loadCalendar(); document.getElementById('planTitre').value = ''; document.getElementById('planDesc').value = ''; }
+    else showToast('❌ ' + (data.error || 'Erreur'), false);
+  } catch(e) { showToast('❌ Erreur réseau', false); }
+}
+
+async function deletePlanning(id) {
+  if (!confirm('Supprimer cet événement ?')) return;
+  await fetch('/api/planning/' + id, { method: 'DELETE' });
+  showToast('✅ Événement supprimé');
+  loadCalendar();
+}
+</script>
+
+<script>
+/* ── EMPLOYÉS ── */
+async function loadEmployes() {
+  try {
+    const data = await fetch('/api/employes').then(r => r.json());
+    const tbody = document.getElementById('employesTable');
+    if (!data.length) { tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;color:var(--white-dim);">Aucun employé.</td></tr>'; return; }
+    tbody.innerHTML = data.map(e => `
+      <tr>
+        <td style="font-weight:800;color:var(--white);">${e.prenom} ${e.nom}</td>
+        <td style="font-family:monospace;font-size:11px;color:var(--white-dim);">${e.username}</td>
+        <td>${e.poste}</td>
+        <td><span class="badge ${e.role === 'admin' ? 'badge-gold' : 'badge-dim'}">${e.role === 'admin' ? 'Admin' : 'Employé'}</span></td>
+        <td><span class="badge ${e.actif ? 'badge-green' : 'badge-red'}">${e.actif ? 'Actif' : 'Inactif'}</span></td>
+        <td>
+          ${e.actif ? `<button class="btn btn-danger" style="padding:5px 10px;font-size:10px;" onclick="desactiverEmploye(${e.id})"><i class="fa-solid fa-user-slash"></i> Désactiver</button>` : ''}
+        </td>
+      </tr>`).join('');
+  } catch(e) { console.error(e); }
+}
+
+async function saveEmploye() {
+  const prenom = document.getElementById('empPrenom').value.trim();
+  const nom = document.getElementById('empNom').value.trim();
+  const username = document.getElementById('empUsername').value.trim();
+  const password = document.getElementById('empPassword').value;
+  const poste = document.getElementById('empPoste').value;
+  const role = document.getElementById('empRole').value;
+  if (!prenom || !nom || !username || !password) { showToast('❌ Remplis tous les champs', false); return; }
+  try {
+    const r = await fetch('/api/employes', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({ prenom, nom, username, password, poste, role }) });
+    const data = await r.json();
+    if (data.id) { showToast('✅ Employé créé'); closeModal('modalEmploye'); loadEmployes(); }
+    else showToast('❌ ' + (data.error || 'Erreur'), false);
+  } catch(e) { showToast('❌ Erreur réseau', false); }
+}
+
+async function desactiverEmploye(id) {
+  if (!confirm('Désactiver cet employé ?')) return;
+  await fetch('/api/employes/' + id, { method: 'PUT', headers: {'Content-Type':'application/json'}, body: JSON.stringify({ actif: false }) });
+  showToast('✅ Employé désactivé');
+  loadEmployes();
+}
+
+/* ── ANNONCES ── */
+async function loadAnnonces() {
+  try {
+    const data = await fetch('/api/annonces').then(r => r.json());
+    const el = document.getElementById('annoncesList');
+    if (!data.length) { el.innerHTML = '<div style="color:var(--white-dim);font-size:12px;padding:8px 0;">Aucune annonce.</div>'; return; }
+    el.innerHTML = data.map(a => `
+      <div class="annonce-item ${a.priorite}">
+        <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:12px;">
+          <div style="flex:1;">
+            <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px;">
+              <span class="badge ${a.priorite === 'urgente' ? 'badge-red' : a.priorite === 'importante' ? 'badge-gold' : 'badge-dim'}">${a.priorite}</span>
+              <div class="annonce-titre">${a.titre}</div>
+            </div>
+            <div class="annonce-contenu">${a.contenu}</div>
+            <div class="annonce-meta">
+              <span><i class="fa-solid fa-user"></i> ${a.auteur_nom || 'Admin'}</span>
+              <span><i class="fa-solid fa-clock"></i> ${new Date(a.created_at).toLocaleDateString('fr-FR',{day:'numeric',month:'short',year:'numeric'})}</span>
+            </div>
+          </div>
+          ${currentUser?.role === 'admin' ? `<button class="btn btn-danger" style="padding:6px 10px;font-size:10px;flex-shrink:0;" onclick="deleteAnnonce(${a.id})"><i class="fa-solid fa-trash"></i></button>` : ''}
+        </div>
+      </div>`).join('');
+  } catch(e) { console.error(e); }
+}
+
+async function saveAnnonce() {
+  const titre = document.getElementById('annTitre').value.trim();
+  const contenu = document.getElementById('annContenu').value.trim();
+  const priorite = document.getElementById('annPriorite').value;
+  if (!titre || !contenu) { showToast('❌ Remplis tous les champs', false); return; }
+  try {
+    const r = await fetch('/api/annonces', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({ titre, contenu, priorite }) });
+    const data = await r.json();
+    if (data.success) { showToast('✅ Annonce publiée'); closeModal('modalAnnonce'); loadAnnonces(); document.getElementById('annTitre').value = ''; document.getElementById('annContenu').value = ''; }
+    else showToast('❌ ' + (data.error || 'Erreur'), false);
+  } catch(e) { showToast('❌ Erreur réseau', false); }
+}
+
+async function deleteAnnonce(id) {
+  if (!confirm('Supprimer cette annonce ?')) return;
+  await fetch('/api/annonces/' + id, { method: 'DELETE' });
+  showToast('✅ Annonce supprimée');
+  loadAnnonces();
+}
+
+/* ── START ── */
+init();
+</script>
+</body>
+</html>

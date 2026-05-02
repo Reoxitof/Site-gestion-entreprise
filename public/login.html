@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Elite Corp. — Connexion</title>
+  <link href="https://fonts.googleapis.com/css2?family=Anton&family=Inter:wght@300;400;600;700;800;900&display=swap" rel="stylesheet"/>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css"/>
+  <style>
+    :root{--gold:#c9a84c;--gold-light:#f0d080;--gold-dim:#8a6f2e;--bg:#0a0a0f;--surface:#111118;--card:#16161f;--border:rgba(201,168,76,0.25);--white:#f0ead8;--white-dim:#9a9080;}
+    *{box-sizing:border-box;margin:0;padding:0;}
+    body{background:var(--bg);color:var(--white);font-family:'Inter',sans-serif;min-height:100vh;display:flex;align-items:center;justify-content:center;
+      background-image:linear-gradient(rgba(201,168,76,0.03) 1px,transparent 1px),linear-gradient(90deg,rgba(201,168,76,0.03) 1px,transparent 1px);
+      background-size:50px 50px;}
+    .login-wrap{width:min(420px,92vw);}
+    .login-logo{text-align:center;margin-bottom:32px;}
+    .login-logo-title{font-family:'Anton',sans-serif;font-size:36px;letter-spacing:6px;color:var(--gold);}
+    .login-logo-title span{color:var(--white);}
+    .login-logo-sub{font-size:11px;font-weight:700;letter-spacing:3px;text-transform:uppercase;color:var(--white-dim);margin-top:4px;}
+    .login-card{background:var(--card);border:1px solid var(--border);border-radius:20px;padding:40px;position:relative;overflow:hidden;}
+    .login-card::before{content:'';position:absolute;top:0;left:0;right:0;height:3px;background:linear-gradient(90deg,transparent,var(--gold),transparent);}
+    .login-title{font-family:'Anton',sans-serif;font-size:22px;letter-spacing:3px;color:var(--white);margin-bottom:6px;}
+    .login-sub{font-size:12px;color:var(--white-dim);margin-bottom:28px;}
+    label{display:block;font-size:10px;font-weight:800;letter-spacing:2px;text-transform:uppercase;color:var(--white-dim);margin-bottom:6px;}
+    .input-field{width:100%;padding:13px 16px;background:var(--bg);border:1px solid var(--border);border-radius:10px;color:var(--white);font-family:'Inter',sans-serif;font-size:14px;font-weight:600;outline:none;transition:border-color 0.2s;margin-bottom:18px;}
+    .input-field:focus{border-color:var(--gold);}
+    .btn-gold{width:100%;padding:14px;background:linear-gradient(135deg,var(--gold-dim),var(--gold));border:none;border-radius:10px;color:#000;font-family:'Inter',sans-serif;font-size:13px;font-weight:900;letter-spacing:2px;text-transform:uppercase;cursor:pointer;transition:all 0.2s;box-shadow:0 8px 24px rgba(201,168,76,0.3);}
+    .btn-gold:hover{transform:translateY(-2px);box-shadow:0 12px 32px rgba(201,168,76,0.45);}
+    .error-msg{background:rgba(226,64,64,0.12);border:1px solid rgba(226,64,64,0.3);border-radius:8px;padding:10px 14px;font-size:12px;font-weight:700;color:#ff7b7b;margin-bottom:16px;display:none;}
+  </style>
+</head>
+<body>
+<div class="login-wrap">
+  <div class="login-logo">
+    <div class="login-logo-title">ELITE <span>CORP.</span></div>
+    <div class="login-logo-sub">Panel de Gestion Interne</div>
+  </div>
+  <div class="login-card">
+    <div class="login-title">CONNEXION</div>
+    <div class="login-sub">Accès réservé au personnel Elite Corp.</div>
+    <div class="error-msg" id="errorMsg"></div>
+    <label>Identifiant</label>
+    <input class="input-field" id="username" type="text" placeholder="Votre identifiant" autocomplete="username"/>
+    <label>Mot de passe</label>
+    <input class="input-field" id="password" type="password" placeholder="••••••••" autocomplete="current-password"/>
+    <button class="btn-gold" onclick="doLogin()"><i class="fa-solid fa-right-to-bracket"></i> &nbsp;SE CONNECTER</button>
+  </div>
+</div>
+<script>
+  async function doLogin() {
+    const username = document.getElementById('username').value.trim();
+    const password = document.getElementById('password').value;
+    const err = document.getElementById('errorMsg');
+    err.style.display = 'none';
+    if (!username || !password) { err.textContent = 'Remplis tous les champs.'; err.style.display = 'block'; return; }
+    try {
+      const r = await fetch('/api/login', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({ username, password }) });
+      const data = await r.json();
+      if (data.success) { window.location.href = '/'; }
+      else { err.textContent = data.error || 'Identifiants invalides.'; err.style.display = 'block'; }
+    } catch(e) { err.textContent = 'Erreur réseau.'; err.style.display = 'block'; }
+  }
+  document.addEventListener('keydown', e => { if (e.key === 'Enter') doLogin(); });
+</script>
+</body>
+</html>
