@@ -167,7 +167,7 @@
     <div class="sidebar-section">Gestion</div>
     <button class="nav-btn admin-only" onclick="showTab('employes')"><i class="fa-solid fa-users"></i> Employés</button>
     <button class="nav-btn" onclick="showTab('annonces')"><i class="fa-solid fa-bullhorn"></i> Annonces</button>
-    <button class="nav-btn admin-only" onclick="showTab('recrutement')"><i class="fa-solid fa-user-tie"></i> Recrutement</button>
+    <button class="nav-btn recrutement-access" onclick="showTab('recrutement')"><i class="fa-solid fa-user-tie"></i> Recrutement</button>
     <button class="nav-btn admin-only" onclick="showTab('commandes')"><i class="fa-solid fa-clipboard-list"></i> Commandes</button>
   </nav>
   <div class="sidebar-bottom">
@@ -723,6 +723,15 @@ async function init() {
     document.getElementById('sidebarAvatar').textContent = (data.user.prenom[0] || '?').toUpperCase();
     if (data.user.role !== 'admin') {
       document.querySelectorAll('.admin-only').forEach(el => el.style.display = 'none');
+    }
+    // Accès recrutement : admin + postes de direction/responsables
+    const POSTES_RECRUTEMENT = [
+      'Directeur Général', 'Directeur de Division', 'Coordinateur',
+      'Chef de la Sécurité', 'Responsable Événementiel', 'Responsable Artistique'
+    ];
+    const canRecruit = data.user.role === 'admin' || POSTES_RECRUTEMENT.includes(data.user.poste);
+    if (!canRecruit) {
+      document.querySelectorAll('.recrutement-access').forEach(el => el.style.display = 'none');
     }
     updateClock();
     setInterval(updateClock, 1000);
