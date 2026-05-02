@@ -1000,14 +1000,14 @@ init();
 ══════════════════════════════════════════ */
 
 const RECR_QUESTIONS = [
-  // ── GÉNÉRALES ──
-  { id:1, cat:'general', catLabel:'🏢 Général', q:'Qu\'est-ce qu\'Elite Corp. et quelles sont ses divisions ?', rep:`<strong>Elite Corp.</strong> est une entreprise d'Event Planning & Services basée à Blaine County / Orange County. Elle regroupe 4 filiales :<br><br>
+  // ── GÉNÉRALES (poids 3 chacune = 15 pts) ──
+  { id:1, cat:'general', catLabel:'🏢 Général', poids:3, q:'Qu\'est-ce qu\'Elite Corp. et quelles sont ses divisions ?', rep:`<strong>Elite Corp.</strong> est une entreprise d'Event Planning & Services basée à Blaine County / Orange County. Elle regroupe 4 filiales :<br><br>
     • <strong>Penny's Elite Security</strong> — Sécurité des événements, escorte VIP, convois<br>
     • <strong>Elite Aventure</strong> — Road trips, safaris, expéditions, aventures<br>
     • <strong>Elite Tourisme</strong> — Conciergerie, transferts VIP, guide touristique<br>
     • <strong>Lilly's Girls</strong> — Animations, shows, prestations artistiques`, keywords:['elite corp','divisions','filiales'] },
 
-  { id:2, cat:'general', catLabel:'🏢 Général', q:'Quelles sont les valeurs fondamentales de la Charte Elite Corp. ?', rep:`La Charte Elite Corp. repose sur <strong>9 piliers</strong> :<br><br>
+  { id:2, cat:'general', catLabel:'🏢 Général', poids:3, q:'Quelles sont les valeurs fondamentales de la Charte Elite Corp. ?', rep:`La Charte Elite Corp. repose sur <strong>9 piliers</strong> :<br><br>
     1. <strong>Loyauté</strong> — Les intérêts de la structure avant tout<br>
     2. <strong>Respect & Discipline</strong> — Hiérarchie respectée, aucun conflit<br>
     3. <strong>Professionnalisme</strong> — Sérieux, efficacité, maîtrise<br>
@@ -1018,45 +1018,57 @@ const RECR_QUESTIONS = [
     8. <strong>Responsabilité</strong> — Signaler les problèmes rapidement<br>
     9. <strong>Objectif commun</strong> — Développer et faire prospérer Elite Corp.`, keywords:['charte','valeurs','loyauté','discipline'] },
 
-  { id:3, cat:'general', catLabel:'🏢 Général', q:'Que risque un membre qui ne respecte pas la Charte ?', rep:`Tout manquement peut entraîner des <strong>sanctions pouvant aller jusqu\'à l\'exclusion</strong>. La hiérarchie est souveraine dans ses décisions. Aucun conflit ne doit nuire à l\'organisation.`, keywords:['sanction','exclusion','charte'] },
+  { id:3, cat:'general', catLabel:'🏢 Général', poids:3, q:'Que risque un membre qui ne respecte pas la Charte ?', rep:`Tout manquement peut entraîner des <strong>sanctions pouvant aller jusqu\'à l\'exclusion</strong>. La hiérarchie est souveraine dans ses décisions. Aucun conflit ne doit nuire à l\'organisation.`, keywords:['sanction','exclusion','charte'] },
 
-  { id:4, cat:'general', catLabel:'🏢 Général', q:'Pourquoi veux-tu rejoindre Elite Corp. ?', rep:`Réponse attendue : motivation sincère, connaissance de l\'entreprise, alignement avec les valeurs. <strong>Points positifs</strong> : citer les divisions, la charte, l\'ambition de contribuer. <strong>Points négatifs</strong> : réponse vague, intérêt uniquement financier.`, keywords:['motivation','rejoindre'] },
+  { id:4, cat:'general', catLabel:'🏢 Général', poids:3, q:'Pourquoi veux-tu rejoindre Elite Corp. ?', rep:`Réponse attendue : motivation sincère, connaissance de l\'entreprise, alignement avec les valeurs. <strong>Points positifs</strong> : citer les divisions, la charte, l\'ambition de contribuer. <strong>Points négatifs</strong> : réponse vague, intérêt uniquement financier.`, keywords:['motivation','rejoindre'] },
 
-  { id:5, cat:'general', catLabel:'🏢 Général', q:'Comment gères-tu un conflit avec un collègue ou supérieur ?', rep:`Réponse attendue : <strong>en privé, avec respect, en remontant à la hiérarchie si nécessaire</strong>. Jamais en public, jamais de drama. La Charte stipule que les conflits ne doivent pas nuire à l\'organisation.`, keywords:['conflit','collègue','hiérarchie'] },
+  { id:5, cat:'general', catLabel:'🏢 Général', poids:3, q:'Comment gères-tu un conflit avec un collègue ou supérieur ?', rep:`Réponse attendue : <strong>en privé, avec respect, en remontant à la hiérarchie si nécessaire</strong>. Jamais en public, jamais de drama. La Charte stipule que les conflits ne doivent pas nuire à l\'organisation.`, keywords:['conflit','collègue','hiérarchie'] },
 
-  // ── SÉCURITÉ ──
-  { id:6, cat:'securite', catLabel:'🛡️ Penny\'s Elite Security', q:'Quelles sont les missions de Penny\'s Elite Security ?', rep:`<strong>4 missions principales</strong> :<br><br>
+  // ── SÉCURITÉ (poids 3 chacune = 12 pts) ──
+  { id:6, cat:'securite', catLabel:'🛡️ Penny\'s Elite Security', poids:3, q:'Quelles sont les missions de Penny\'s Elite Security ?', rep:`<strong>4 missions principales</strong> :<br><br>
     • <strong>Sécurité des événements</strong> — Contrôle d\'accès, gestion des foules, prévention<br>
     • <strong>Escorte de danseuses</strong> — Protection avant, pendant et après les prestations<br>
     • <strong>Protection VIP</strong> — Sécurité rapprochée, analyse des risques, discrétion<br>
     • <strong>Convois sécurisés</strong> — Planification et mise en place d\'itinéraires optimisés`, keywords:['sécurité','penny','missions'] },
 
-  { id:7, cat:'securite', catLabel:'🛡️ Penny\'s Elite Security', q:'Un client VIP est menacé lors d\'un événement. Quelle est ta réaction ?', rep:`<strong>Protocole attendu</strong> :<br>1. Sécuriser immédiatement le client (extraction si nécessaire)<br>2. Alerter le chef de la sécurité<br>3. Identifier et neutraliser la menace<br>4. Ne jamais agir seul sans communication équipe<br>5. Rapport post-incident obligatoire`, keywords:['vip','menace','protocole','réaction'] },
+  { id:7, cat:'securite', catLabel:'🛡️ Penny\'s Elite Security', poids:3, q:'Un client VIP est menacé lors d\'un événement. Quelle est ta réaction ?', rep:`<strong>Protocole attendu</strong> :<br>1. Sécuriser immédiatement le client (extraction si nécessaire)<br>2. Alerter le chef de la sécurité<br>3. Identifier et neutraliser la menace<br>4. Ne jamais agir seul sans communication équipe<br>5. Rapport post-incident obligatoire`, keywords:['vip','menace','protocole','réaction'] },
 
-  { id:8, cat:'securite', catLabel:'🛡️ Penny\'s Elite Security', q:'Qu\'est-ce que la discrétion signifie dans ton rôle d\'agent ?', rep:`La discrétion signifie : <strong>présence efficace et invisible quand il le faut</strong>. Ne pas divulguer les informations sur les clients, les opérations ou les itinéraires. Confidentialité absolue — pilier de la Charte Elite Corp.`, keywords:['discrétion','confidentialité','agent'] },
+  { id:8, cat:'securite', catLabel:'🛡️ Penny\'s Elite Security', poids:3, q:'Qu\'est-ce que la discrétion signifie dans ton rôle d\'agent ?', rep:`La discrétion signifie : <strong>présence efficace et invisible quand il le faut</strong>. Ne pas divulguer les informations sur les clients, les opérations ou les itinéraires. Confidentialité absolue — pilier de la Charte Elite Corp.`, keywords:['discrétion','confidentialité','agent'] },
 
-  { id:9, cat:'securite', catLabel:'🛡️ Penny\'s Elite Security', q:'Comment assures-tu la sécurité d\'un convoi ?', rep:`<strong>Éléments attendus</strong> :<br>• Reconnaissance préalable de l\'itinéraire<br>• Communication constante entre véhicules<br>• Véhicule de tête + véhicule de queue<br>• Plan B en cas d\'incident<br>• Matériel adapté et professionnel`, keywords:['convoi','sécurité','itinéraire'] },
+  { id:9, cat:'securite', catLabel:'🛡️ Penny\'s Elite Security', poids:3, q:'Comment assures-tu la sécurité d\'un convoi ?', rep:`<strong>Éléments attendus</strong> :<br>• Reconnaissance préalable de l\'itinéraire<br>• Communication constante entre véhicules<br>• Véhicule de tête + véhicule de queue<br>• Plan B en cas d\'incident<br>• Matériel adapté et professionnel`, keywords:['convoi','sécurité','itinéraire'] },
 
-  // ── ÉVÉNEMENTIEL ──
-  { id:10, cat:'evenementiel', catLabel:'🎉 Événementiel', q:'Comment organises-tu un événement de A à Z pour Elite Corp. ?', rep:`<strong>Étapes clés</strong> :<br>1. Brief client — besoins, budget, date<br>2. Coordination avec les filiales concernées (sécurité, animation, tourisme)<br>3. Logistique — lieu, prestataires, matériel<br>4. Briefing équipe avant l\'événement<br>5. Gestion en temps réel le jour J<br>6. Débriefing post-événement`, keywords:['organisation','événement','logistique'] },
+  // ── ÉVÉNEMENTIEL (poids 2 chacune = 4 pts) ──
+  { id:10, cat:'evenementiel', catLabel:'🎉 Événementiel', poids:2, q:'Comment organises-tu un événement de A à Z pour Elite Corp. ?', rep:`<strong>Étapes clés</strong> :<br>1. Brief client — besoins, budget, date<br>2. Coordination avec les filiales concernées (sécurité, animation, tourisme)<br>3. Logistique — lieu, prestataires, matériel<br>4. Briefing équipe avant l\'événement<br>5. Gestion en temps réel le jour J<br>6. Débriefing post-événement`, keywords:['organisation','événement','logistique'] },
 
-  { id:11, cat:'evenementiel', catLabel:'🎉 Événementiel', q:'Un événement tourne mal (incident, retard, problème technique). Comment réagis-tu ?', rep:`<strong>Réponse attendue</strong> : garder son calme, informer immédiatement la hiérarchie, activer le plan de contingence, communiquer avec le client de façon professionnelle. <strong>Jamais de panique visible</strong> devant les clients.`, keywords:['incident','crise','événement','réaction'] },
+  { id:11, cat:'evenementiel', catLabel:'🎉 Événementiel', poids:2, q:'Un événement tourne mal (incident, retard, problème technique). Comment réagis-tu ?', rep:`<strong>Réponse attendue</strong> : garder son calme, informer immédiatement la hiérarchie, activer le plan de contingence, communiquer avec le client de façon professionnelle. <strong>Jamais de panique visible</strong> devant les clients.`, keywords:['incident','crise','événement','réaction'] },
 
-  // ── TOURISME ──
-  { id:12, cat:'tourisme', catLabel:'✈️ Elite Tourisme', q:'Qu\'est-ce qu\'Elite Tourisme propose comme services ?', rep:`Elite Tourisme propose :<br>• <strong>Guide touristique</strong> à Los Santos et Blaine County<br>• <strong>Transferts VIP</strong> avec chauffeurs professionnels<br>• <strong>Conciergerie</strong> — réservations, accès exclusifs, services sur-mesure<br>• <strong>Carnet d\'adresses</strong> — restaurants, clubs, boutiques sélectionnés`, keywords:['tourisme','services','conciergerie'] },
+  // ── TOURISME (poids 2 chacune = 4 pts) ──
+  { id:12, cat:'tourisme', catLabel:'✈️ Elite Tourisme', poids:2, q:'Qu\'est-ce qu\'Elite Tourisme propose comme services ?', rep:`Elite Tourisme propose :<br>• <strong>Guide touristique</strong> à Los Santos et Blaine County<br>• <strong>Transferts VIP</strong> avec chauffeurs professionnels<br>• <strong>Conciergerie</strong> — réservations, accès exclusifs, services sur-mesure<br>• <strong>Carnet d\'adresses</strong> — restaurants, clubs, boutiques sélectionnés`, keywords:['tourisme','services','conciergerie'] },
 
-  { id:13, cat:'tourisme', catLabel:'✈️ Elite Tourisme', q:'Un client VIP demande une expérience exclusive à Los Santos. Comment procèdes-tu ?', rep:`<strong>Démarche attendue</strong> :<br>1. Écouter les attentes précises du client<br>2. Proposer des options sur-mesure (carnet d\'adresses Elite)<br>3. Coordonner avec les autres filiales si besoin (sécurité, aventure)<br>4. Accompagnement personnalisé tout au long<br>5. Suivi satisfaction post-prestation`, keywords:['client','vip','expérience','tourisme'] },
+  { id:13, cat:'tourisme', catLabel:'✈️ Elite Tourisme', poids:2, q:'Un client VIP demande une expérience exclusive à Los Santos. Comment procèdes-tu ?', rep:`<strong>Démarche attendue</strong> :<br>1. Écouter les attentes précises du client<br>2. Proposer des options sur-mesure (carnet d\'adresses Elite)<br>3. Coordonner avec les autres filiales si besoin (sécurité, aventure)<br>4. Accompagnement personnalisé tout au long<br>5. Suivi satisfaction post-prestation`, keywords:['client','vip','expérience','tourisme'] },
 
-  // ── AVENTURE ──
-  { id:14, cat:'aventure', catLabel:'🏔️ Elite Aventure', q:'Quelles prestations propose Elite Aventure ?', rep:`Elite Aventure propose :<br>• <strong>Balades & Road Trips</strong> — 4x4, SUV, motos, buggys<br>• <strong>Gestion d\'événements</strong> sur tout type de terrain<br>• <strong>Safari</strong> (sans animaux) — exploration tout-terrain<br>• <strong>Aventures sous-marines</strong> — sous-marins privatisés<br>• <strong>Convois extrêmes</strong> — montagnes, canyons, déserts`, keywords:['aventure','prestations','road trip'] },
+  // ── AVENTURE (poids 2 chacune = 4 pts) ──
+  { id:14, cat:'aventure', catLabel:'🏔️ Elite Aventure', poids:2, q:'Quelles prestations propose Elite Aventure ?', rep:`Elite Aventure propose :<br>• <strong>Balades & Road Trips</strong> — 4x4, SUV, motos, buggys<br>• <strong>Gestion d\'événements</strong> sur tout type de terrain<br>• <strong>Safari</strong> (sans animaux) — exploration tout-terrain<br>• <strong>Aventures sous-marines</strong> — sous-marins privatisés<br>• <strong>Convois extrêmes</strong> — montagnes, canyons, déserts`, keywords:['aventure','prestations','road trip'] },
 
-  { id:15, cat:'aventure', catLabel:'🏔️ Elite Aventure', q:'La sécurité est-elle une priorité dans les aventures ? Comment l\'assures-tu ?', rep:`<strong>Oui, absolument</strong>. Chaque aventure est planifiée dans les moindres détails pour la sécurité. Éléments attendus :<br>• Reconnaissance du terrain<br>• Matériel adapté et vérifié<br>• Coordination avec Penny's Elite Security si nécessaire<br>• Assistance 24/7 disponible<br>• Briefing sécurité obligatoire avant chaque sortie`, keywords:['sécurité','aventure','terrain'] },
+  { id:15, cat:'aventure', catLabel:'🏔️ Elite Aventure', poids:2, q:'La sécurité est-elle une priorité dans les aventures ? Comment l\'assures-tu ?', rep:`<strong>Oui, absolument</strong>. Chaque aventure est planifiée dans les moindres détails pour la sécurité. Éléments attendus :<br>• Reconnaissance du terrain<br>• Matériel adapté et vérifié<br>• Coordination avec Penny's Elite Security si nécessaire<br>• Assistance 24/7 disponible<br>• Briefing sécurité obligatoire avant chaque sortie`, keywords:['sécurité','aventure','terrain'] },
 
-  // ── LILLY'S GIRLS ──
-  { id:16, cat:'lillys', catLabel:'💃 Lilly\'s Girls', q:'Quel est le rôle de Lilly\'s Girls au sein d\'Elite Corp. ?', rep:`Lilly's Girls est la division <strong>animation et spectacle</strong> d\'Elite Corp. Elle renforce l\'attractivité des événements avec :<br>• Des <strong>shows et chorégraphies</strong> professionnelles<br>• Des <strong>prestations artistiques</strong> pour soirées privées et événements extérieurs<br>• Une équipe de sécurité dédiée pour la protection des animatrices<br>• <strong>Discrétion et professionnalisme</strong> garantis`, keywords:['lilly','animation','show'] },
+  // ── LILLY'S GIRLS (poids 1 chacune = 2 pts) ──
+  { id:16, cat:'lillys', catLabel:'💃 Lilly\'s Girls', poids:1, q:'Quel est le rôle de Lilly\'s Girls au sein d\'Elite Corp. ?', rep:`Lilly's Girls est la division <strong>animation et spectacle</strong> d\'Elite Corp. Elle renforce l\'attractivité des événements avec :<br>• Des <strong>shows et chorégraphies</strong> professionnelles<br>• Des <strong>prestations artistiques</strong> pour soirées privées et événements extérieurs<br>• Une équipe de sécurité dédiée pour la protection des animatrices<br>• <strong>Discrétion et professionnalisme</strong> garantis`, keywords:['lilly','animation','show'] },
 
-  { id:17, cat:'lillys', catLabel:'💃 Lilly\'s Girls', q:'Comment garantis-tu la sécurité et la discrétion lors d\'une prestation Lilly\'s Girls ?', rep:`<strong>Éléments attendus</strong> :<br>• Coordination avec Penny's Elite Security pour l\'escorte<br>• Confidentialité sur les clients et les lieux<br>• Aucune information partagée en dehors de l\'équipe<br>• Présence sécurité avant, pendant et après la prestation<br>• Respect de l\'image Elite Corp. en toutes circonstances`, keywords:['sécurité','discrétion','lilly'] },
+  { id:17, cat:'lillys', catLabel:'💃 Lilly\'s Girls', poids:1, q:'Comment garantis-tu la sécurité et la discrétion lors d\'une prestation Lilly\'s Girls ?', rep:`<strong>Éléments attendus</strong> :<br>• Coordination avec Penny's Elite Security pour l\'escorte<br>• Confidentialité sur les clients et les lieux<br>• Aucune information partagée en dehors de l\'équipe<br>• Présence sécurité avant, pendant et après la prestation<br>• Respect de l\'image Elite Corp. en toutes circonstances`, keywords:['sécurité','discrétion','lilly'] },
 ];
+
+// Barème : Excellent = poids×2, Bien = poids×1.5 (arrondi), Moyen = poids×0.5 (arrondi), Insuffisant = 0
+// Total max = (5×3 + 4×3 + 2×2 + 2×2 + 2×2 + 2×1) × 2 = (15+12+4+4+4+2)×2 = 41×2... 
+// On normalise sur 40 : chaque question donne (score/maxScore)*poids*2, total ramené sur 40
+const RECR_MAX = 40;
+function recrGetScore(id, note) {
+  const q = RECR_QUESTIONS.find(x => x.id == id);
+  if (!q || !note) return 0;
+  const mult = { excellent: 1, bien: 0.75, moyen: 0.4, insuffisant: 0 };
+  return q.poids * 2 * (mult[note] || 0);
+}
+const RECR_TOTAL_MAX = RECR_QUESTIONS.reduce((s,q) => s + q.poids * 2, 0); // = 41 → on ramène sur 40
 
 let recrScores = {};
 let recrNotes = {};
@@ -1105,6 +1117,16 @@ function recrShowQuestion(id) {
         <div class="recr-answer-text">${q.rep}</div>
       </div>
       <div class="recr-answer-label" style="margin-top:16px;"><i class="fa-solid fa-star"></i> Évaluation du candidat</div>
+      <!-- Critères de notation -->
+      <div style="background:rgba(255,255,255,0.02);border:1px solid var(--border);border-radius:8px;padding:10px 14px;margin-bottom:10px;font-size:11px;">
+        <div style="font-size:9px;font-weight:800;letter-spacing:1px;text-transform:uppercase;color:var(--white-dim);margin-bottom:6px;">CRITÈRES — Question poids ${q.poids} (max ${q.poids*2} pts)</div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:4px;">
+          <div style="color:#4caf7d;">⭐ <strong>Excellent</strong> — ${q.poids*2} pts : Réponse complète, précise, spontanée</div>
+          <div style="color:var(--gold);">✅ <strong>Bien</strong> — ${Math.round(q.poids*1.5)} pts : Bonne réponse, quelques éléments manquants</div>
+          <div style="color:#f09030;">⚠️ <strong>Moyen</strong> — ${Math.round(q.poids*0.8)} pts : Réponse partielle, hésitations</div>
+          <div style="color:#ff7b7b;">❌ <strong>Insuffisant</strong> — 0 pt : Réponse incorrecte ou absente</div>
+        </div>
+      </div>
       <div class="recr-score">
         ${['excellent','bien','moyen','insuffisant'].map(s => `
           <button class="recr-score-btn ${s} ${score === s ? 'sel' : ''}" onclick="recrSetScore(${id},'${s}')">${scoreLabels[s]}</button>
@@ -1142,40 +1164,91 @@ function recrShowSummary() {
   const evaluated = Object.keys(recrScores).length;
   const counts = { excellent:0, bien:0, moyen:0, insuffisant:0 };
   Object.values(recrScores).forEach(s => { if(counts[s] !== undefined) counts[s]++; });
-  const points = counts.excellent*3 + counts.bien*2 + counts.moyen*1 + counts.insuffisant*0;
-  const maxPoints = evaluated * 3;
-  const pct = maxPoints ? Math.round(points/maxPoints*100) : 0;
-  const verdict = pct >= 80 ? { label:'RECOMMANDÉ', color:'#4caf7d' } : pct >= 60 ? { label:'À CONSIDÉRER', color:'var(--gold)' } : pct >= 40 ? { label:'DOSSIER FAIBLE', color:'#f09030' } : { label:'NON RECOMMANDÉ', color:'#ff7b7b' };
+
+  // Calcul note sur 40
+  let rawScore = 0;
+  Object.entries(recrScores).forEach(([id, note]) => { rawScore += recrGetScore(id, note); });
+  const note40 = Math.round((rawScore / RECR_TOTAL_MAX) * 40 * 10) / 10;
+
+  // Verdict
+  const verdict = note40 >= 32 ? { label:'RECRUTÉ — EXCELLENT PROFIL', color:'#4caf7d', icon:'🏆' }
+    : note40 >= 26 ? { label:'RECRUTÉ — BON PROFIL', color:'var(--gold)', icon:'✅' }
+    : note40 >= 20 ? { label:'À RECONSIDÉRER', color:'#f09030', icon:'⚠️' }
+    : { label:'NON RECRUTÉ', color:'#ff7b7b', icon:'❌' };
+
+  // Détail par question
+  const detailRows = RECR_QUESTIONS.map(q => {
+    const s = recrScores[q.id];
+    const pts = s ? Math.round(recrGetScore(q.id, s) * 10) / 10 : null;
+    const maxPts = q.poids * 2;
+    const colors = { excellent:'#4caf7d', bien:'var(--gold)', moyen:'#f09030', insuffisant:'#ff7b7b' };
+    return `<div class="recr-result-row">
+      <div style="flex:1;font-size:11px;color:var(--white-dim);">${q.catLabel} — ${q.q.slice(0,45)}...</div>
+      <div style="display:flex;align-items:center;gap:8px;flex-shrink:0;">
+        ${s ? `<span style="font-size:10px;font-weight:800;color:${colors[s]};padding:2px 8px;border-radius:999px;border:1px solid ${colors[s]};background:rgba(0,0,0,0.2);">${s.toUpperCase()}</span>` : '<span style="font-size:10px;color:var(--white-dim);">—</span>'}
+        <span style="font-size:12px;font-weight:800;color:${s ? colors[s] : 'var(--white-dim)'};">${pts !== null ? pts : '—'}/${maxPts}</span>
+      </div>
+    </div>`;
+  }).join('');
 
   document.getElementById('recrMainPanel').innerHTML = `
-    <div class="recr-summary">
-      <div class="recr-summary-score" style="color:${verdict.color};">${pct}%</div>
-      <div class="recr-summary-label">Score global — <span style="color:${verdict.color};">${verdict.label}</span></div>
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:20px;">
-        <div style="background:rgba(76,175,125,0.1);border:1px solid rgba(76,175,125,0.3);border-radius:10px;padding:14px;text-align:center;">
-          <div style="font-family:'Anton',sans-serif;font-size:28px;color:#4caf7d;">${counts.excellent}</div>
-          <div style="font-size:10px;color:var(--white-dim);font-weight:700;letter-spacing:1px;">EXCELLENT</div>
+    <div class="recr-summary" style="overflow-y:auto;max-height:70vh;">
+      <!-- Note principale -->
+      <div style="text-align:center;margin-bottom:20px;padding:24px;background:rgba(201,168,76,0.06);border:1px solid var(--border);border-radius:14px;">
+        <div style="font-size:11px;font-weight:800;letter-spacing:2px;color:var(--white-dim);text-transform:uppercase;margin-bottom:8px;">NOTE FINALE</div>
+        <div style="font-family:'Anton',sans-serif;font-size:64px;letter-spacing:4px;color:${verdict.color};line-height:1;">${note40}</div>
+        <div style="font-family:'Anton',sans-serif;font-size:18px;color:var(--white-dim);margin-bottom:12px;">/ 40</div>
+        <div style="font-size:13px;font-weight:800;letter-spacing:1px;color:${verdict.color};">${verdict.icon} ${verdict.label}</div>
+      </div>
+
+      <!-- Barème -->
+      <div style="background:rgba(255,255,255,0.02);border:1px solid var(--border);border-radius:10px;padding:14px;margin-bottom:16px;">
+        <div style="font-size:10px;font-weight:800;letter-spacing:2px;text-transform:uppercase;color:var(--gold);margin-bottom:10px;">BARÈME DE NOTATION</div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;font-size:11px;">
+          <div style="color:#4caf7d;font-weight:700;">⭐ Excellent = 100% des pts</div>
+          <div style="color:var(--gold);font-weight:700;">✅ Bien = 75% des pts</div>
+          <div style="color:#f09030;font-weight:700;">⚠️ Moyen = 40% des pts</div>
+          <div style="color:#ff7b7b;font-weight:700;">❌ Insuffisant = 0 pt</div>
         </div>
-        <div style="background:rgba(201,168,76,0.1);border:1px solid rgba(201,168,76,0.3);border-radius:10px;padding:14px;text-align:center;">
-          <div style="font-family:'Anton',sans-serif;font-size:28px;color:var(--gold);">${counts.bien}</div>
-          <div style="font-size:10px;color:var(--white-dim);font-weight:700;letter-spacing:1px;">BIEN</div>
-        </div>
-        <div style="background:rgba(240,144,48,0.1);border:1px solid rgba(240,144,48,0.3);border-radius:10px;padding:14px;text-align:center;">
-          <div style="font-family:'Anton',sans-serif;font-size:28px;color:#f09030;">${counts.moyen}</div>
-          <div style="font-size:10px;color:var(--white-dim);font-weight:700;letter-spacing:1px;">MOYEN</div>
-        </div>
-        <div style="background:rgba(226,64,64,0.1);border:1px solid rgba(226,64,64,0.3);border-radius:10px;padding:14px;text-align:center;">
-          <div style="font-family:'Anton',sans-serif;font-size:28px;color:#ff7b7b;">${counts.insuffisant}</div>
-          <div style="font-size:10px;color:var(--white-dim);font-weight:700;letter-spacing:1px;">INSUFFISANT</div>
+        <div style="margin-top:10px;font-size:10px;color:var(--white-dim);border-top:1px solid var(--border);padding-top:8px;">
+          Questions générales & sécurité : <strong style="color:var(--white);">poids 3</strong> (max 6 pts/question) •
+          Événementiel, Tourisme, Aventure : <strong style="color:var(--white);">poids 2</strong> (max 4 pts) •
+          Lilly's Girls : <strong style="color:var(--white);">poids 1</strong> (max 2 pts)
         </div>
       </div>
-      <div style="font-size:11px;color:var(--white-dim);margin-bottom:12px;">${evaluated}/${total} questions évaluées</div>
+
+      <!-- Seuils de recrutement -->
+      <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:16px;">
+        <div style="text-align:center;padding:10px 6px;border-radius:10px;background:rgba(76,175,125,0.1);border:1px solid rgba(76,175,125,0.3);">
+          <div style="font-family:'Anton',sans-serif;font-size:16px;color:#4caf7d;">32-40</div>
+          <div style="font-size:9px;color:#4caf7d;font-weight:800;letter-spacing:1px;">EXCELLENT</div>
+        </div>
+        <div style="text-align:center;padding:10px 6px;border-radius:10px;background:rgba(201,168,76,0.1);border:1px solid rgba(201,168,76,0.3);">
+          <div style="font-family:'Anton',sans-serif;font-size:16px;color:var(--gold);">26-31</div>
+          <div style="font-size:9px;color:var(--gold);font-weight:800;letter-spacing:1px;">BON PROFIL</div>
+        </div>
+        <div style="text-align:center;padding:10px 6px;border-radius:10px;background:rgba(240,144,48,0.1);border:1px solid rgba(240,144,48,0.3);">
+          <div style="font-family:'Anton',sans-serif;font-size:16px;color:#f09030;">20-25</div>
+          <div style="font-size:9px;color:#f09030;font-weight:800;letter-spacing:1px;">À REVOIR</div>
+        </div>
+        <div style="text-align:center;padding:10px 6px;border-radius:10px;background:rgba(226,64,64,0.1);border:1px solid rgba(226,64,64,0.3);">
+          <div style="font-family:'Anton',sans-serif;font-size:16px;color:#ff7b7b;">0-19</div>
+          <div style="font-size:9px;color:#ff7b7b;font-weight:800;letter-spacing:1px;">REFUSÉ</div>
+        </div>
+      </div>
+
+      <!-- Détail par question -->
+      <div class="card-title"><i class="fa-solid fa-list-check"></i> Détail — ${evaluated}/${total} questions évaluées</div>
+      ${detailRows}
+
+      <!-- Notes -->
       ${Object.keys(recrNotes).filter(id => recrNotes[id]).length ? `
-        <div class="card-title" style="margin-top:16px;"><i class="fa-solid fa-note-sticky"></i> Notes</div>
+        <div class="card-title" style="margin-top:16px;"><i class="fa-solid fa-note-sticky"></i> Notes du recruteur</div>
         ${Object.keys(recrNotes).filter(id => recrNotes[id]).map(id => {
           const q = RECR_QUESTIONS.find(x => x.id == id);
           return `<div class="recr-result-row"><div style="flex:1;"><div style="font-size:11px;font-weight:700;color:var(--white);margin-bottom:2px;">${q?.q?.slice(0,50)}...</div><div style="font-size:11px;color:var(--white-dim);">${recrNotes[id]}</div></div></div>`;
         }).join('')}` : ''}
+
       <div class="btn-row" style="margin-top:20px;">
         <button class="btn btn-outline" onclick="recrShowQuestion(1)"><i class="fa-solid fa-rotate-left"></i> Retour aux questions</button>
         <button class="btn btn-gold" onclick="recrReset()"><i class="fa-solid fa-trash"></i> Nouvel entretien</button>
