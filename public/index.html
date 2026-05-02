@@ -938,6 +938,13 @@ function openModal(id) {
     document.getElementById('profilMdpConfirm').value = '';
     document.getElementById('profilError').style.display = 'none';
   }
+  if (id === 'modalCommande') {
+    loadTarifs().then(() => {
+      selectedPrestations = [];
+      renderPrestationsSelector();
+      updateBudgetEstim();
+    });
+  }
 }
 
 async function saveProfil() {
@@ -1908,19 +1915,6 @@ function openCmdDetail(id) {
 
 // Charger les tarifs au démarrage
 window.addEventListener('load', () => loadTarifs());
-
-// Surcharger openModal pour initialiser le sélecteur de prestations
-const _origOpenModal = window.openModal;
-window.openModal = function(id) {
-  _origOpenModal(id);
-  if (id === 'modalCommande') {
-    loadTarifs().then(() => {
-      selectedPrestations = [];
-      renderPrestationsSelector();
-      updateBudgetEstim();
-    });
-  }
-};
 </script>
 
 <script>
