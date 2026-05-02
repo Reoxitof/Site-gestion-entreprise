@@ -133,12 +133,6 @@ async function initDB() {
       created_by INTEGER REFERENCES ec_users(id),
       created_at TIMESTAMP DEFAULT NOW()
     )`);
-      paye_par INTEGER REFERENCES ec_users(id),
-      paye_le TIMESTAMP,
-      details TEXT DEFAULT '[]',
-      created_at TIMESTAMP DEFAULT NOW(),
-      UNIQUE(user_id, semaine_debut)
-    )`);
 
     await getPool().query(`CREATE TABLE IF NOT EXISTS ec_tarifs (
       id SERIAL PRIMARY KEY,
