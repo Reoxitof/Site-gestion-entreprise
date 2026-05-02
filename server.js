@@ -120,6 +120,26 @@ async function initDB() {
       UNIQUE(user_id, semaine_debut)
     )`);
 
+    // Table livre de comptes
+    await getPool().query(`CREATE TABLE IF NOT EXISTS ec_comptes (
+      id SERIAL PRIMARY KEY,
+      type TEXT NOT NULL DEFAULT 'recette',
+      categorie TEXT NOT NULL DEFAULT 'autre',
+      description TEXT NOT NULL,
+      montant NUMERIC NOT NULL,
+      date DATE NOT NULL DEFAULT CURRENT_DATE,
+      reference TEXT DEFAULT '',
+      commande_id INTEGER REFERENCES ec_commandes(id) ON DELETE SET NULL,
+      created_by INTEGER REFERENCES ec_users(id),
+      created_at TIMESTAMP DEFAULT NOW()
+    )`);
+      paye_par INTEGER REFERENCES ec_users(id),
+      paye_le TIMESTAMP,
+      details TEXT DEFAULT '[]',
+      created_at TIMESTAMP DEFAULT NOW(),
+      UNIQUE(user_id, semaine_debut)
+    )`);
+
     await getPool().query(`CREATE TABLE IF NOT EXISTS ec_tarifs (
       id SERIAL PRIMARY KEY,
       code TEXT UNIQUE NOT NULL,
@@ -198,6 +218,7 @@ app.post('/api/logout', (req, res) => req.session.destroy(() => res.json({ succe
 app.get('/api/me', auth, (req, res) => res.json({ user: req.session.user }));
 app.get('/mes-tickets', auth, (req, res) => res.sendFile(path.join(__dirname, 'public', 'mes-tickets.html')));
 app.get('/fiches-paye', auth, (req, res) => res.sendFile(path.join(__dirname, 'public', 'fiches-paye.html')));
+app.get('/livre-comptes', admin, (req, res) => res.sendFile(path.join(__dirname, 'public', 'livre-comptes.html')));
 
 /* Changer son propre mot de passe */
 app.put('/api/me/password', auth, async (req, res) => {
@@ -489,7 +510,111 @@ app.post('/api/commandes/:id/payer', admin, async (req, res) => {
       `UPDATE ec_commandes SET statut='paye', prix_final=$1, paiement_partage=$2, updated_at=NOW() WHERE id=$3`,
       [Number(prix_final), JSON.stringify(partage), req.params.id]
     );
+
+    // Auto-enregistrer la recette dans le livre de comptes
+    try {
+      const montantEntreprise = Math.round(Number(prix_final) * 0.20 * 100) / 100;
+      await getPool().query(
+        `INSERT INTO ec_comptes (type, categorie, description, montant, date, reference, commande_id, created_by)
+         VALUES ('recette', 'evenement', $1, $2, $3, $4, $5, $6)
+         ON CONFLICT DO NOTHING`,
+        [
+          `Paiement — ${cmd.client_nom} (${cmd.type_prestation})`,
+          Number(prix_final),
+          cmd.date_evenement ? new Date(cmd.date_evenement).toISOString().split('T')[0] : new Date().toISOString().split('T')[0],
+          `CMD#${cmd.id}`,
+          cmd.id,
+          req.session.user.id
+        ]
+      );
+      // Enregistrer aussi la part entreprise séparément
+      await getPool().query(
+        `INSERT INTO ec_comptes (type, categorie, description, montant, date, reference, commande_id, created_by)
+         VALUES ('recette', 'caisse_entreprise', $1, $2, $3, $4, $5, $6)
+         ON CONFLICT DO NOTHING`,
+        [
+          `Part entreprise (20%) — ${cmd.client_nom}`,
+          montantEntreprise,
+          cmd.date_evenement ? new Date(cmd.date_evenement).toISOString().split('T')[0] : new Date().toISOString().split('T')[0],
+          `CMD#${cmd.id}-ENT`,
+          cmd.id,
+          req.session.user.id
+        ]
+      );
+    } catch(compteErr) {
+      console.error('[COMPTES AUTO] Erreur:', compteErr.message);
+    }
+
     res.json({ success: true, partage, prix_final: Number(prix_final) });
+  } catch(e) { res.status(500).json({ error: e.message }); }
+});
+
+/* ═══ LIVRE DE COMPTES ═══ */
+
+// Lister les entrées (direction uniquement)
+app.get('/api/comptes', admin, async (req, res) => {
+  try {
+    const { type, categorie, date_debut, date_fin } = req.query;
+    let q = `SELECT c.*, u.nom as createur_nom, u.prenom as createur_prenom,
+             cmd.client_nom as commande_client
+             FROM ec_comptes c
+             LEFT JOIN ec_users u ON c.created_by = u.id
+             LEFT JOIN ec_commandes cmd ON c.commande_id = cmd.id
+             WHERE 1=1`;
+    const params = [];
+    if (type) { params.push(type); q += ` AND c.type = $${params.length}`; }
+    if (categorie) { params.push(categorie); q += ` AND c.categorie = $${params.length}`; }
+    if (date_debut) { params.push(date_debut); q += ` AND c.date >= $${params.length}`; }
+    if (date_fin) { params.push(date_fin); q += ` AND c.date <= $${params.length}`; }
+    q += ' ORDER BY c.date DESC, c.created_at DESC';
+    res.json((await getPool().query(q, params)).rows);
+  } catch(e) { res.status(500).json({ error: e.message }); }
+});
+
+// Ajouter une entrée manuelle
+app.post('/api/comptes', admin, async (req, res) => {
+  try {
+    const { type, categorie, description, montant, date, reference, commande_id } = req.body;
+    if (!description || !montant || !type) return res.status(400).json({ error: 'Champs manquants' });
+    const r = await getPool().query(
+      `INSERT INTO ec_comptes (type, categorie, description, montant, date, reference, commande_id, created_by)
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8) RETURNING *`,
+      [type, categorie||'autre', description, Math.abs(Number(montant)), date||new Date().toISOString().split('T')[0], reference||'', commande_id||null, req.session.user.id]
+    );
+    res.json({ success: true, entry: r.rows[0] });
+  } catch(e) { res.status(500).json({ error: e.message }); }
+});
+
+// Supprimer une entrée
+app.delete('/api/comptes/:id', admin, async (req, res) => {
+  try {
+    await getPool().query('DELETE FROM ec_comptes WHERE id=$1', [req.params.id]);
+    res.json({ success: true });
+  } catch(e) { res.status(500).json({ error: e.message }); }
+});
+
+// Résumé financier (solde, totaux)
+app.get('/api/comptes/resume', admin, async (req, res) => {
+  try {
+    const { date_debut, date_fin } = req.query;
+    let where = 'WHERE 1=1';
+    const params = [];
+    if (date_debut) { params.push(date_debut); where += ` AND date >= $${params.length}`; }
+    if (date_fin) { params.push(date_fin); where += ` AND date <= $${params.length}`; }
+    const r = await getPool().query(
+      `SELECT
+        COALESCE(SUM(CASE WHEN type='recette' THEN montant ELSE 0 END),0) as total_recettes,
+        COALESCE(SUM(CASE WHEN type='depense' THEN montant ELSE 0 END),0) as total_depenses,
+        COALESCE(SUM(CASE WHEN type='recette' THEN montant ELSE -montant END),0) as solde
+       FROM ec_comptes ${where}`, params
+    );
+    // Par catégorie
+    const cats = await getPool().query(
+      `SELECT type, categorie, SUM(montant) as total, COUNT(*) as nb
+       FROM ec_comptes ${where}
+       GROUP BY type, categorie ORDER BY total DESC`, params
+    );
+    res.json({ ...r.rows[0], par_categorie: cats.rows });
   } catch(e) { res.status(500).json({ error: e.message }); }
 });
 
@@ -593,10 +718,35 @@ app.get('/api/fiches-paye', auth, async (req, res) => {
 // Marquer une fiche comme payée (direction)
 app.post('/api/fiches-paye/:id/payer', admin, async (req, res) => {
   try {
+    const ficheRes = await getPool().query(
+      `SELECT f.*, u.nom, u.prenom FROM ec_fiches_paye f JOIN ec_users u ON f.user_id = u.id WHERE f.id=$1`,
+      [req.params.id]
+    );
+    const fiche = ficheRes.rows[0];
+    if (!fiche) return res.status(404).json({ error: 'Fiche introuvable' });
+
     await getPool().query(
       `UPDATE ec_fiches_paye SET statut='paye', paye_par=$1, paye_le=NOW() WHERE id=$2`,
       [req.session.user.id, req.params.id]
     );
+
+    // Auto-enregistrer la dépense dans le livre de comptes
+    try {
+      await getPool().query(
+        `INSERT INTO ec_comptes (type, categorie, description, montant, date, reference, created_by)
+         VALUES ('depense', 'salaires', $1, $2, $3, $4, $5)`,
+        [
+          `Fiche de paye — ${fiche.prenom} ${fiche.nom} (sem. ${fiche.semaine_debut})`,
+          Number(fiche.montant_total),
+          new Date().toISOString().split('T')[0],
+          `FICHE#${fiche.id}`,
+          req.session.user.id
+        ]
+      );
+    } catch(compteErr) {
+      console.error('[COMPTES AUTO] Erreur fiche:', compteErr.message);
+    }
+
     res.json({ success: true });
   } catch(e) { res.status(500).json({ error: e.message }); }
 });

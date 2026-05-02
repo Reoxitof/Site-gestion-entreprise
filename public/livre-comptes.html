@@ -1,0 +1,381 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Elite Corp — Livre de Comptes</title>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&family=Anton&display=swap');
+*{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#0a0a0f;--bg2:#111118;--border:rgba(255,255,255,0.08);
+  --gold:#c9a84c;--white:#f0eaff;--white-dim:rgba(240,234,255,0.55);
+  --green:#4caf7d;--red:#e24040;--purple:#a78bfa;--blue:#4c8af0;
+}
+body{background:var(--bg);color:var(--white);font-family:Inter,Arial;min-height:100vh;}
+.topbar{display:flex;align-items:center;justify-content:space-between;padding:14px 24px;background:var(--bg2);border-bottom:1px solid var(--border);position:sticky;top:0;z-index:100;}
+.topbar-logo{font-family:Anton,Arial;font-size:20px;letter-spacing:3px;color:var(--gold);}
+.topbar-right{display:flex;align-items:center;gap:10px;}
+.btn{padding:8px 16px;border-radius:10px;border:1px solid var(--border);background:transparent;color:var(--white);font-size:12px;font-weight:700;cursor:pointer;letter-spacing:1px;transition:all .2s;}
+.btn:hover{border-color:var(--gold);color:var(--gold);}
+.btn-gold{background:linear-gradient(135deg,var(--gold),#8b6914);border:none;color:#000 !important;}
+.btn-gold:hover{opacity:0.85;}
+.btn-red{background:rgba(226,64,64,0.12);border:1px solid rgba(226,64,64,0.3);color:var(--red);}
+.btn-green{background:rgba(76,175,125,0.12);border:1px solid rgba(76,175,125,0.3);color:var(--green);}
+.main{max-width:1200px;margin:0 auto;padding:32px 20px;}
+.page-title{font-family:Anton,Arial;font-size:28px;letter-spacing:3px;color:var(--gold);margin-bottom:4px;}
+.page-sub{font-size:12px;color:var(--white-dim);margin-bottom:28px;}
+
+/* STATS */
+.stats-row{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px;margin-bottom:28px;}
+.stat-card{background:var(--bg2);border:1px solid var(--border);border-radius:14px;padding:18px;}
+.stat-label{font-size:9px;font-weight:800;letter-spacing:2px;text-transform:uppercase;color:var(--white-dim);margin-bottom:8px;}
+.stat-val{font-family:Anton,Arial;font-size:26px;}
+.stat-green{color:var(--green);}
+.stat-red{color:var(--red);}
+.stat-gold{color:var(--gold);}
+
+/* TOOLBAR */
+.toolbar{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:20px;}
+.input-field{padding:9px 14px;border-radius:10px;border:1px solid var(--border);background:var(--bg2);color:var(--white);font-size:12px;font-weight:600;}
+.input-field:focus{outline:none;border-color:var(--gold);}
+select.input-field{cursor:pointer;}
+
+/* TABLE */
+.table-wrap{overflow-x:auto;border-radius:14px;border:1px solid var(--border);}
+table{width:100%;border-collapse:collapse;}
+thead th{padding:12px 16px;font-size:9px;font-weight:800;letter-spacing:2px;text-transform:uppercase;color:var(--white-dim);background:rgba(255,255,255,0.03);text-align:left;border-bottom:1px solid var(--border);}
+tbody tr{border-bottom:1px solid rgba(255,255,255,0.04);transition:background .15s;}
+tbody tr:hover{background:rgba(255,255,255,0.03);}
+tbody td{padding:12px 16px;font-size:13px;}
+.type-recette{color:var(--green);font-weight:800;}
+.type-depense{color:var(--red);font-weight:800;}
+.montant-recette{font-family:Anton,Arial;font-size:15px;color:var(--green);}
+.montant-depense{font-family:Anton,Arial;font-size:15px;color:var(--red);}
+.badge{display:inline-flex;align-items:center;padding:2px 8px;border-radius:999px;font-size:10px;font-weight:800;letter-spacing:1px;}
+.badge-evt{background:rgba(201,168,76,0.12);border:1px solid rgba(201,168,76,0.3);color:var(--gold);}
+.badge-sal{background:rgba(167,139,250,0.12);border:1px solid rgba(167,139,250,0.3);color:var(--purple);}
+.badge-ent{background:rgba(76,175,125,0.12);border:1px solid rgba(76,175,125,0.3);color:var(--green);}
+.badge-dep{background:rgba(226,64,64,0.12);border:1px solid rgba(226,64,64,0.3);color:var(--red);}
+.badge-aut{background:rgba(255,255,255,0.06);border:1px solid var(--border);color:var(--white-dim);}
+
+/* MODAL */
+.modal-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,0.75);z-index:200;align-items:center;justify-content:center;padding:20px;}
+.modal-overlay.open{display:flex;}
+.modal{background:var(--bg2);border:1px solid var(--border);border-radius:18px;width:min(520px,100%);max-height:90vh;overflow-y:auto;padding:24px;}
+.modal-title{font-family:Anton,Arial;font-size:20px;letter-spacing:2px;color:var(--white);margin-bottom:20px;}
+.modal-close{float:right;background:none;border:none;color:var(--white-dim);font-size:20px;cursor:pointer;margin-top:-4px;}
+.form-row{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px;}
+.form-group{display:flex;flex-direction:column;gap:6px;}
+.form-group.full{grid-column:1/-1;}
+.form-label{font-size:9px;font-weight:800;letter-spacing:1px;text-transform:uppercase;color:var(--white-dim);}
+
+/* EMPTY */
+.empty{text-align:center;padding:60px 20px;color:var(--white-dim);}
+.empty i{font-size:40px;margin-bottom:16px;opacity:0.3;display:block;}
+
+/* TOAST */
+#toast{position:fixed;bottom:24px;right:24px;padding:12px 20px;border-radius:12px;background:var(--bg2);border:1px solid var(--gold);color:var(--white);font-weight:700;font-size:13px;z-index:999;opacity:0;transition:opacity .3s;pointer-events:none;}
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <div class="topbar-logo">📒 LIVRE DE COMPTES</div>
+  <div class="topbar-right">
+    <a href="/dashboard" class="btn"><i class="fa-solid fa-arrow-left"></i> Dashboard</a>
+    <button class="btn btn-gold" onclick="openModal()"><i class="fa-solid fa-plus"></i> Nouvelle entrée</button>
+    <button class="btn" onclick="logout()"><i class="fa-solid fa-right-from-bracket"></i></button>
+  </div>
+</div>
+
+<div class="main">
+  <div class="page-title">LIVRE DE COMPTES</div>
+  <div class="page-sub">Recettes et dépenses de l'entreprise — Direction uniquement</div>
+
+  <!-- STATS -->
+  <div class="stats-row">
+    <div class="stat-card">
+      <div class="stat-label"><i class="fa-solid fa-scale-balanced"></i> Solde</div>
+      <div class="stat-val stat-gold" id="statSolde">0 $</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-label"><i class="fa-solid fa-arrow-trend-up"></i> Total recettes</div>
+      <div class="stat-val stat-green" id="statRecettes">0 $</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-label"><i class="fa-solid fa-arrow-trend-down"></i> Total dépenses</div>
+      <div class="stat-val stat-red" id="statDepenses">0 $</div>
+    </div>
+    <div class="stat-card" id="statCatCard" style="grid-column:span 1;">
+      <div class="stat-label"><i class="fa-solid fa-chart-pie"></i> Top catégorie</div>
+      <div class="stat-val stat-gold" id="statTopCat">—</div>
+    </div>
+  </div>
+
+  <!-- FILTRES -->
+  <div class="toolbar">
+    <select class="input-field" id="filterType" onchange="loadEntrees()">
+      <option value="">Tous les types</option>
+      <option value="recette">Recettes</option>
+      <option value="depense">Dépenses</option>
+    </select>
+    <select class="input-field" id="filterCat" onchange="loadEntrees()">
+      <option value="">Toutes catégories</option>
+      <option value="evenement">Événements</option>
+      <option value="caisse_entreprise">Caisse entreprise</option>
+      <option value="salaires">Salaires</option>
+      <option value="materiel">Matériel</option>
+      <option value="loyer">Loyer</option>
+      <option value="transport">Transport</option>
+      <option value="autre">Autre</option>
+    </select>
+    <input type="date" class="input-field" id="filterDebut" onchange="loadEntrees()" placeholder="Du">
+    <input type="date" class="input-field" id="filterFin" onchange="loadEntrees()" placeholder="Au">
+    <button class="btn" onclick="resetFiltres()"><i class="fa-solid fa-rotate-left"></i> Reset</button>
+  </div>
+
+  <!-- TABLE -->
+  <div class="table-wrap">
+    <table>
+      <thead>
+        <tr>
+          <th>Date</th>
+          <th>Type</th>
+          <th>Catégorie</th>
+          <th>Description</th>
+          <th>Référence</th>
+          <th>Ajouté par</th>
+          <th style="text-align:right;">Montant</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody id="tableBody">
+        <tr><td colspan="8" style="text-align:center;padding:40px;color:var(--white-dim);">Chargement...</td></tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<!-- MODAL NOUVELLE ENTRÉE -->
+<div class="modal-overlay" id="modalEntree">
+  <div class="modal">
+    <button class="modal-close" onclick="closeModal()"><i class="fa-solid fa-xmark"></i></button>
+    <div class="modal-title">NOUVELLE ENTRÉE</div>
+    <div class="form-row">
+      <div class="form-group">
+        <div class="form-label">Type *</div>
+        <select class="input-field" id="fType" onchange="updateTypeColor()">
+          <option value="recette">💰 Recette</option>
+          <option value="depense">💸 Dépense</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <div class="form-label">Catégorie *</div>
+        <select class="input-field" id="fCat">
+          <option value="evenement">🎉 Événement</option>
+          <option value="caisse_entreprise">🏢 Caisse entreprise</option>
+          <option value="salaires">👥 Salaires</option>
+          <option value="materiel">🔧 Matériel</option>
+          <option value="loyer">🏠 Loyer</option>
+          <option value="transport">🚗 Transport</option>
+          <option value="autre">📦 Autre</option>
+        </select>
+      </div>
+      <div class="form-group full">
+        <div class="form-label">Description *</div>
+        <input class="input-field" id="fDesc" placeholder="Ex: Achat équipement sécurité..." style="width:100%;">
+      </div>
+      <div class="form-group">
+        <div class="form-label">Montant ($) *</div>
+        <input class="input-field" id="fMontant" type="number" min="0" step="0.01" placeholder="0.00" style="width:100%;">
+      </div>
+      <div class="form-group">
+        <div class="form-label">Date *</div>
+        <input class="input-field" id="fDate" type="date" style="width:100%;">
+      </div>
+      <div class="form-group full">
+        <div class="form-label">Référence (optionnel)</div>
+        <input class="input-field" id="fRef" placeholder="Ex: Facture #123..." style="width:100%;">
+      </div>
+    </div>
+    <div style="display:flex;gap:8px;margin-top:8px;">
+      <button class="btn btn-gold" onclick="sauvegarderEntree()"><i class="fa-solid fa-floppy-disk"></i> Sauvegarder</button>
+      <button class="btn" onclick="closeModal()">Annuler</button>
+    </div>
+  </div>
+</div>
+
+<div id="toast"></div>
+
+<script>
+const CATS = {
+  evenement: { label: 'Événement', badge: 'badge-evt' },
+  caisse_entreprise: { label: 'Caisse entreprise', badge: 'badge-ent' },
+  salaires: { label: 'Salaires', badge: 'badge-sal' },
+  materiel: { label: 'Matériel', badge: 'badge-aut' },
+  loyer: { label: 'Loyer', badge: 'badge-aut' },
+  transport: { label: 'Transport', badge: 'badge-aut' },
+  autre: { label: 'Autre', badge: 'badge-aut' },
+};
+
+async function init() {
+  try {
+    const r = await fetch('/api/me');
+    const d = await r.json();
+    if (!d.user) { window.location.href = '/login'; return; }
+    // Vérifier direction
+    const isDir = ['admin','direction'].includes(d.user.role) || ['Directeur Général','Directeur de Division','Coordinateur'].includes(d.user.poste);
+    if (!isDir) { window.location.href = '/dashboard'; return; }
+    // Date par défaut = aujourd'hui
+    document.getElementById('fDate').value = new Date().toISOString().split('T')[0];
+    loadEntrees();
+    loadResume();
+  } catch(e) { window.location.href = '/login'; }
+}
+
+async function loadResume() {
+  const params = buildParams();
+  try {
+    const r = await fetch('/api/comptes/resume' + (params ? '?' + params : ''));
+    const d = await r.json();
+    document.getElementById('statSolde').textContent = Number(d.solde||0).toLocaleString('fr-FR') + ' $';
+    document.getElementById('statSolde').style.color = Number(d.solde) >= 0 ? 'var(--green)' : 'var(--red)';
+    document.getElementById('statRecettes').textContent = Number(d.total_recettes||0).toLocaleString('fr-FR') + ' $';
+    document.getElementById('statDepenses').textContent = Number(d.total_depenses||0).toLocaleString('fr-FR') + ' $';
+    const cats = d.par_categorie || [];
+    const top = cats[0];
+    document.getElementById('statTopCat').textContent = top ? `${CATS[top.categorie]?.label||top.categorie} (${Number(top.total).toLocaleString('fr-FR')} $)` : '—';
+  } catch(e) {}
+}
+
+function buildParams() {
+  const type = document.getElementById('filterType').value;
+  const cat = document.getElementById('filterCat').value;
+  const debut = document.getElementById('filterDebut').value;
+  const fin = document.getElementById('filterFin').value;
+  const p = [];
+  if (type) p.push('type=' + type);
+  if (cat) p.push('categorie=' + cat);
+  if (debut) p.push('date_debut=' + debut);
+  if (fin) p.push('date_fin=' + fin);
+  return p.join('&');
+}
+
+async function loadEntrees() {
+  const params = buildParams();
+  try {
+    const r = await fetch('/api/comptes' + (params ? '?' + params : ''));
+    const data = await r.json();
+    renderTable(data);
+    loadResume();
+  } catch(e) {
+    document.getElementById('tableBody').innerHTML = '<tr><td colspan="8" style="text-align:center;padding:40px;color:var(--white-dim);">Erreur de chargement</td></tr>';
+  }
+}
+
+function renderTable(data) {
+  const tbody = document.getElementById('tableBody');
+  if (!data.length) {
+    tbody.innerHTML = '<tr><td colspan="8"><div class="empty"><i class="fa-solid fa-book-open"></i><p>Aucune entrée pour ces filtres.</p></div></td></tr>';
+    return;
+  }
+  tbody.innerHTML = data.map(e => {
+    const cat = CATS[e.categorie] || { label: e.categorie, badge: 'badge-aut' };
+    const isRec = e.type === 'recette';
+    const date = new Date(e.date).toLocaleDateString('fr-FR', { day:'numeric', month:'short', year:'numeric' });
+    const createur = e.createur_nom ? `${e.createur_prenom} ${e.createur_nom}` : '—';
+    return `<tr>
+      <td style="color:var(--white-dim);font-size:12px;">${date}</td>
+      <td><span class="${isRec ? 'type-recette' : 'type-depense'}">${isRec ? '↑ Recette' : '↓ Dépense'}</span></td>
+      <td><span class="badge ${cat.badge}">${cat.label}</span></td>
+      <td style="max-width:260px;">
+        <div style="font-weight:700;color:var(--white);">${e.description}</div>
+        ${e.commande_client ? `<div style="font-size:10px;color:var(--white-dim);">📋 ${e.commande_client}</div>` : ''}
+      </td>
+      <td style="font-size:11px;color:var(--white-dim);">${e.reference||'—'}</td>
+      <td style="font-size:11px;color:var(--white-dim);">${createur}</td>
+      <td style="text-align:right;"><span class="${isRec ? 'montant-recette' : 'montant-depense'}">${isRec ? '+' : '-'}${Number(e.montant).toLocaleString('fr-FR')} $</span></td>
+      <td><button class="btn btn-red" style="padding:4px 10px;font-size:10px;" onclick="supprimerEntree(${e.id})"><i class="fa-solid fa-trash"></i></button></td>
+    </tr>`;
+  }).join('');
+}
+
+function resetFiltres() {
+  document.getElementById('filterType').value = '';
+  document.getElementById('filterCat').value = '';
+  document.getElementById('filterDebut').value = '';
+  document.getElementById('filterFin').value = '';
+  loadEntrees();
+}
+
+function openModal() {
+  document.getElementById('fDesc').value = '';
+  document.getElementById('fMontant').value = '';
+  document.getElementById('fRef').value = '';
+  document.getElementById('fDate').value = new Date().toISOString().split('T')[0];
+  document.getElementById('modalEntree').classList.add('open');
+}
+
+function closeModal() {
+  document.getElementById('modalEntree').classList.remove('open');
+}
+
+async function sauvegarderEntree() {
+  const type = document.getElementById('fType').value;
+  const categorie = document.getElementById('fCat').value;
+  const description = document.getElementById('fDesc').value.trim();
+  const montant = parseFloat(document.getElementById('fMontant').value);
+  const date = document.getElementById('fDate').value;
+  const reference = document.getElementById('fRef').value.trim();
+  if (!description || !montant || montant <= 0 || !date) {
+    showToast('❌ Remplis tous les champs obligatoires', false); return;
+  }
+  try {
+    const r = await fetch('/api/comptes', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ type, categorie, description, montant, date, reference })
+    });
+    const d = await r.json();
+    if (d.success) {
+      showToast('✅ Entrée ajoutée');
+      closeModal();
+      loadEntrees();
+    } else {
+      showToast('❌ ' + (d.error || 'Erreur'), false);
+    }
+  } catch(e) { showToast('❌ Erreur réseau', false); }
+}
+
+async function supprimerEntree(id) {
+  if (!confirm('Supprimer cette entrée ? Action irréversible.')) return;
+  try {
+    const r = await fetch('/api/comptes/' + id, { method: 'DELETE' });
+    if (r.ok) { showToast('✅ Entrée supprimée'); loadEntrees(); }
+    else showToast('❌ Erreur', false);
+  } catch(e) { showToast('❌ Erreur réseau', false); }
+}
+
+function showToast(msg, ok = true) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.style.borderColor = ok ? 'var(--gold)' : 'var(--red)';
+  t.style.opacity = '1';
+  setTimeout(() => { t.style.opacity = '0'; }, 3000);
+}
+
+async function logout() {
+  await fetch('/api/logout', { method: 'POST' });
+  window.location.href = '/login';
+}
+
+document.getElementById('modalEntree').addEventListener('click', function(e) {
+  if (e.target === this) closeModal();
+});
+
+init();
+</script>
+</body>
+</html>
