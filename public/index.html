@@ -1824,62 +1824,6 @@ async function updateCmdStatut(id, statut) {
   closeModal('modalCommandeDetail');
   loadCommandes();
 }
-    const statsEl = document.getElementById('cmdStats');
-    if (statsEl) {
-      statsEl.innerHTML = [
-        { label:'Nouvelles', val:stats.nouveau, color:'#3fa7d6' },
-        { label:'En cours', val:stats.en_cours, color:'#f09030' },
-        { label:'Confirmées', val:stats.confirme, color:'var(--gold)' },
-        { label:'Terminées', val:stats.termine, color:'#4caf7d' },
-      ].map(s => `<div style="background:var(--card);border:1px solid var(--border);border-radius:10px;padding:14px;text-align:center;">
-        <div style="font-family:'Anton',sans-serif;font-size:28px;color:${s.color};">${s.val}</div>
-        <div style="font-size:10px;font-weight:800;letter-spacing:1px;text-transform:uppercase;color:var(--white-dim);">${s.label}</div>
-      </div>`).join('');
-    }
-    ['nouveau','en_cours','confirme','termine'].forEach(st => {
-      const col = document.getElementById('cmdCol-' + st);
-      const cnt = document.getElementById('cmdCount-' + st);
-      if (!col) return;
-      const items = data.filter(c => c.statut === st);
-      if (cnt) cnt.textContent = items.length;
-      col.innerHTML = items.map(c => {
-        const estime = parseFloat(c.budget_estime)||0;
-        const budgetDisplay = c.budget || (estime>0 ? estime.toLocaleString('fr-FR')+' $' : '');
-        return `<div class="cmd-card" onclick="openCmdDetail(${c.id})">
-          <div class="cmd-card-client">${c.client_nom}</div>
-          <div class="cmd-card-type">${c.type_prestation.length>40?c.type_prestation.slice(0,40)+'…':c.type_prestation}</div>
-          <div class="cmd-card-meta">
-            <span class="cmd-prio ${c.priorite}">${c.priorite}</span>
-            ${c.date_evenement?'<span><i class="fa-solid fa-calendar"></i> '+fmtDate(c.date_evenement,{day:'numeric',month:'short'})+'</span>':''}
-            ${budgetDisplay?'<span><i class="fa-solid fa-dollar-sign"></i> '+budgetDisplay+'</span>':''}
-          </div>
-        </div>`;
-      }).join('') || '<div style="color:var(--white-dim);font-size:11px;text-align:center;padding:20px 0;opacity:0.5;">Aucune</div>';
-    });
-    const tbody = document.getElementById('cmdTable');
-    if (tbody) {
-      if (!data.length) { tbody.innerHTML = '<tr><td colspan="8" style="text-align:center;color:var(--white-dim);">Aucune commande.</td></tr>'; return; }
-      const divEmoji = { securite:'🛡️', soiree:'🎉', tourisme:'✈️', aventure:'🏔️', lillys:'💃', multi:'🏢' };
-      tbody.innerHTML = data.map(c => {
-        const estime = parseFloat(c.budget_estime)||0;
-        const budgetDisplay = c.budget || (estime>0 ? estime.toLocaleString('fr-FR')+' $' : '—');
-        return `<tr>
-          <td style="font-weight:800;color:var(--white);">${c.client_nom}</td>
-          <td>${divEmoji[c.division]||''} ${c.division}</td>
-          <td style="max-width:160px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;" title="${c.type_prestation}">${c.type_prestation}</td>
-          <td>${c.date_evenement?fmtDate(c.date_evenement,{day:'numeric',month:'short',year:'numeric'}):'—'}</td>
-          <td><span class="cmd-prio ${c.priorite}">${c.priorite}</span></td>
-          <td><span class="badge ${c.statut==='nouveau'?'badge-blue':c.statut==='termine'?'badge-green':'badge-gold'}">${c.statut.replace('_',' ')}</span></td>
-          <td>${c.assigned_nom||'—'}</td>
-          <td style="display:flex;gap:6px;">
-            <button class="btn btn-outline" style="padding:5px 10px;font-size:10px;" onclick="openCmdDetail(${c.id})"><i class="fa-solid fa-eye"></i></button>
-            ${currentUser?.role==='admin'?'<button class="btn btn-danger" style="padding:5px 10px;font-size:10px;" onclick="deleteCommande('+c.id+')"><i class="fa-solid fa-trash"></i></button>':''}
-          </td>
-        </tr>`;
-      }).join('');
-    }
-  } catch(e) { console.error(e); }
-}
 
 function openCmdDetail(id) {
   fetch('/api/commandes').then(r => r.json()).then(data => {
