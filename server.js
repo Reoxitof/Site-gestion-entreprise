@@ -152,7 +152,7 @@ async function initDB() {
       budget_estime NUMERIC DEFAULT 0,
       prix_final NUMERIC DEFAULT 0,
       paiement_partage TEXT DEFAULT '[]',
-      statut TEXT NOT NULL DEFAULT 'nouveau',
+      statut TEXT NOT NULL DEFAULT 'devis',
       priorite TEXT NOT NULL DEFAULT 'normale',
       note_interne TEXT DEFAULT '',
       assigned_to INTEGER REFERENCES ec_users(id),
@@ -172,6 +172,7 @@ async function initDB() {
     // Migration statuts : renommer 'nouveau' → 'devis', 'paye' → 'confirme' si besoin
     await getPool().query(`UPDATE ec_commandes SET statut='devis' WHERE statut='nouveau'`);
     await getPool().query(`UPDATE ec_commandes SET statut='confirme' WHERE statut='paye'`);
+    await getPool().query(`ALTER TABLE ec_commandes ALTER COLUMN statut SET DEFAULT 'devis'`).catch(() => {});
 
     // Table fiches de paye
     await getPool().query(`CREATE TABLE IF NOT EXISTS ec_fiches_paye (
