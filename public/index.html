@@ -745,6 +745,10 @@
     <button class="modal-close" onclick="closeModal('modalContratInterimaire')"><i class="fa-solid fa-xmark"></i></button>
     <div class="modal-title">📄 CONTRAT INTÉRIMAIRE</div>
     <div style="font-size:11px;color:var(--white-dim);margin-bottom:18px;">Remplis les infos de mission — le contrat sera généré en PNG.</div>
+    <!-- Champs cachés pour les données du dossier RH -->
+    <input type="hidden" id="contratNom"/>
+    <input type="hidden" id="contratDivision"/>
+    <input type="hidden" id="contratIdEmploye"/>
     <div class="form-group">
       <label>Mission / Poste *</label>
       <input class="input-field" id="contratMission" placeholder="Ex: Agent de Sécurité"/>
@@ -3456,13 +3460,17 @@ function ouvrirContratInterimaire(id) {
   const d = rhData.find(x => x.id === id);
   if (!d) return;
   window._contratDossier = d;
-  // Pré-remplir le poste
+  // Pré-remplir les champs visibles
   document.getElementById('contratMission').value = d.poste || d.poste_libre || '';
   document.getElementById('contratDate').value = new Date().toISOString().slice(0,10);
   document.getElementById('contratHeureDebut').value = '21:00';
   document.getElementById('contratHeureFin').value = '23:00';
   document.getElementById('contratRemuneration').value = '';
   document.getElementById('contratDescription').value = '';
+  // Stocker les infos du dossier dans les champs cachés
+  document.getElementById('contratNom').value = ((d.prenom||'') + ' ' + (d.nom||'')).trim();
+  document.getElementById('contratDivision').value = d.division || '';
+  document.getElementById('contratIdEmploye').value = d.id_employe || '';
   openModal('modalContratInterimaire');
 }
 
@@ -3481,9 +3489,12 @@ function genererContratPNG() {
     ? new Date(dateVal + 'T12:00').toLocaleDateString('fr-FR', {day:'2-digit',month:'2-digit',year:'numeric'})
     : '—';
 
-  const nom       = d ? (((d.prenom||'') + ' ' + (d.nom||'')).trim() || '—') : '—';
-  const idEmploye = d?.id_employe || '—';
-  const division  = d?.division  || '—';
+  const nom       = document.getElementById('contratNom')?.value?.trim()
+                    || (d ? (((d.prenom||'') + ' ' + (d.nom||'')).trim()) : '') || '—';
+  const idEmploye = document.getElementById('contratIdEmploye')?.value?.trim()
+                    || d?.id_employe || '—';
+  const division  = document.getElementById('contratDivision')?.value?.trim()
+                    || d?.division  || '—';
   const remuStr   = remuneration > 0 ? remuneration.toLocaleString('fr-FR') + ' $' : '—';
   const horaires  = `${heureDebut} - ${heureFin}`;
 
@@ -3532,33 +3543,35 @@ function genererContratPNG() {
     ctx.fillText('✓', 150, 288);
 
     // INFORMATIONS EMPLOYÉ — coordonnées calibrées depuis Paint (image 1536×1024)
-    // NOM COMPLET field top ≈ y:413 → texte à y:430
-    txt(nom,         238, 430, 18, '#ffffff', true);
-    // POSTE / FONCTION ← mission  (+38px)
-    txt(mission,     238, 468, 18, '#ffffff', true);
-    // FILIÈRE / DÉPARTEMENT ← division  (+38px)
-    txt(division,    238, 506, 18, '#ffffff', false);
-    // ID EMPLOYÉ  (+38px)
-    txt(idEmploye,   238, 544, 18, '#ffffff', false);
-    // DATE D'EMBAUCHE ← date  (+38px)
-    txt(dateAffiche, 238, 582, 18, '#ffffff', false);
+    // NOM COMPLET field ≈ y:253
+    txt(nom,         238, 253, 18, '#1a1a1a', true);
+    // POSTE / FONCTION ← mission  (+20px)
+    txt(mission,     238, 273, 18, '#1a1a1a', true);
+    // FILIÈRE / DÉPARTEMENT ← division  (+20px)
+    txt(division,    238, 293, 18, '#1a1a1a', false);
+    // ID EMPLOYÉ  (+20px)
+    txt(idEmploye,   238, 313, 18, '#1a1a1a', false);
+    // DATE D'EMBAUCHE ← date  (+20px)
+    txt(dateAffiche, 238, 333, 18, '#1a1a1a', false);
 
     // CONDITIONS DE TRAVAIL — INTÉRIMAIRE
-    txt(horaires,    222, 650, 16, '#ffffff', true);
-    txt(dateAffiche, 222, 700, 15, '#c9a84c', false);
-    txt(remuStr,     222, 748, 16, '#c9a84c', true);
+    // HORAIRES DU CONTRAT ≈ y:370
+    txt(horaires,    222, 370, 16, '#1a1a1a', true);
+    // DURÉE / MISSION ≈ y:400
+    txt(dateAffiche, 222, 400, 15, '#1a1a1a', false);
+    // RÉMUNÉRATION ≈ y:430
+    txt(remuStr,     222, 430, 16, '#c9a84c', true);
 
     // ══ COLONNE DROITE (768 → 1536) ══
 
-    // INFORMATIONS COMPLÉMENTAIRES ← description
-    // Zone blanche droite : x≈820, y≈345, largeur≈310, hauteur≈100
+    // INFORMATIONS COMPLÉMENTAIRES ← description ≈ x:820, y:265
     if (description) {
-      txtWrap(description, 820, 358, 310, 15, '#f0ead8');
+      txtWrap(description, 820, 265, 310, 15, '#1a1a1a');
     }
 
-    // DATE signatures
-    txt(dateAffiche, 820, 502, 15, '#ffffff', false);
-    txt(dateAffiche, 1100, 502, 15, '#ffffff', false);
+    // DATE signatures ≈ y:502
+    txt(dateAffiche, 820, 502, 15, '#1a1a1a', false);
+    txt(dateAffiche, 1100, 502, 15, '#1a1a1a', false);
 
     // Télécharger
     const link = document.createElement('a');
