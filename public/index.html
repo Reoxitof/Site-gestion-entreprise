@@ -3652,127 +3652,116 @@ function genererContratPNG() {
   // Formater la date en DD/MM/YYYY
   const [yyyy, mm, dd] = date.split('-');
   const dateAffiche = `${dd}/${mm}/${yyyy}`;
+  const horaires = `${heureDebut} - ${heureFin}`;
+  const remunerationFmt = Number(remuneration).toLocaleString('fr-FR') + ' $';
 
-  // Générer le contrat via canvas
-  const canvas = document.createElement('canvas');
-  canvas.width = 900;
-  canvas.height = 620;
-  const ctx = canvas.getContext('2d');
+  // Charger le template PNG et dessiner par-dessus
+  const img = new Image();
+  img.onload = function() {
+    const canvas = document.createElement('canvas');
+    canvas.width = img.width;
+    canvas.height = img.height;
+    const ctx = canvas.getContext('2d');
 
-  // Fond sombre
-  ctx.fillStyle = '#0a0a0f';
-  ctx.fillRect(0, 0, canvas.width, canvas.height);
+    // Dessiner le template
+    ctx.drawImage(img, 0, 0);
 
-  // Bordure dorée
-  ctx.strokeStyle = '#c9a84c';
-  ctx.lineWidth = 3;
-  ctx.strokeRect(16, 16, canvas.width - 32, canvas.height - 32);
-
-  // Ligne déco haut
-  const grad = ctx.createLinearGradient(0, 0, canvas.width, 0);
-  grad.addColorStop(0, 'transparent');
-  grad.addColorStop(0.5, '#c9a84c');
-  grad.addColorStop(1, 'transparent');
-  ctx.strokeStyle = grad;
-  ctx.lineWidth = 2;
-  ctx.beginPath(); ctx.moveTo(40, 80); ctx.lineTo(canvas.width - 40, 80); ctx.stroke();
-
-  // Titre
-  ctx.fillStyle = '#c9a84c';
-  ctx.font = 'bold 36px Anton, Arial';
-  ctx.textAlign = 'center';
-  ctx.fillText('CONTRAT INTÉRIMAIRE', canvas.width / 2, 58);
-
-  // Sous-titre
-  ctx.fillStyle = 'rgba(240,234,255,0.5)';
-  ctx.font = '13px Inter, Arial';
-  ctx.fillText('ELITE CORP. — Document officiel', canvas.width / 2, 100);
-
-  // Ligne déco bas titre
-  ctx.strokeStyle = grad;
-  ctx.lineWidth = 1;
-  ctx.beginPath(); ctx.moveTo(40, 115); ctx.lineTo(canvas.width - 40, 115); ctx.stroke();
-
-  // Champs
-  const fields = [
-    { label: 'MISSION / POSTE', value: mission },
-    { label: 'DATE DE LA MISSION', value: dateAffiche },
-    { label: 'HEURE DÉBUT', value: heureDebut },
-    { label: 'HEURE FIN', value: heureFin },
-    { label: 'RÉMUNÉRATION', value: Number(remuneration).toLocaleString('fr-FR') + ' $' },
-  ];
-
-  let y = 155;
-  fields.forEach(f => {
-    // Label
-    ctx.fillStyle = 'rgba(201,168,76,0.7)';
-    ctx.font = 'bold 10px Inter, Arial';
+    // Style du texte à remplir
+    ctx.fillStyle = '#ffffff';
+    ctx.font = 'bold 18px Inter, Arial';
     ctx.textAlign = 'left';
-    ctx.fillText(f.label, 60, y);
-    // Fond champ
-    ctx.fillStyle = 'rgba(255,255,255,0.04)';
-    ctx.beginPath();
-    ctx.roundRect(60, y + 6, canvas.width - 120, 38, 8);
-    ctx.fill();
-    ctx.strokeStyle = 'rgba(201,168,76,0.25)';
-    ctx.lineWidth = 1;
-    ctx.beginPath();
-    ctx.roundRect(60, y + 6, canvas.width - 120, 38, 8);
-    ctx.stroke();
-    // Valeur
-    ctx.fillStyle = '#f0eaff';
-    ctx.font = 'bold 16px Inter, Arial';
-    ctx.fillText(f.value, 80, y + 31);
-    y += 62;
+
+    // ── COLONNE GAUCHE ──
+    // NOM COMPLET (champ vide à remplir — on met le nom du client si dispo)
+    // POSTE / FONCTION ← mission
+    ctx.fillText(mission, 175, 330);
+
+    // DATE D'EMBAUCHE ← date
+    ctx.fillText(dateAffiche, 175, 415);
+
+    // ── CONDITIONS DE TRAVAIL — INTÉRIMAIRE ──
+    // HORAIRES DU CONTRAT ← heureDebut - heureFin
+    ctx.fillText(horaires, 100, 510);
+
+    // DURÉE / MISSION ← date
+    ctx.font = '15px Inter, Arial';
+    ctx.fillText('Le ' + dateAffiche, 100, 560);
+
+    // RÉMUNÉRATION ← remuneration
+    ctx.font = 'bold 18px Inter, Arial';
+    ctx.fillText(remunerationFmt, 100, 610);
+
+    // ── COLONNE DROITE — INFORMATIONS COMPLÉMENTAIRES ──
+    if (description) {
+      ctx.font = '14px Inter, Arial';
+      ctx.fillStyle = '#e0d8c0';
+      const words = description.split(' ');
+      let line = ''; let lineY = 490;
+      const maxW = 340;
+      const startX = 580;
+      words.forEach(word => {
+        const test = line + word + ' ';
+        if (ctx.measureText(test).width > maxW && line) {
+          ctx.fillText(line.trim(), startX, lineY);
+          line = word + ' '; lineY += 20;
+        } else { line = test; }
+      });
+      if (line) ctx.fillText(line.trim(), startX, lineY);
+    }
+
+    // Télécharger
+    const link = document.createElement('a');
+    link.download = `contrat_${mission.replace(/\s+/g,'_')}_${dateAffiche.replace(/\//g,'-')}.png`;
+    link.href = canvas.toDataURL('image/png');
+    link.click();
+
+    showToast('✅ Contrat généré et téléchargé');
+    closeModal('modalContrat');
+  };
+  img.onerror = function() {
+    showToast('❌ Template introuvable — génération sans fond', false);
+    // Fallback : génération sans template
+    genererContratPNGFallback(mission, dateAffiche, horaires, remunerationFmt, description);
+  };
+  img.src = '/contrat-template.png';
+}
+
+function genererContratPNGFallback(mission, dateAffiche, horaires, remunerationFmt, description) {
+  const canvas = document.createElement('canvas');
+  canvas.width = 900; canvas.height = 620;
+  const ctx = canvas.getContext('2d');
+  ctx.fillStyle = '#0a0a0f'; ctx.fillRect(0, 0, canvas.width, canvas.height);
+  ctx.strokeStyle = '#c9a84c'; ctx.lineWidth = 3;
+  ctx.strokeRect(16, 16, canvas.width - 32, canvas.height - 32);
+  ctx.fillStyle = '#c9a84c'; ctx.font = 'bold 36px Anton, Arial';
+  ctx.textAlign = 'center'; ctx.fillText('CONTRAT INTÉRIMAIRE', canvas.width / 2, 58);
+  ctx.fillStyle = '#f0eaff'; ctx.font = 'bold 16px Inter, Arial'; ctx.textAlign = 'left';
+  const fields = [
+    ['POSTE / FONCTION', mission],
+    ['DATE DE LA MISSION', dateAffiche],
+    ['HORAIRES', horaires],
+    ['RÉMUNÉRATION', remunerationFmt],
+  ];
+  let y = 120;
+  fields.forEach(([label, val]) => {
+    ctx.fillStyle = 'rgba(201,168,76,0.7)'; ctx.font = 'bold 10px Inter, Arial';
+    ctx.fillText(label, 60, y);
+    ctx.fillStyle = '#f0eaff'; ctx.font = 'bold 16px Inter, Arial';
+    ctx.fillText(val, 60, y + 22); y += 60;
   });
-
-  // Description
   if (description) {
-    ctx.fillStyle = 'rgba(201,168,76,0.7)';
-    ctx.font = 'bold 10px Inter, Arial';
-    ctx.fillText('DESCRIPTION DE LA MISSION', 60, y);
-    ctx.fillStyle = 'rgba(255,255,255,0.04)';
-    ctx.beginPath();
-    ctx.roundRect(60, y + 6, canvas.width - 120, 60, 8);
-    ctx.fill();
-    ctx.strokeStyle = 'rgba(201,168,76,0.25)';
-    ctx.lineWidth = 1;
-    ctx.beginPath();
-    ctx.roundRect(60, y + 6, canvas.width - 120, 60, 8);
-    ctx.stroke();
-    ctx.fillStyle = 'rgba(240,234,255,0.7)';
-    ctx.font = '13px Inter, Arial';
-    // Wrap texte simple
-    const words = description.split(' ');
-    let line = ''; let lineY = y + 28;
-    words.forEach(word => {
-      const test = line + word + ' ';
-      if (ctx.measureText(test).width > canvas.width - 160 && line) {
-        ctx.fillText(line.trim(), 80, lineY);
-        line = word + ' '; lineY += 18;
-      } else { line = test; }
-    });
-    if (line) ctx.fillText(line.trim(), 80, lineY);
-    y += 80;
+    ctx.fillStyle = 'rgba(201,168,76,0.7)'; ctx.font = 'bold 10px Inter, Arial';
+    ctx.fillText('DESCRIPTION', 60, y);
+    ctx.fillStyle = 'rgba(240,234,255,0.7)'; ctx.font = '13px Inter, Arial';
+    const words = description.split(' '); let line = ''; let lineY = y + 20;
+    words.forEach(w => { const t = line + w + ' '; if (ctx.measureText(t).width > 780 && line) { ctx.fillText(line.trim(), 60, lineY); line = w + ' '; lineY += 18; } else line = t; });
+    if (line) ctx.fillText(line.trim(), 60, lineY);
   }
-
-  // Pied de page
-  ctx.strokeStyle = grad;
-  ctx.lineWidth = 1;
-  ctx.beginPath(); ctx.moveTo(40, canvas.height - 50); ctx.lineTo(canvas.width - 40, canvas.height - 50); ctx.stroke();
-  ctx.fillStyle = 'rgba(201,168,76,0.5)';
-  ctx.font = '11px Inter, Arial';
-  ctx.textAlign = 'center';
-  ctx.fillText('Elite Corp. — Confidentiel — Document généré automatiquement', canvas.width / 2, canvas.height - 28);
-
-  // Télécharger
   const link = document.createElement('a');
   link.download = `contrat_${mission.replace(/\s+/g,'_')}_${dateAffiche.replace(/\//g,'-')}.png`;
   link.href = canvas.toDataURL('image/png');
   link.click();
-
-  showToast('✅ Contrat généré et téléchargé');
-  closeModal('modalContrat');
+  showToast('✅ Contrat généré'); closeModal('modalContrat');
 }
 
 
