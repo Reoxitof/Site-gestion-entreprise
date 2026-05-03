@@ -2125,16 +2125,16 @@ function exportDossierPNG(id) {
   // Positions des cases blanches sur visite.png (1024x512)
   // Haut droite : NOM COMPLET, POSTE, FILIERE, ID EMPLOYE, DATE, STATUT
   const infoFields = [
-    { value: (d.prenom + ' ' + d.nom).toUpperCase(), x: 432, y: 148 },
-    { value: d.poste || '—',                          x: 432, y: 178 },
-    { value: d.division || '—',                       x: 432, y: 208 },
-    { value: d.id_employe || '—',                     x: 432, y: 238 },
-    { value: d.created_at ? new Date(d.created_at).toLocaleDateString('fr-FR') : '—', x: 432, y: 268 },
-    { value: d.role === 'interimaire' ? 'Intérimaire' : d.role === 'admin' ? 'Admin' : d.role === 'direction' ? 'Direction' : 'Employé', x: 432, y: 298 },
+    { value: (d.prenom + ' ' + d.nom).toUpperCase(), x: 432, y: 118 },
+    { value: d.poste || '—',                          x: 432, y: 148 },
+    { value: d.division || '—',                       x: 432, y: 178 },
+    { value: d.id_employe || '—',                     x: 432, y: 208 },
+    { value: d.created_at ? new Date(d.created_at).toLocaleDateString('fr-FR') : '—', x: 432, y: 238 },
+    { value: d.role === 'interimaire' ? 'Intérimaire' : d.role === 'admin' ? 'Admin' : d.role === 'direction' ? 'Direction' : 'Employé', x: 432, y: 268 },
   ];
   // Bas gauche : TELEPHONE EMPLOYE, COMPTE
   const contactFields = [
-    { value: d.perso || '—',  x: 155, y: 358 },
+    { value: d.perso || '—',  x: 155, y: 355 },
     { value: '205-7586',      x: 155, y: 408 }, // TÉLÉPHONE DU PATRON (fixe)
   ];
   // Zone photo
