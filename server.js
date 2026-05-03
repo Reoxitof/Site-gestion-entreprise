@@ -1291,19 +1291,17 @@ app.post('/api/dossiers-rh', admin, uploadRH.single('photo'), async (req, res) =
     const existing = await getPool().query('SELECT id FROM ec_dossiers_rh WHERE user_id=$1', [user_id]);
     let r;
     if (existing.rows.length > 0) {
-      // Mettre à jour
       r = await getPool().query(
         `UPDATE ec_dossiers_rh SET perso=$2, compte=$3, id_employe=$4, division=$5,
-         photo_url=CASE WHEN $6='' THEN photo_url ELSE $6 END, updated_at=NOW()
+         photo_data=CASE WHEN $6::TEXT='' THEN photo_data ELSE $6::TEXT END, updated_at=NOW()
          WHERE user_id=$1 RETURNING *`,
-        [user_id, perso, compte, id_employe, division, photo_url]
+        [user_id, perso, compte, id_employe, division, photo_data]
       );
     } else {
-      // Insérer
       r = await getPool().query(
         `INSERT INTO ec_dossiers_rh (user_id, perso, compte, id_employe, division, photo_data)
          VALUES ($1,$2,$3,$4,$5,$6) RETURNING *`,
-        [user_id, perso, compte, id_employe, division, photo_url]
+        [user_id, perso, compte, id_employe, division, photo_data]
       );
     }
     res.json({ success: true, dossier: r.rows[0] });
@@ -1321,7 +1319,7 @@ app.put('/api/dossiers-rh/:id', admin, uploadRH.single('photo'), async (req, res
     await getPool().query(
       `UPDATE ec_dossiers_rh SET
         perso=$1, compte=$2, id_employe=$3, division=$4,
-        photo_url=CASE WHEN $5::TEXT IS NULL THEN photo_url ELSE $5::TEXT END,
+        photo_data=CASE WHEN $5::TEXT IS NULL THEN photo_data ELSE $5::TEXT END,
         updated_at=NOW()
        WHERE id=$6`,
       [perso, compte, id_employe, division, photo_data, req.params.id]
