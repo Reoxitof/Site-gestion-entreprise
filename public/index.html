@@ -3532,35 +3532,35 @@ function genererContratPNG() {
     ctx.fillText('✓', 150, 288);
 
     // INFORMATIONS EMPLOYÉ
-    // NOM COMPLET ← nom (champ blanc commence ~x:228, y:330)
-    txt(nom,        228, 340, 18, '#ffffff', true);
+    // NOM COMPLET ← nom
+    txt(nom,         228, 338, 18, '#ffffff', true);
     // POSTE / FONCTION ← mission
-    txt(mission,    228, 358, 18, '#ffffff', true);
+    txt(mission,     228, 358, 18, '#ffffff', true);
     // FILIÈRE / DÉPARTEMENT ← division
-    txt(division,   228, 376, 18, '#ffffff', false);
+    txt(division,    228, 378, 18, '#ffffff', false);
     // ID EMPLOYÉ
-    txt(idEmploye,  228, 394, 18, '#ffffff', false);
+    txt(idEmploye,   228, 398, 18, '#ffffff', false);
     // DATE D'EMBAUCHE ← date
-    txt(dateAffiche, 228, 412, 18, '#ffffff', false);
+    txt(dateAffiche, 228, 418, 18, '#ffffff', false);
 
     // CONDITIONS DE TRAVAIL — INTÉRIMAIRE
     // HORAIRES DU CONTRAT ← heureDebut - heureFin
-    txt(horaires,    218, 472, 16, '#ffffff', true);
+    txt(horaires,    218, 478, 16, '#ffffff', true);
     // DURÉE / MISSION ← date
-    txt('Le ' + dateAffiche, 218, 510, 15, '#c9a84c', false);
+    txt(dateAffiche, 218, 516, 15, '#c9a84c', false);
     // RÉMUNÉRATION
-    txt(remuStr,     218, 548, 16, '#c9a84c', true);
+    txt(remuStr,     218, 554, 16, '#c9a84c', true);
 
     // ══ COLONNE DROITE (768 → 1536) ══
 
-    // INFORMATIONS COMPLÉMENTAIRES ← description (zone ~x:538, y:340, largeur:240)
+    // INFORMATIONS COMPLÉMENTAIRES ← description (zone ~x:820, y:345, largeur:310)
     if (description) {
-      txtWrap(description, 538, 355, 240, 15, '#f0ead8');
+      txtWrap(description, 820, 358, 310, 15, '#f0ead8');
     }
 
-    // DATE signatures
-    txt(dateAffiche, 538, 500, 15, '#ffffff', false);
-    txt(dateAffiche, 730, 500, 15, '#ffffff', false);
+    // DATE signatures (bas)
+    txt(dateAffiche, 820, 502, 15, '#ffffff', false);
+    txt(dateAffiche, 1100, 502, 15, '#ffffff', false);
 
     // Télécharger
     const link = document.createElement('a');
