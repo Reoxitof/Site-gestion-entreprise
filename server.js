@@ -1324,7 +1324,7 @@ app.put('/api/dossiers-rh/:id', admin, uploadRH.single('photo'), async (req, res
     await getPool().query(
       `UPDATE ec_dossiers_rh SET
         perso=$1, compte=$2, id_employe=$3, division=$4,
-        photo_url=CASE WHEN $5 IS NULL THEN photo_url ELSE $5 END,
+        photo_url=CASE WHEN $5::TEXT IS NULL THEN photo_url ELSE $5::TEXT END,
         updated_at=NOW()
        WHERE id=$6`,
       [perso, compte, id_employe, division, photo_url, req.params.id]
