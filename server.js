@@ -5,9 +5,31 @@ const session = require('express-session');
 const bcrypt = require('bcryptjs');
 const { Pool } = require('pg');
 const rateLimit = require('express-rate-limit');
+const multer = require('multer');
+const fs = require('fs');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
+
+/* ═══ MULTER — DOSSIERS RH ═══ */
+const uploadDir = path.join(__dirname, 'public', 'uploads', 'dossiers-rh');
+if (!fs.existsSync(uploadDir)) fs.mkdirSync(uploadDir, { recursive: true });
+
+const storageRH = multer.diskStorage({
+  destination: (req, file, cb) => cb(null, uploadDir),
+  filename: (req, file, cb) => {
+    const ext = path.extname(file.originalname).toLowerCase() || '.jpg';
+    cb(null, 'rh_' + Date.now() + '_' + Math.random().toString(36).slice(2) + ext);
+  }
+});
+const uploadRH = multer({
+  storage: storageRH,
+  limits: { fileSize: 5 * 1024 * 1024 },
+  fileFilter: (req, file, cb) => {
+    if (/^image\/(jpeg|png|gif|webp)$/.test(file.mimetype)) cb(null, true);
+    else cb(new Error('Seules les images sont acceptées'));
+  }
+});
 
 /* ═══ SANITISATION ═══ */
 function sanitizeStr(val, maxLen = 500) {
@@ -213,6 +235,20 @@ async function initDB() {
       action TEXT NOT NULL,
       details TEXT DEFAULT '',
       created_at TIMESTAMP DEFAULT NOW()
+    )`);
+
+    // Table dossiers RH
+    await getPool().query(`CREATE TABLE IF NOT EXISTS ec_dossiers_rh (
+      id SERIAL PRIMARY KEY,
+      user_id INTEGER REFERENCES ec_users(id) ON DELETE CASCADE,
+      perso TEXT DEFAULT '',
+      compte TEXT DEFAULT '',
+      id_employe TEXT DEFAULT '',
+      division TEXT DEFAULT '',
+      photo_url TEXT DEFAULT '',
+      created_at TIMESTAMP DEFAULT NOW(),
+      updated_at TIMESTAMP DEFAULT NOW(),
+      UNIQUE(user_id)
     )`);
     // Insérer les tarifs par défaut si la table est vide
     const tc = await getPool().query('SELECT COUNT(*) FROM ec_tarifs');
@@ -1214,6 +1250,130 @@ async function logAdminAction(userId, action, details) {
     );
   } catch(e) {}
 }
+
+/* ═══ DOSSIERS RH ═══ */
+
+// Lister tous les dossiers RH avec infos utilisateur
+app.get('/api/dossiers-rh', auth, async (req, res) => {
+  try {
+    const rows = (await getPool().query(
+      `SELECT d.*, u.nom, u.prenom, u.poste, u.role, u.actif, u.username
+       FROM ec_dossiers_rh d
+       JOIN ec_users u ON d.user_id = u.id
+       ORDER BY u.nom, u.prenom`
+    )).rows;
+    res.json(rows);
+  } catch(e) { res.status(500).json({ error: e.message }); }
+});
+
+// Créer un dossier RH pour un employé existant
+app.post('/api/dossiers-rh', admin, uploadRH.single('photo'), async (req, res) => {
+  try {
+    const user_id = parseInt(req.body.user_id);
+    if (!user_id) return res.status(400).json({ error: 'user_id requis' });
+    const perso = sanitizeStr(req.body.perso, 500);
+    const compte = sanitizeStr(req.body.compte, 500);
+    const id_employe = sanitizeStr(req.body.id_employe, 100);
+    const division = sanitizeStr(req.body.division, 100);
+    const photo_url = req.file ? '/uploads/dossiers-rh/' + req.file.filename : '';
+    const r = await getPool().query(
+      `INSERT INTO ec_dossiers_rh (user_id, perso, compte, id_employe, division, photo_url)
+       VALUES ($1,$2,$3,$4,$5,$6)
+       ON CONFLICT (user_id) DO UPDATE
+       SET perso=$2, compte=$3, id_employe=$4, division=$5,
+           photo_url=CASE WHEN $6='' THEN ec_dossiers_rh.photo_url ELSE $6 END,
+           updated_at=NOW()
+       RETURNING *`,
+      [user_id, perso, compte, id_employe, division, photo_url]
+    );
+    res.json({ success: true, dossier: r.rows[0] });
+  } catch(e) { res.status(500).json({ error: e.message }); }
+});
+
+// Mettre à jour un dossier RH
+app.put('/api/dossiers-rh/:id', admin, uploadRH.single('photo'), async (req, res) => {
+  try {
+    const perso = sanitizeStr(req.body.perso, 500);
+    const compte = sanitizeStr(req.body.compte, 500);
+    const id_employe = sanitizeStr(req.body.id_employe, 100);
+    const division = sanitizeStr(req.body.division, 100);
+    const photo_url = req.file ? '/uploads/dossiers-rh/' + req.file.filename : null;
+    await getPool().query(
+      `UPDATE ec_dossiers_rh SET
+        perso=$1, compte=$2, id_employe=$3, division=$4,
+        photo_url=CASE WHEN $5 IS NULL THEN photo_url ELSE $5 END,
+        updated_at=NOW()
+       WHERE id=$6`,
+      [perso, compte, id_employe, division, photo_url, req.params.id]
+    );
+    res.json({ success: true });
+  } catch(e) { res.status(500).json({ error: e.message }); }
+});
+
+// Supprimer un dossier RH (désactive le compte si intérimaire)
+app.delete('/api/dossiers-rh/:id', admin, async (req, res) => {
+  try {
+    const dossierRes = await getPool().query(
+      `SELECT d.*, u.role FROM ec_dossiers_rh d JOIN ec_users u ON d.user_id=u.id WHERE d.id=$1`,
+      [req.params.id]
+    );
+    const dossier = dossierRes.rows[0];
+    if (!dossier) return res.status(404).json({ error: 'Dossier introuvable' });
+    // Désactiver le compte si intérimaire
+    if (dossier.role === 'interimaire') {
+      await getPool().query('UPDATE ec_users SET actif=false WHERE id=$1', [dossier.user_id]);
+      clearCache('employes');
+    }
+    await getPool().query('DELETE FROM ec_dossiers_rh WHERE id=$1', [req.params.id]);
+    res.json({ success: true });
+  } catch(e) { res.status(500).json({ error: e.message }); }
+});
+
+// Créer un compte intérimaire + dossier RH en une seule transaction
+app.post('/api/dossiers-rh/interimaire', admin, uploadRH.single('photo'), async (req, res) => {
+  const client = await getPool().connect();
+  try {
+    await client.query('BEGIN');
+    const { username, password, poste } = req.body;
+    const nom = sanitizeStr(req.body.nom, 100);
+    const prenom = sanitizeStr(req.body.prenom, 100);
+    const perso = sanitizeStr(req.body.perso, 500);
+    const compte = sanitizeStr(req.body.compte, 500);
+    const id_employe = sanitizeStr(req.body.id_employe, 100);
+    const division = sanitizeStr(req.body.division, 100);
+    const photo_url = req.file ? '/uploads/dossiers-rh/' + req.file.filename : '';
+
+    if (!username || !password || !nom || !prenom) {
+      await client.query('ROLLBACK');
+      return res.status(400).json({ error: 'Champs manquants (nom, prénom, username, password)' });
+    }
+    if (!/^[a-z0-9_]{3,32}$/.test(username)) {
+      await client.query('ROLLBACK');
+      return res.status(400).json({ error: 'Identifiant invalide (3-32 caractères, lettres minuscules, chiffres, underscore)' });
+    }
+    const hash = await bcrypt.hash(password, 12);
+    const userRes = await client.query(
+      `INSERT INTO ec_users (username, password_hash, nom, prenom, poste, role)
+       VALUES ($1,$2,$3,$4,$5,'interimaire') RETURNING id`,
+      [username.toLowerCase(), hash, nom, prenom, poste || 'Intérimaire']
+    );
+    const user_id = userRes.rows[0].id;
+    const dossierRes = await client.query(
+      `INSERT INTO ec_dossiers_rh (user_id, perso, compte, id_employe, division, photo_url)
+       VALUES ($1,$2,$3,$4,$5,$6) RETURNING *`,
+      [user_id, perso, compte, id_employe, division, photo_url]
+    );
+    await client.query('COMMIT');
+    clearCache('employes');
+    res.json({ success: true, user_id, dossier: dossierRes.rows[0] });
+  } catch(e) {
+    await client.query('ROLLBACK');
+    if (e.code === '23505') return res.status(400).json({ error: 'Identifiant déjà pris' });
+    res.status(500).json({ error: e.message });
+  } finally {
+    client.release();
+  }
+});
 
 /* ═══ PAGES ═══ */
 app.get('/login', (req, res) => res.sendFile(path.join(__dirname, 'public', 'login.html')));

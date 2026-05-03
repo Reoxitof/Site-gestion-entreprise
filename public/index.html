@@ -172,6 +172,7 @@
     <button class="nav-btn" onclick="showTab('annonces')"><i class="fa-solid fa-bullhorn"></i> Annonces</button>
     <button class="nav-btn recrutement-access" onclick="showTab('recrutement')"><i class="fa-solid fa-user-tie"></i> Recrutement</button>
     <button class="nav-btn admin-only" onclick="showTab('commandes')"><i class="fa-solid fa-clipboard-list"></i> Commandes</button>
+    <button class="nav-btn admin-only" onclick="showTab('dossiers-rh')"><i class="fa-solid fa-id-card"></i> Dossiers RH</button>
     <a href="/fiches-paye" class="nav-btn" style="text-decoration:none;display:flex;align-items:center;gap:8px;"><i class="fa-solid fa-file-invoice-dollar"></i> Fiches de paye</a>
     <a href="/livre-comptes" class="nav-btn admin-only" style="text-decoration:none;display:flex;align-items:center;gap:8px;"><i class="fa-solid fa-book"></i> Livre de comptes</a>
   </nav>
@@ -437,10 +438,171 @@
       </div>
     </div>
 
+    <!-- ═══ TAB: DOSSIERS RH ═══ -->
+    <div class="tab-content" id="tab-dossiers-rh">
+      <style>
+        .rh-grid { display: grid; grid-template-columns: repeat(3,1fr); gap: 18px; }
+        @media(max-width:1100px){ .rh-grid { grid-template-columns: repeat(2,1fr); } }
+        @media(max-width:650px){ .rh-grid { grid-template-columns: 1fr; } }
+        .rh-card { background: var(--card); border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden; transition: border-color 0.2s, transform 0.2s; }
+        .rh-card:hover { border-color: var(--border-hover); transform: translateY(-2px); }
+        .rh-card-avatar { width: 100%; height: 180px; background: linear-gradient(135deg,rgba(201,168,76,0.15),rgba(201,168,76,0.05)); display: flex; align-items: center; justify-content: center; }
+        .rh-card-body { padding: 16px; }
+        .rh-card-name { font-family: 'Anton', sans-serif; font-size: 16px; letter-spacing: 1px; color: var(--white); margin-bottom: 4px; }
+        .rh-card-division { font-size: 10px; font-weight: 800; letter-spacing: 2px; text-transform: uppercase; color: var(--gold); margin-bottom: 10px; }
+        .rh-card-info { font-size: 11px; color: var(--white-dim); margin-bottom: 4px; display: flex; gap: 6px; }
+        .rh-card-info span { color: var(--white); font-weight: 700; }
+        .rh-card-actions { display: flex; gap: 6px; margin-top: 12px; flex-wrap: wrap; }
+        .rh-sort-btn { padding: 7px 14px; border-radius: 8px; border: 1px solid var(--border); background: transparent; color: var(--white-dim); font-size: 11px; font-weight: 800; cursor: pointer; transition: all 0.2s; }
+        .rh-sort-btn:hover { border-color: var(--gold); color: var(--gold); }
+        .rh-sort-btn.active { border-color: var(--gold); background: rgba(201,168,76,0.1); color: var(--gold); }
+      </style>
+      <!-- Header -->
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;flex-wrap:wrap;gap:12px;">
+        <div>
+          <div class="section-label">Ressources Humaines</div>
+          <div style="font-family:'Anton',sans-serif;font-size:22px;letter-spacing:3px;color:var(--white);">DOSSIERS <span style="color:var(--gold);">RH</span></div>
+        </div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;">
+          <button class="rh-sort-btn active" id="rhSortNom" onclick="sortDossiers('nom')"><i class="fa-solid fa-arrow-down-a-z"></i> Nom</button>
+          <button class="rh-sort-btn" id="rhSortPrenom" onclick="sortDossiers('prenom')"><i class="fa-solid fa-arrow-down-a-z"></i> Prénom</button>
+          <button class="btn btn-gold admin-only" onclick="openCreateDossier()"><i class="fa-solid fa-plus"></i> Nouveau dossier</button>
+          <button class="btn btn-outline admin-only" onclick="openCreateInterimaire()" style="border-color:rgba(167,139,250,0.4);color:#a78bfa;"><i class="fa-solid fa-user-clock"></i> Nouvel intérimaire</button>
+        </div>
+      </div>
+      <div class="rh-grid" id="rhGrid">
+        <div style="color:var(--white-dim);font-size:12px;grid-column:1/-1;text-align:center;padding:40px 0;">Chargement...</div>
+      </div>
+    </div>
+
   </div><!-- /content -->
 </div><!-- /main -->
 
 <!-- ═══ MODALS ═══ -->
+
+<!-- Modal Dossier RH — Créer -->
+<div class="modal-overlay" id="modalDossierCreate">
+  <div class="modal" style="max-width:560px;">
+    <button class="modal-close" onclick="closeModal('modalDossierCreate')"><i class="fa-solid fa-xmark"></i></button>
+    <div class="modal-title">NOUVEAU DOSSIER RH</div>
+    <div class="form-group">
+      <label>Employé *</label>
+      <select class="input-field" id="dossierCreateUser"></select>
+    </div>
+    <div class="grid-2">
+      <div class="form-group"><label>Perso (personnage RP)</label><input class="input-field" id="dossierCreatePerso" placeholder="Ex: John Smith"/></div>
+      <div class="form-group"><label>Compte (numéro)</label><input class="input-field" id="dossierCreateCompte" placeholder="Ex: 1234567"/></div>
+    </div>
+    <div class="grid-2">
+      <div class="form-group"><label>ID Employé</label><input class="input-field" id="dossierCreateIdEmploye" placeholder="Ex: EC-0042"/></div>
+      <div class="form-group"><label>Division</label>
+        <select class="input-field" id="dossierCreateDivision">
+          <option value="">— Sélectionner —</option>
+          <option value="Penny's Elite Security">🛡️ Penny's Elite Security</option>
+          <option value="Événementiel">🎉 Événementiel</option>
+          <option value="Elite Tourisme">✈️ Elite Tourisme</option>
+          <option value="Elite Aventure">🏔️ Elite Aventure</option>
+          <option value="Lilly's Girls">💃 Lilly's Girls</option>
+          <option value="Direction">🏢 Direction</option>
+          <option value="Support Interne">⚙️ Support Interne</option>
+        </select>
+      </div>
+    </div>
+    <div class="form-group">
+      <label>Photo</label>
+      <input type="file" class="input-field" id="dossierCreatePhoto" accept="image/*" onchange="previewImage(this,'dossierCreatePreview')" style="padding:8px;"/>
+      <img id="dossierCreatePreview" src="" alt="" style="display:none;width:100%;max-height:200px;object-fit:cover;border-radius:8px;margin-top:8px;border:1px solid var(--border);"/>
+    </div>
+    <div class="btn-row">
+      <button class="btn btn-gold" onclick="submitCreateDossier()"><i class="fa-solid fa-floppy-disk"></i> Enregistrer</button>
+      <button class="btn btn-outline" onclick="closeModal('modalDossierCreate')">Annuler</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal Dossier RH — Modifier -->
+<div class="modal-overlay" id="modalDossierEdit">
+  <div class="modal" style="max-width:560px;">
+    <button class="modal-close" onclick="closeModal('modalDossierEdit')"><i class="fa-solid fa-xmark"></i></button>
+    <div class="modal-title">MODIFIER DOSSIER RH</div>
+    <input type="hidden" id="dossierEditId"/>
+    <div style="font-size:12px;font-weight:700;color:var(--gold);margin-bottom:14px;" id="dossierEditNom"></div>
+    <div class="grid-2">
+      <div class="form-group"><label>Perso (personnage RP)</label><input class="input-field" id="dossierEditPerso" placeholder="Ex: John Smith"/></div>
+      <div class="form-group"><label>Compte (numéro)</label><input class="input-field" id="dossierEditCompte" placeholder="Ex: 1234567"/></div>
+    </div>
+    <div class="grid-2">
+      <div class="form-group"><label>ID Employé</label><input class="input-field" id="dossierEditIdEmploye" placeholder="Ex: EC-0042"/></div>
+      <div class="form-group"><label>Division</label>
+        <select class="input-field" id="dossierEditDivision">
+          <option value="">— Sélectionner —</option>
+          <option value="Penny's Elite Security">🛡️ Penny's Elite Security</option>
+          <option value="Événementiel">🎉 Événementiel</option>
+          <option value="Elite Tourisme">✈️ Elite Tourisme</option>
+          <option value="Elite Aventure">🏔️ Elite Aventure</option>
+          <option value="Lilly's Girls">💃 Lilly's Girls</option>
+          <option value="Direction">🏢 Direction</option>
+          <option value="Support Interne">⚙️ Support Interne</option>
+        </select>
+      </div>
+    </div>
+    <div class="form-group">
+      <label>Nouvelle photo (laisser vide pour conserver)</label>
+      <input type="file" class="input-field" id="dossierEditPhoto" accept="image/*" onchange="previewImage(this,'dossierEditPreview')" style="padding:8px;"/>
+      <img id="dossierEditPreview" src="" alt="" style="display:none;width:100%;max-height:200px;object-fit:cover;border-radius:8px;margin-top:8px;border:1px solid var(--border);"/>
+    </div>
+    <div class="btn-row">
+      <button class="btn btn-gold" onclick="submitEditDossier()"><i class="fa-solid fa-floppy-disk"></i> Enregistrer</button>
+      <button class="btn btn-outline" onclick="closeModal('modalDossierEdit')">Annuler</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal Intérimaire — Créer -->
+<div class="modal-overlay" id="modalInterimaire">
+  <div class="modal" style="max-width:580px;">
+    <button class="modal-close" onclick="closeModal('modalInterimaire')"><i class="fa-solid fa-xmark"></i></button>
+    <div class="modal-title">NOUVEL INTÉRIMAIRE</div>
+    <div style="font-size:11px;color:var(--white-dim);margin-bottom:16px;">Crée un compte intérimaire et son dossier RH en une seule opération.</div>
+    <div class="grid-2">
+      <div class="form-group"><label>Prénom *</label><input class="input-field" id="interimairePrenom" placeholder="Jean"/></div>
+      <div class="form-group"><label>Nom *</label><input class="input-field" id="interimaireNom" placeholder="Dupont"/></div>
+    </div>
+    <div class="grid-2">
+      <div class="form-group"><label>Identifiant *</label><input class="input-field" id="interimaireUsername" placeholder="jean.dupont"/></div>
+      <div class="form-group"><label>Mot de passe *</label><input class="input-field" id="interimairePassword" type="password" placeholder="••••••••"/></div>
+    </div>
+    <div class="form-group"><label>Poste</label><input class="input-field" id="interimairePoste" placeholder="Ex: Agent de Sécurité"/></div>
+    <div class="grid-2">
+      <div class="form-group"><label>Perso (personnage RP)</label><input class="input-field" id="interimairePerso" placeholder="Ex: John Smith"/></div>
+      <div class="form-group"><label>Compte (numéro)</label><input class="input-field" id="interimaireCompte" placeholder="Ex: 1234567"/></div>
+    </div>
+    <div class="grid-2">
+      <div class="form-group"><label>ID Employé</label><input class="input-field" id="interimaireIdEmploye" placeholder="Ex: EC-INT-001"/></div>
+      <div class="form-group"><label>Division</label>
+        <select class="input-field" id="interimaireDivision">
+          <option value="">— Sélectionner —</option>
+          <option value="Penny's Elite Security">🛡️ Penny's Elite Security</option>
+          <option value="Événementiel">🎉 Événementiel</option>
+          <option value="Elite Tourisme">✈️ Elite Tourisme</option>
+          <option value="Elite Aventure">🏔️ Elite Aventure</option>
+          <option value="Lilly's Girls">💃 Lilly's Girls</option>
+          <option value="Direction">🏢 Direction</option>
+          <option value="Support Interne">⚙️ Support Interne</option>
+        </select>
+      </div>
+    </div>
+    <div class="form-group">
+      <label>Photo</label>
+      <input type="file" class="input-field" id="interimairePhoto" accept="image/*" onchange="previewImage(this,'interimairePreview')" style="padding:8px;"/>
+      <img id="interimairePreview" src="" alt="" style="display:none;width:100%;max-height:200px;object-fit:cover;border-radius:8px;margin-top:8px;border:1px solid var(--border);"/>
+    </div>
+    <div class="btn-row">
+      <button class="btn btn-gold" onclick="submitCreateInterimaire()"><i class="fa-solid fa-user-plus"></i> Créer l'intérimaire</button>
+      <button class="btn btn-outline" onclick="closeModal('modalInterimaire')">Annuler</button>
+    </div>
+  </div>
+</div>
 
 <!-- Modal Employé -->
 <div class="modal-overlay" id="modalEmploye">
@@ -996,6 +1158,7 @@ function showTab(name) {
   if (name === 'employes') loadEmployes();
   if (name === 'annonces') loadAnnonces();
   if (name === 'commandes') { loadCommandes(); if (isAdmin() && !window._allEmployes) fetch('/api/employes').then(r=>r.json()).then(emp=>{window._allEmployes=emp;}).catch(()=>{}); }
+  if (name === 'dossiers-rh') loadDossiersRH();
 }
 
 /* ── TOAST ── */
@@ -1691,7 +1854,412 @@ async function deleteAnnonce(id) {
 /* ── START ── */
 init();
 
+/* ══════════════════════════════════════════
+   DOSSIERS RH
+══════════════════════════════════════════ */
+let rhData = [];
+let rhSortActif = 'nom';
 
+async function loadDossiersRH() {
+  try {
+    const r = await fetch('/api/dossiers-rh');
+    if (!r.ok) throw new Error('HTTP ' + r.status);
+    rhData = await r.json();
+    renderDossiersRH(rhData);
+  } catch(e) {
+    document.getElementById('rhGrid').innerHTML = `<div style="color:var(--red);font-size:12px;grid-column:1/-1;text-align:center;padding:40px 0;">❌ Erreur : ${e.message}</div>`;
+  }
+}
+
+function renderDossiersRH(data) {
+  const sorted = [...data].sort((a, b) => {
+    const va = (a[rhSortActif] || '').toLowerCase();
+    const vb = (b[rhSortActif] || '').toLowerCase();
+    return va.localeCompare(vb, 'fr');
+  });
+  const grid = document.getElementById('rhGrid');
+  if (!sorted.length) {
+    grid.innerHTML = '<div style="color:var(--white-dim);font-size:12px;grid-column:1/-1;text-align:center;padding:40px 0;">Aucun dossier RH. Créez le premier avec le bouton ci-dessus.</div>';
+    return;
+  }
+  grid.innerHTML = sorted.map(d => renderRHCard(d)).join('');
+}
+
+function renderRHCard(d) {
+  const roleBadge = {
+    admin: '<span class="badge badge-gold">Admin</span>',
+    direction: '<span class="badge badge-blue">Direction</span>',
+    employe: '<span class="badge badge-green">Employé</span>',
+    interimaire: '<span class="badge badge-purple">Intérimaire</span>'
+  }[d.role] || '<span class="badge badge-dim">—</span>';
+
+  const photoHtml = d.photo_url
+    ? `<img src="${d.photo_url}" alt="Photo" style="width:100%;height:180px;object-fit:cover;"/>`
+    : `<div class="rh-card-avatar"><i class="fa-solid fa-user" style="font-size:64px;color:rgba(201,168,76,0.3);"></i></div>`;
+
+  const adminBtns = isAdmin() ? `
+    <button class="btn btn-outline" style="font-size:10px;padding:6px 10px;" onclick="openEditDossier(${d.id})"><i class="fa-solid fa-pen"></i></button>
+    <button class="btn btn-danger" style="font-size:10px;padding:6px 10px;" onclick="deleteDossier(${d.id},'${d.role}')"><i class="fa-solid fa-trash"></i></button>
+    <button class="btn btn-outline" style="font-size:10px;padding:6px 10px;border-color:rgba(201,168,76,0.4);color:var(--gold);" onclick="exportDossierPNG(${d.id})"><i class="fa-solid fa-file-image"></i> PNG</button>
+  ` : '';
+
+  return `<div class="rh-card">
+    ${photoHtml}
+    <div class="rh-card-body">
+      <div class="rh-card-name">${d.prenom} ${d.nom}</div>
+      <div class="rh-card-division">${d.division || d.poste || '—'}</div>
+      <div class="rh-card-info"><i class="fa-solid fa-user-secret" style="width:14px;color:var(--gold);"></i> Perso : <span>${d.perso || '—'}</span></div>
+      <div class="rh-card-info"><i class="fa-solid fa-wallet" style="width:14px;color:var(--gold);"></i> Compte : <span>${d.compte || '—'}</span></div>
+      <div class="rh-card-info"><i class="fa-solid fa-id-badge" style="width:14px;color:var(--gold);"></i> ID : <span>${d.id_employe || '—'}</span></div>
+      <div style="margin-top:8px;">${roleBadge}</div>
+      <div class="rh-card-actions">${adminBtns}</div>
+    </div>
+  </div>`;
+}
+
+function sortDossiers(critere) {
+  rhSortActif = critere;
+  document.getElementById('rhSortNom').classList.toggle('active', critere === 'nom');
+  document.getElementById('rhSortPrenom').classList.toggle('active', critere === 'prenom');
+  renderDossiersRH(rhData);
+}
+
+async function openCreateDossier() {
+  // Charger les employés sans dossier
+  try {
+    const [employes, dossiers] = await Promise.all([
+      fetch('/api/employes').then(r => r.json()),
+      fetch('/api/dossiers-rh').then(r => r.json())
+    ]);
+    const dossierUserIds = new Set(dossiers.map(d => d.user_id));
+    const sans = employes.filter(e => e.actif && !dossierUserIds.has(e.id));
+    const sel = document.getElementById('dossierCreateUser');
+    sel.innerHTML = sans.length
+      ? sans.map(e => `<option value="${e.id}">${e.prenom} ${e.nom} — ${e.poste}</option>`).join('')
+      : '<option value="">Tous les employés ont déjà un dossier</option>';
+    document.getElementById('dossierCreatePerso').value = '';
+    document.getElementById('dossierCreateCompte').value = '';
+    document.getElementById('dossierCreateIdEmploye').value = '';
+    document.getElementById('dossierCreateDivision').value = '';
+    document.getElementById('dossierCreatePhoto').value = '';
+    document.getElementById('dossierCreatePreview').style.display = 'none';
+    openModal('modalDossierCreate');
+  } catch(e) { showToast('❌ Erreur chargement employés', false); }
+}
+
+async function submitCreateDossier() {
+  const user_id = document.getElementById('dossierCreateUser').value;
+  if (!user_id) { showToast('❌ Sélectionne un employé', false); return; }
+  const fd = new FormData();
+  fd.append('user_id', user_id);
+  fd.append('perso', document.getElementById('dossierCreatePerso').value);
+  fd.append('compte', document.getElementById('dossierCreateCompte').value);
+  fd.append('id_employe', document.getElementById('dossierCreateIdEmploye').value);
+  fd.append('division', document.getElementById('dossierCreateDivision').value);
+  const photo = document.getElementById('dossierCreatePhoto').files[0];
+  if (photo) fd.append('photo', photo);
+  try {
+    const r = await fetch('/api/dossiers-rh', { method: 'POST', body: fd });
+    const d = await r.json();
+    if (d.success) { showToast('✅ Dossier créé'); closeModal('modalDossierCreate'); loadDossiersRH(); }
+    else showToast('❌ ' + (d.error || 'Erreur'), false);
+  } catch(e) { showToast('❌ Erreur réseau', false); }
+}
+
+function openEditDossier(id) {
+  const d = rhData.find(x => x.id === id);
+  if (!d) return;
+  document.getElementById('dossierEditId').value = id;
+  document.getElementById('dossierEditNom').textContent = d.prenom + ' ' + d.nom;
+  document.getElementById('dossierEditPerso').value = d.perso || '';
+  document.getElementById('dossierEditCompte').value = d.compte || '';
+  document.getElementById('dossierEditIdEmploye').value = d.id_employe || '';
+  document.getElementById('dossierEditDivision').value = d.division || '';
+  document.getElementById('dossierEditPhoto').value = '';
+  const prev = document.getElementById('dossierEditPreview');
+  if (d.photo_url) { prev.src = d.photo_url; prev.style.display = 'block'; }
+  else prev.style.display = 'none';
+  openModal('modalDossierEdit');
+}
+
+async function submitEditDossier() {
+  const id = document.getElementById('dossierEditId').value;
+  const fd = new FormData();
+  fd.append('perso', document.getElementById('dossierEditPerso').value);
+  fd.append('compte', document.getElementById('dossierEditCompte').value);
+  fd.append('id_employe', document.getElementById('dossierEditIdEmploye').value);
+  fd.append('division', document.getElementById('dossierEditDivision').value);
+  const photo = document.getElementById('dossierEditPhoto').files[0];
+  if (photo) fd.append('photo', photo);
+  try {
+    const r = await fetch('/api/dossiers-rh/' + id, { method: 'PUT', body: fd });
+    const d = await r.json();
+    if (d.success) { showToast('✅ Dossier mis à jour'); closeModal('modalDossierEdit'); loadDossiersRH(); }
+    else showToast('❌ ' + (d.error || 'Erreur'), false);
+  } catch(e) { showToast('❌ Erreur réseau', false); }
+}
+
+async function deleteDossier(id, role) {
+  const msg = role === 'interimaire'
+    ? 'Supprimer ce dossier et désactiver le compte intérimaire ?'
+    : 'Supprimer ce dossier RH ?';
+  if (!confirm(msg)) return;
+  try {
+    const r = await fetch('/api/dossiers-rh/' + id, { method: 'DELETE' });
+    const d = await r.json();
+    if (d.success) { showToast('✅ Dossier supprimé'); loadDossiersRH(); }
+    else showToast('❌ ' + (d.error || 'Erreur'), false);
+  } catch(e) { showToast('❌ Erreur réseau', false); }
+}
+
+function openCreateInterimaire() {
+  ['interimairePrenom','interimaireNom','interimaireUsername','interimairePassword',
+   'interimairePoste','interimairePerso','interimaireCompte','interimaireIdEmploye'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.value = '';
+  });
+  document.getElementById('interimaireDivision').value = '';
+  document.getElementById('interimairePhoto').value = '';
+  document.getElementById('interimairePreview').style.display = 'none';
+  openModal('modalInterimaire');
+}
+
+async function submitCreateInterimaire() {
+  const prenom = document.getElementById('interimairePrenom').value.trim();
+  const nom = document.getElementById('interimaireNom').value.trim();
+  const username = document.getElementById('interimaireUsername').value.trim();
+  const password = document.getElementById('interimairePassword').value;
+  if (!prenom || !nom || !username || !password) { showToast('❌ Champs obligatoires manquants', false); return; }
+  const fd = new FormData();
+  fd.append('prenom', prenom);
+  fd.append('nom', nom);
+  fd.append('username', username);
+  fd.append('password', password);
+  fd.append('poste', document.getElementById('interimairePoste').value);
+  fd.append('perso', document.getElementById('interimairePerso').value);
+  fd.append('compte', document.getElementById('interimaireCompte').value);
+  fd.append('id_employe', document.getElementById('interimaireIdEmploye').value);
+  fd.append('division', document.getElementById('interimaireDivision').value);
+  const photo = document.getElementById('interimairePhoto').files[0];
+  if (photo) fd.append('photo', photo);
+  try {
+    const r = await fetch('/api/dossiers-rh/interimaire', { method: 'POST', body: fd });
+    const d = await r.json();
+    if (d.success) { showToast('✅ Intérimaire créé'); closeModal('modalInterimaire'); loadDossiersRH(); }
+    else showToast('❌ ' + (d.error || 'Erreur'), false);
+  } catch(e) { showToast('❌ Erreur réseau', false); }
+}
+
+function previewImage(inputEl, previewId) {
+  const file = inputEl.files[0];
+  const prev = document.getElementById(previewId);
+  if (!file || !prev) return;
+  const reader = new FileReader();
+  reader.onload = e => { prev.src = e.target.result; prev.style.display = 'block'; };
+  reader.readAsDataURL(file);
+}
+
+function exportDossierPNG(id) {
+  const d = rhData.find(x => x.id === id);
+  if (!d) return;
+
+  const canvas = document.createElement('canvas');
+  canvas.width = 800;
+  canvas.height = 1100;
+  const ctx = canvas.getContext('2d');
+
+  const gold = '#c9a84c';
+  const goldLight = '#f0d080';
+  const bg = '#0a0a0f';
+  const white = '#f0ead8';
+  const whiteDim = '#9a9080';
+
+  // Background
+  ctx.fillStyle = bg;
+  ctx.fillRect(0, 0, 800, 1100);
+
+  // Gold border frame
+  ctx.strokeStyle = gold;
+  ctx.lineWidth = 3;
+  ctx.strokeRect(20, 20, 760, 1060);
+  ctx.lineWidth = 1;
+  ctx.strokeStyle = 'rgba(201,168,76,0.3)';
+  ctx.strokeRect(28, 28, 744, 1044);
+
+  // Corner decorations
+  const corners = [[20,20],[780,20],[20,1080],[780,1080]];
+  corners.forEach(([x,y]) => {
+    ctx.fillStyle = gold;
+    ctx.fillRect(x-4, y-4, 8, 8);
+  });
+
+  // Header background
+  ctx.fillStyle = 'rgba(201,168,76,0.08)';
+  ctx.fillRect(20, 20, 760, 120);
+
+  // ELITE CORP. title
+  ctx.font = 'bold 52px Anton, sans-serif';
+  ctx.fillStyle = gold;
+  ctx.textAlign = 'center';
+  ctx.fillText('ELITE CORP.', 400, 90);
+
+  // Subtitle
+  const isInterimaire = d.role === 'interimaire';
+  ctx.font = 'bold 14px Inter, sans-serif';
+  ctx.fillStyle = whiteDim;
+  ctx.letterSpacing = '4px';
+  ctx.fillText(isInterimaire ? 'CONTRAT INTÉRIMAIRE' : "CONTRAT D'EMPLOYÉ", 400, 118);
+
+  // Gold separator
+  ctx.strokeStyle = gold;
+  ctx.lineWidth = 2;
+  ctx.beginPath();
+  ctx.moveTo(60, 148);
+  ctx.lineTo(740, 148);
+  ctx.stroke();
+
+  // Thin separator
+  ctx.strokeStyle = 'rgba(201,168,76,0.3)';
+  ctx.lineWidth = 1;
+  ctx.beginPath();
+  ctx.moveTo(60, 153);
+  ctx.lineTo(740, 153);
+  ctx.stroke();
+
+  function drawField(label, value, x, y, maxWidth) {
+    ctx.font = 'bold 9px Inter, sans-serif';
+    ctx.fillStyle = whiteDim;
+    ctx.textAlign = 'left';
+    ctx.fillText(label.toUpperCase(), x, y);
+    ctx.font = 'bold 14px Inter, sans-serif';
+    ctx.fillStyle = white;
+    ctx.fillText(value || '—', x, y + 18);
+  }
+
+  const photoX = 60, photoY = 170, photoW = 200, photoH = 250;
+
+  // Photo placeholder
+  ctx.fillStyle = 'rgba(201,168,76,0.08)';
+  ctx.fillRect(photoX, photoY, photoW, photoH);
+  ctx.strokeStyle = 'rgba(201,168,76,0.4)';
+  ctx.lineWidth = 1;
+  ctx.strokeRect(photoX, photoY, photoW, photoH);
+
+  // Info fields on the right
+  const infoX = 290;
+  let infoY = 185;
+  const lineH = 52;
+
+  drawField('Nom complet', d.prenom + ' ' + d.nom, infoX, infoY, 450);
+  infoY += lineH;
+  drawField('Division', d.division || d.poste || '—', infoX, infoY, 450);
+  infoY += lineH;
+  drawField('ID Employé', d.id_employe || '—', infoX, infoY, 450);
+  infoY += lineH;
+  drawField('Perso (personnage)', d.perso || '—', infoX, infoY, 450);
+  infoY += lineH;
+  drawField('Compte', d.compte || '—', infoX, infoY, 450);
+
+  // Role badge
+  const roleLabels = { admin:'ADMIN', direction:'DIRECTION', employe:'EMPLOYÉ', interimaire:'INTÉRIMAIRE' };
+  const roleColors = { admin:'#c9a84c', direction:'#3fa7d6', employe:'#4caf7d', interimaire:'#a78bfa' };
+  const roleLabel = roleLabels[d.role] || d.role?.toUpperCase() || '—';
+  const roleColor = roleColors[d.role] || whiteDim;
+  ctx.fillStyle = roleColor + '22';
+  ctx.strokeStyle = roleColor + '88';
+  ctx.lineWidth = 1;
+  const badgeW = 120, badgeH = 26, badgeX = infoX, badgeY = infoY + lineH;
+  ctx.beginPath();
+  ctx.roundRect(badgeX, badgeY, badgeW, badgeH, 13);
+  ctx.fill();
+  ctx.stroke();
+  ctx.font = 'bold 11px Inter, sans-serif';
+  ctx.fillStyle = roleColor;
+  ctx.textAlign = 'center';
+  ctx.fillText(roleLabel, badgeX + badgeW/2, badgeY + 17);
+
+  // Separator after photo section
+  const sepY = photoY + photoH + 40;
+  ctx.strokeStyle = 'rgba(201,168,76,0.3)';
+  ctx.lineWidth = 1;
+  ctx.beginPath();
+  ctx.moveTo(60, sepY);
+  ctx.lineTo(740, sepY);
+  ctx.stroke();
+
+  // Signature section
+  const sigY = sepY + 40;
+  ctx.font = 'bold 11px Inter, sans-serif';
+  ctx.fillStyle = whiteDim;
+  ctx.textAlign = 'left';
+  ctx.fillText('SIGNATURE EN JEU :', 60, sigY);
+  ctx.strokeStyle = 'rgba(201,168,76,0.5)';
+  ctx.lineWidth = 1;
+  ctx.setLineDash([6, 4]);
+  ctx.beginPath();
+  ctx.moveTo(60, sigY + 50);
+  ctx.lineTo(400, sigY + 50);
+  ctx.stroke();
+  ctx.setLineDash([]);
+
+  // Date
+  ctx.font = 'bold 10px Inter, sans-serif';
+  ctx.fillStyle = whiteDim;
+  ctx.textAlign = 'right';
+  ctx.fillText('Date : ' + new Date().toLocaleDateString('fr-FR'), 740, sigY + 50);
+
+  // Footer separator
+  ctx.strokeStyle = gold;
+  ctx.lineWidth = 1;
+  ctx.beginPath();
+  ctx.moveTo(60, 1040);
+  ctx.lineTo(740, 1040);
+  ctx.stroke();
+
+  // Footer text
+  ctx.font = 'bold 11px Inter, sans-serif';
+  ctx.fillStyle = gold;
+  ctx.textAlign = 'center';
+  ctx.fillText('Elite Corp. — Document officiel', 400, 1065);
+
+  // Draw photo if available
+  if (d.photo_url) {
+    const img = new Image();
+    img.crossOrigin = 'anonymous';
+    img.onload = () => {
+      ctx.save();
+      ctx.beginPath();
+      ctx.rect(photoX, photoY, photoW, photoH);
+      ctx.clip();
+      ctx.drawImage(img, photoX, photoY, photoW, photoH);
+      ctx.restore();
+      downloadCanvas(canvas, d.prenom + '_' + d.nom);
+    };
+    img.onerror = () => {
+      // Draw avatar icon if photo fails
+      ctx.font = '80px sans-serif';
+      ctx.fillStyle = 'rgba(201,168,76,0.3)';
+      ctx.textAlign = 'center';
+      ctx.fillText('👤', photoX + photoW/2, photoY + photoH/2 + 30);
+      downloadCanvas(canvas, d.prenom + '_' + d.nom);
+    };
+    img.src = d.photo_url;
+  } else {
+    // Avatar placeholder
+    ctx.font = '80px sans-serif';
+    ctx.fillStyle = 'rgba(201,168,76,0.3)';
+    ctx.textAlign = 'center';
+    ctx.fillText('👤', photoX + photoW/2, photoY + photoH/2 + 30);
+    downloadCanvas(canvas, d.prenom + '_' + d.nom);
+  }
+}
+
+function downloadCanvas(canvas, name) {
+  const link = document.createElement('a');
+  link.download = 'dossier_' + name.replace(/\s+/g, '_') + '.png';
+  link.href = canvas.toDataURL('image/png');
+  link.click();
+}
 
 /* ══════════════════════════════════════════
    COMMANDES — Prestations multiples & Tarifs
