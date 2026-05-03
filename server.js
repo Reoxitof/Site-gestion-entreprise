@@ -511,7 +511,13 @@ app.get('/api/commandes/mes-tickets', auth, async (req, res) => {
 app.get('/api/employes/par-poste', auth, async (req, res) => {
   try {
     const rows = (await getPool().query(
-      `SELECT poste, COUNT(*) as nb, array_agg(json_build_object('id',id,'nom',nom,'prenom',prenom,'poste',poste,'statut_employe',statut_employe)) as employes
+      `SELECT poste,
+        COUNT(*) FILTER (WHERE statut_employe = 'disponible') as nb_dispo,
+        COUNT(*) as nb_total,
+        array_agg(json_build_object(
+          'id',id,'nom',nom,'prenom',prenom,'poste',poste,
+          'statut_employe',statut_employe
+        )) as employes
        FROM ec_users WHERE actif=true GROUP BY poste ORDER BY poste`
     )).rows;
     res.json(rows);

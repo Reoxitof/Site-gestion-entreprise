@@ -2337,7 +2337,15 @@ async function initPosteRequisSelect() {
     // Aussi récupérer les postes uniques depuis la liste employés
     const postes = [...new Set(data.map(d => d.poste))].sort();
     sel.innerHTML = '<option value="">— Sélectionner un poste —</option>' +
-      postes.map(p => `<option value="${p}">${p} (${data.find(d=>d.poste===p)?.nb||0} dispo)</option>`).join('');
+      postes.map(p => {
+        const d = data.find(d => d.poste === p);
+        const nbDispo = parseInt(d?.nb_dispo || 0);
+        const nbTotal = parseInt(d?.nb_total || 0);
+        const label = nbDispo > 0
+          ? `${p} (${nbDispo} dispo)`
+          : `${p} (${nbTotal} — aucun dispo)`;
+        return `<option value="${p}">${label}</option>`;
+      }).join('');
   } catch(e) {}
 }
 
