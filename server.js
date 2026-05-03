@@ -289,7 +289,13 @@ app.get('/api/me', auth, async (req, res) => {
   try {
     const r = await getPool().query('SELECT id,username,nom,prenom,poste,role,actif,statut_employe FROM ec_users WHERE id=$1', [req.session.user.id]);
     const u = r.rows[0];
-    if (u) req.session.user = { ...req.session.user, statut_employe: u.statut_employe || 'disponible' };
+    if (u) {
+      // Toujours rafraîchir la session avec les données DB actuelles
+      req.session.user = {
+        id: u.id, username: u.username, nom: u.nom, prenom: u.prenom,
+        poste: u.poste, role: u.role, statut_employe: u.statut_employe || 'disponible'
+      };
+    }
     res.json({ user: req.session.user });
   } catch(e) { res.json({ user: req.session.user }); }
 });
