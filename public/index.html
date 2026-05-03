@@ -3538,30 +3538,27 @@ function genererContratPNG() {
     ctx.font = 'bold 14px Arial';
     ctx.fillText('✓', 150, 288);
 
-    // INFORMATIONS EMPLOYÉ — calibré sur capture (image 1536×1024)
-    // NOM COMPLET : y≈268
-    txt(nom,         175, 268, 18, '#c9a84c', true);
-    // POSTE / FONCTION : y≈288
-    txt(mission,     175, 288, 18, '#c9a84c', true);
-    // FILIÈRE / DÉPARTEMENT : y≈308
-    txt(division,    175, 308, 18, '#c9a84c', false);
-    // ID EMPLOYÉ : y≈328
-    txt(idEmploye,   175, 328, 18, '#c9a84c', false);
-    // DATE D'EMBAUCHE : y≈348
-    txt(dateAffiche, 175, 348, 18, '#c9a84c', false);
+    // INFORMATIONS EMPLOYÉ — coordonnées exactes depuis Paint
+    // NOM COMPLET field haut-gauche : x=235, y=413 → texte à y=430
+    txt(nom,         235, 430, 18, '#c9a84c', true);
+    // POSTE / FONCTION : +38px
+    txt(mission,     235, 468, 18, '#c9a84c', true);
+    // FILIÈRE / DÉPARTEMENT : +38px
+    txt(division,    235, 506, 18, '#c9a84c', false);
+    // ID EMPLOYÉ : +38px
+    txt(idEmploye,   235, 544, 18, '#c9a84c', false);
+    // DATE D'EMBAUCHE : +38px
+    txt(dateAffiche, 235, 582, 18, '#c9a84c', false);
 
     // CONDITIONS DE TRAVAIL — INTÉRIMAIRE
-    // HORAIRES : x≈175, y≈430
-    txt(horaires,    175, 430, 15, '#c9a84c', true);
-    // DURÉE / MISSION : y≈468
-    txt(dateAffiche, 175, 468, 14, '#c9a84c', false);
-    // RÉMUNÉRATION : y≈506
-    txt(remuStr,     175, 506, 15, '#c9a84c', true);
+    txt(horaires,    235, 660, 15, '#c9a84c', true);
+    txt(dateAffiche, 235, 700, 14, '#c9a84c', false);
+    txt(remuStr,     235, 740, 15, '#c9a84c', true);
 
     // ══ COLONNE DROITE ══
-    // INFORMATIONS COMPLÉMENTAIRES : x≈820, y≈268, largeur≈310
+    // INFORMATIONS COMPLÉMENTAIRES haut-gauche : x=816, y=452 → texte à y=470
     if (description) {
-      txtWrap(description, 820, 268, 310, 15, '#c9a84c');
+      txtWrap(description, 816, 470, 310, 15, '#c9a84c');
     }
 
     // Télécharger
