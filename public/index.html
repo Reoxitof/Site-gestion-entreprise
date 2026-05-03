@@ -3460,6 +3460,9 @@ function ouvrirContratInterimaire(id) {
   const d = rhData.find(x => x.id === id);
   if (!d) return;
   window._contratDossier = d;
+  window._contratNom = ((d.prenom||'') + ' ' + (d.nom||'')).trim();
+  window._contratDivision = d.division || '';
+  window._contratIdEmploye = d.id_employe || '';
   // Pré-remplir les champs visibles
   document.getElementById('contratMission').value = d.poste || d.poste_libre || '';
   document.getElementById('contratDate').value = new Date().toISOString().slice(0,10);
@@ -3467,10 +3470,6 @@ function ouvrirContratInterimaire(id) {
   document.getElementById('contratHeureFin').value = '23:00';
   document.getElementById('contratRemuneration').value = '';
   document.getElementById('contratDescription').value = '';
-  // Stocker les infos du dossier dans les champs cachés
-  document.getElementById('contratNom').value = ((d.prenom||'') + ' ' + (d.nom||'')).trim();
-  document.getElementById('contratDivision').value = d.division || '';
-  document.getElementById('contratIdEmploye').value = d.id_employe || '';
   openModal('modalContratInterimaire');
 }
 
@@ -3489,12 +3488,9 @@ function genererContratPNG() {
     ? new Date(dateVal + 'T12:00').toLocaleDateString('fr-FR', {day:'2-digit',month:'2-digit',year:'numeric'})
     : '—';
 
-  const nom       = document.getElementById('contratNom')?.value?.trim()
-                    || (d ? (((d.prenom||'') + ' ' + (d.nom||'')).trim()) : '') || '—';
-  const idEmploye = document.getElementById('contratIdEmploye')?.value?.trim()
-                    || d?.id_employe || '—';
-  const division  = document.getElementById('contratDivision')?.value?.trim()
-                    || d?.division  || '—';
+  const nom       = window._contratNom || (d ? (((d.prenom||'') + ' ' + (d.nom||'')).trim()) : '') || '—';
+  const idEmploye = window._contratIdEmploye || d?.id_employe || '—';
+  const division  = window._contratDivision  || d?.division  || '—';
   const remuStr   = remuneration > 0 ? remuneration.toLocaleString('fr-FR') + ' $' : '—';
   const horaires  = `${heureDebut} - ${heureFin}`;
 
