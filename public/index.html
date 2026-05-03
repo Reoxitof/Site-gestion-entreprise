@@ -1450,7 +1450,7 @@ async function loadEmployes() {
         ${identifiantCell}
         ${posteCell}
         <td><span class="badge ${roleBadge}">${roleLabel}</span></td>
-        <td>${isAdmin() && e.id !== currentUser?.id
+        <td>${currentUser?.role === 'admin' && e.id !== currentUser?.id
           ? `<button onclick="toggleStatutEmploye(${e.id},${e.actif})" class="badge ${e.actif ? 'badge-green' : 'badge-red'}" style="cursor:pointer;border:none;font-family:inherit;font-size:10px;font-weight:800;letter-spacing:1px;text-transform:uppercase;" title="Cliquer pour ${e.actif ? 'désactiver' : 'activer'}">${e.actif ? '✅ Actif' : '❌ Inactif'}</button>`
           : `<span class="badge ${e.actif ? 'badge-green' : 'badge-red'}">${e.actif ? 'Actif' : 'Inactif'}</span>`
         }</td>
