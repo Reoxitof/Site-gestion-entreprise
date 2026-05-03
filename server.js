@@ -150,6 +150,11 @@ async function initDB() {
     await getPool().query(`ALTER TABLE ec_commandes ADD COLUMN IF NOT EXISTS paiement_partage TEXT DEFAULT '[]'`);
     await getPool().query(`ALTER TABLE ec_users ADD COLUMN IF NOT EXISTS must_reset_password BOOLEAN DEFAULT false`);
     await getPool().query(`ALTER TABLE ec_users ADD COLUMN IF NOT EXISTS statut_employe TEXT DEFAULT 'disponible'`);
+    // Colonne postes_requis : sélection d'employés par poste pour une commande
+    await getPool().query(`ALTER TABLE ec_commandes ADD COLUMN IF NOT EXISTS postes_requis TEXT DEFAULT '[]'`);
+    // Migration statuts : renommer 'nouveau' → 'devis', 'paye' → 'confirme' si besoin
+    await getPool().query(`UPDATE ec_commandes SET statut='devis' WHERE statut='nouveau'`);
+    await getPool().query(`UPDATE ec_commandes SET statut='confirme' WHERE statut='paye'`);
 
     // Table fiches de paye
     await getPool().query(`CREATE TABLE IF NOT EXISTS ec_fiches_paye (
@@ -247,9 +252,15 @@ async function initDB() {
 
 /* ═══ AUTH ═══ */
 const DIRECTION_POSTES = ['Directeur Général', 'Directeur de Division', 'Coordinateur'];
+const VALID_ROLES = ['admin', 'direction', 'employe', 'interimaire'];
 const auth = (req, res, next) => req.session?.user ? next() : res.status(401).json({ error: 'Non connecte' });
 const isAdminOrDirection = (user) => user?.role === 'admin' || user?.role === 'direction' || DIRECTION_POSTES.includes(user?.poste);
 const admin = (req, res, next) => isAdminOrDirection(req.session?.user) ? next() : res.status(403).json({ error: 'Acces refuse' });
+// Bloque les intérimaires sur les actions sensibles
+const notInterimaire = (req, res, next) => {
+  if (req.session?.user?.role === 'interimaire') return res.status(403).json({ error: 'Accès refusé — rôle intérimaire' });
+  next();
+};
 
 /* ═══ ROUTES AUTH ═══ */
 app.post('/api/login', loginLimiter, async (req, res) => {
@@ -347,7 +358,7 @@ app.post('/api/employes', admin, async (req, res) => {
     const h = await bcrypt.hash(password, 12);
     const r = await getPool().query(
       `INSERT INTO ec_users (username,password_hash,nom,prenom,poste,role) VALUES ($1,$2,$3,$4,$5,$6) RETURNING id,username,nom,prenom,poste,role`,
-      [username.toLowerCase(), h, nom, prenom, poste || 'Employe', role || 'employe']
+      [username.toLowerCase(), h, nom, prenom, poste || 'Employe', VALID_ROLES.includes(role) ? role : 'employe']
     );
     clearCache('employes');
     res.json(r.rows[0]);
@@ -481,17 +492,28 @@ app.put('/api/tarifs/:id', admin, async (req, res) => {
 /* Tickets assignés à l'employé connecté (statut >= confirmé) */
 app.get('/api/commandes/mes-tickets', auth, async (req, res) => {
   try {
-    const statutsVisibles = ['confirme', 'paye', 'termine'];
+    const statutsVisibles = ['confirme', 'en_cours', 'termine'];
     const r = await getPool().query(
       `SELECT c.id, c.client_nom, c.client_contact, c.division, c.type_prestation,
               c.description, c.date_evenement, c.lieu, c.statut, c.priorite,
-              c.prestations_ids, c.budget_estime, c.prix_final
+              c.prestations_ids, c.budget_estime, c.prix_final, c.postes_requis
        FROM ec_commandes c
        WHERE c.assigned_to = $1 AND c.statut = ANY($2)
        ORDER BY c.date_evenement ASC NULLS LAST`,
       [req.session.user.id, statutsVisibles]
     );
     res.json(r.rows);
+  } catch(e) { res.status(500).json({ error: e.message }); }
+});
+
+/* Employés actifs par poste (pour sélection dans les commandes) */
+app.get('/api/employes/par-poste', auth, async (req, res) => {
+  try {
+    const rows = (await getPool().query(
+      `SELECT poste, COUNT(*) as nb, array_agg(json_build_object('id',id,'nom',nom,'prenom',prenom,'poste',poste,'statut_employe',statut_employe)) as employes
+       FROM ec_users WHERE actif=true GROUP BY poste ORDER BY poste`
+    )).rows;
+    res.json(rows);
   } catch(e) { res.status(500).json({ error: e.message }); }
 });
 
@@ -511,13 +533,13 @@ app.get('/api/commandes', auth, async (req, res) => {
     res.json((await getPool().query(q, params)).rows);
   } catch(e) { res.status(500).json({ error: e.message }); }
 });
-app.post('/api/commandes', auth, async (req, res) => {
+app.post('/api/commandes', auth, notInterimaire, async (req, res) => {
   try {
     const client_nom = sanitizeStr(req.body.client_nom, 200);
     const client_contact = sanitizeStr(req.body.client_contact, 200);
     const division = sanitizeStr(req.body.division, 50);
     const type_prestation = sanitizeStr(req.body.type_prestation, 300);
-    const { prestations_ids } = req.body;
+    const { prestations_ids, postes_requis } = req.body;
     const description = sanitizeStr(req.body.description, 2000);
     const { date_evenement } = req.body;
     const lieu = sanitizeStr(req.body.lieu, 300);
@@ -527,42 +549,52 @@ app.post('/api/commandes', auth, async (req, res) => {
     const note_interne = sanitizeStr(req.body.note_interne, 2000);
     if (!client_nom || !type_prestation) return res.status(400).json({ error: 'Champs manquants' });
     const r = await getPool().query(
-      `INSERT INTO ec_commandes (client_nom,client_contact,division,type_prestation,prestations_ids,description,date_evenement,lieu,budget,budget_estime,priorite,note_interne,created_by)
-       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13) RETURNING id`,
-      [client_nom, client_contact||'', division||'securite', type_prestation, JSON.stringify(prestations_ids||[]), description||'', date_evenement||null, lieu||'', budget||'', budget_estime||0, priorite||'normale', note_interne||'', req.session.user.id]
+      `INSERT INTO ec_commandes (client_nom,client_contact,division,type_prestation,prestations_ids,postes_requis,description,date_evenement,lieu,budget,budget_estime,priorite,note_interne,created_by)
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14) RETURNING id`,
+      [client_nom, client_contact||'', division||'securite', type_prestation, JSON.stringify(prestations_ids||[]), JSON.stringify(postes_requis||[]), description||'', date_evenement||null, lieu||'', budget||'', budget_estime||0, priorite||'normale', note_interne||'', req.session.user.id]
     );
     res.json({ success: true, id: r.rows[0].id });
   } catch(e) { res.status(500).json({ error: e.message }); }
 });
-app.put('/api/commandes/:id', auth, async (req, res) => {
+app.put('/api/commandes/:id', auth, notInterimaire, async (req, res) => {
   try {
     const { statut, assigned_to, priorite, budget, date_evenement } = req.body;
     const note_interne = sanitizeStr(req.body.note_interne, 2000) || null;
     const lieu = sanitizeStr(req.body.lieu, 300) || null;
     const client_contact = sanitizeStr(req.body.client_contact, 200) || null;
     const budget_estime = req.body.budget_estime !== undefined ? sanitizeNum(req.body.budget_estime, 0, 9999999) : null;
+    const postes_requis = req.body.postes_requis !== undefined ? JSON.stringify(req.body.postes_requis) : null;
+
+    // Valider le statut
+    const STATUTS_VALIDES = ['devis', 'confirme', 'en_cours', 'termine'];
+    if (statut && !STATUTS_VALIDES.includes(statut)) {
+      return res.status(400).json({ error: `Statut invalide. Valeurs acceptées : ${STATUTS_VALIDES.join(', ')}` });
+    }
+
     await getPool().query(
       `UPDATE ec_commandes SET statut=COALESCE($1,statut), note_interne=COALESCE($2,note_interne),
        assigned_to=COALESCE($3,assigned_to), priorite=COALESCE($4,priorite),
        budget=COALESCE($5,budget), budget_estime=COALESCE($6,budget_estime),
        lieu=COALESCE($7,lieu), date_evenement=COALESCE($8,date_evenement),
-       client_contact=COALESCE($9,client_contact), updated_at=NOW() WHERE id=$10`,
-      [statut||null, note_interne||null, assigned_to||null, priorite||null, budget||null, budget_estime||null, lieu||null, date_evenement||null, client_contact||null, req.params.id]
+       client_contact=COALESCE($9,client_contact),
+       postes_requis=COALESCE($10,postes_requis),
+       updated_at=NOW() WHERE id=$11`,
+      [statut||null, note_interne||null, assigned_to||null, priorite||null, budget||null, budget_estime||null, lieu||null, date_evenement||null, client_contact||null, postes_requis||null, req.params.id]
     );
+
     // Auto-ajout au planning quand statut passe à "confirme"
     if (statut === 'confirme') {
       try {
         const cmdRes = await getPool().query('SELECT * FROM ec_commandes WHERE id=$1', [req.params.id]);
         const cmd = cmdRes.rows[0];
         if (cmd && cmd.date_evenement) {
-          // Vérifier si un événement planning existe déjà pour cette commande
           const existing = await getPool().query(
             `SELECT id FROM ec_planning WHERE titre LIKE $1`,
             [`[CMD#${cmd.id}]%`]
           );
           if (existing.rows.length === 0) {
             const dateDebut = new Date(cmd.date_evenement);
-            const dateFin = new Date(dateDebut.getTime() + 4 * 60 * 60 * 1000); // +4h par défaut
+            const dateFin = new Date(dateDebut.getTime() + 4 * 60 * 60 * 1000);
             await getPool().query(
               `INSERT INTO ec_planning (titre, description, date_debut, date_fin, type, couleur, created_by)
                VALUES ($1, $2, $3, $4, $5, $6, $7)`,
@@ -591,6 +623,7 @@ app.put('/api/commandes/:id', auth, async (req, res) => {
       if (client_contact) changes.push('contact mis à jour');
       if (lieu) changes.push('lieu mis à jour');
       if (date_evenement) changes.push('date mise à jour');
+      if (postes_requis) changes.push('postes requis mis à jour');
       if (changes.length > 0) {
         await getPool().query(
           `INSERT INTO ec_commandes_historique (commande_id, user_id, action, details) VALUES ($1,$2,$3,$4)`,
@@ -619,21 +652,49 @@ app.get('/api/commandes/:id/historique', auth, async (req, res) => {
   } catch(e) { res.status(500).json({ error: e.message }); }
 });
 
-/* Passer une commande en "payé" et calculer le partage */
+/* Passer une commande en "terminé" et calculer le partage (paiement sur confirme) */
 app.post('/api/commandes/:id/payer', admin, async (req, res) => {
   try {
     const { prix_final } = req.body;
     if (!prix_final || isNaN(prix_final) || Number(prix_final) <= 0) {
       return res.status(400).json({ error: 'Prix final invalide' });
     }
-    // Récupérer la commande pour avoir la date de l'événement
     const cmdRes = await getPool().query('SELECT * FROM ec_commandes WHERE id=$1', [req.params.id]);
     const cmd = cmdRes.rows[0];
     if (!cmd) return res.status(404).json({ error: 'Commande introuvable' });
+    if (!['confirme', 'en_cours'].includes(cmd.statut)) {
+      return res.status(400).json({ error: 'Le paiement est disponible uniquement sur une commande confirmée ou en cours' });
+    }
 
-    // Trouver les employés présents sur la date de l'événement
+    // Calculer le partage selon les postes requis ou les présences
     let partage = [];
-    if (cmd.date_evenement) {
+    let postesRequis = [];
+    try { postesRequis = JSON.parse(cmd.postes_requis || '[]'); } catch(e) {}
+
+    if (postesRequis.length > 0) {
+      // Partage basé sur les postes requis définis dans la commande
+      const montantTotal = Number(prix_final);
+      const nbTotal = postesRequis.reduce((sum, p) => sum + (parseInt(p.nb) || 0), 0);
+      if (nbTotal > 0) {
+        const montantParPersonne = Math.round((montantTotal / nbTotal) * 100) / 100;
+        for (const pr of postesRequis) {
+          const nb = parseInt(pr.nb) || 0;
+          // Récupérer les employés actifs avec ce poste
+          const empRes = await getPool().query(
+            `SELECT id, nom, prenom, poste FROM ec_users WHERE poste=$1 AND actif=true LIMIT $2`,
+            [pr.poste, nb]
+          );
+          for (const emp of empRes.rows) {
+            partage.push({ user_id: emp.id, nom: emp.prenom + ' ' + emp.nom, poste: emp.poste, montant: montantParPersonne });
+          }
+          // Si pas assez d'employés trouvés, ajouter des entrées sans user_id
+          for (let i = empRes.rows.length; i < nb; i++) {
+            partage.push({ user_id: null, nom: `${pr.poste} (non assigné)`, poste: pr.poste, montant: montantParPersonne });
+          }
+        }
+      }
+    } else if (cmd.date_evenement) {
+      // Fallback : partage basé sur les présences du jour
       const dateStr = new Date(cmd.date_evenement).toISOString().split('T')[0];
       const presRes = await getPool().query(
         `SELECT p.user_id, u.nom, u.prenom, u.poste FROM ec_presences p
@@ -643,20 +704,14 @@ app.post('/api/commandes/:id/payer', admin, async (req, res) => {
       );
       const presents = presRes.rows;
       const montantTotal = Number(prix_final);
-
       if (presents.length > 0) {
         const montantParPersonne = Math.round((montantTotal / presents.length) * 100) / 100;
-        partage = presents.map(p => ({
-          user_id: p.user_id,
-          nom: p.prenom + ' ' + p.nom,
-          poste: p.poste,
-          montant: montantParPersonne
-        }));
+        partage = presents.map(p => ({ user_id: p.user_id, nom: p.prenom + ' ' + p.nom, poste: p.poste, montant: montantParPersonne }));
       }
     }
 
     await getPool().query(
-      `UPDATE ec_commandes SET statut='paye', prix_final=$1, paiement_partage=$2, updated_at=NOW() WHERE id=$3`,
+      `UPDATE ec_commandes SET statut='termine', prix_final=$1, paiement_partage=$2, updated_at=NOW() WHERE id=$3`,
       [Number(prix_final), JSON.stringify(partage), req.params.id]
     );
 
