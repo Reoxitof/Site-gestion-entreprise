@@ -1099,7 +1099,7 @@
       <textarea class="input-field" id="devisDescription" rows="3" placeholder="Détails de la demande..."></textarea>
     </div>
     <div class="form-group">
-      <label>💰 Montant estimé ($)</label>
+      <label>💰 Montant total ($)</label>
       <input class="input-field" id="devisMontant" type="number" min="0" step="500" placeholder="Ex: 25000" style="font-size:18px;font-weight:800;color:var(--gold);"/>
     </div>
     <div class="btn-row">
@@ -3125,7 +3125,7 @@ function genererDevisPNG() {
         ${clientContact ? `<div style="font-size:13px;color:#9a9080;">📞 ${clientContact}</div>` : ''}
       </div>
       <div style="background:rgba(201,168,76,0.1);border:2px solid rgba(201,168,76,0.4);border-radius:10px;padding:18px;margin-bottom:20px;text-align:center;">
-        <div style="font-size:10px;font-weight:800;letter-spacing:2px;color:#9a9080;text-transform:uppercase;margin-bottom:6px;">Montant estimé</div>
+        <div style="font-size:10px;font-weight:800;letter-spacing:2px;color:#9a9080;text-transform:uppercase;margin-bottom:6px;">Montant total</div>
         <div style="font-family:Anton,Arial;font-size:42px;letter-spacing:2px;color:#c9a84c;">${budgetAffiche}</div>
         <div style="font-size:10px;color:#9a9080;margin-top:4px;">${statutLabel}</div>
       </div>
@@ -3150,6 +3150,18 @@ function genererDevisPNG() {
       <div style="margin-bottom:20px;">
         <div style="font-size:10px;font-weight:800;letter-spacing:2px;color:#c9a84c;text-transform:uppercase;margin-bottom:12px;padding-bottom:6px;border-bottom:1px solid rgba(201,168,76,0.3);">Prestations</div>
         <div style="font-size:14px;color:#f0ead8;padding:8px 0;">${prestation || '—'}</div>
+        ${(() => {
+          try {
+            const postes = JSON.parse(c.postes_requis || '[]');
+            if (postes.length) {
+              return '<div style="margin-top:10px;padding-top:10px;border-top:1px solid rgba(201,168,76,0.15);">' +
+                '<div style="font-size:9px;color:#9a9080;letter-spacing:1px;text-transform:uppercase;margin-bottom:8px;">Personnel prévu</div>' +
+                postes.map(p => `<div style="display:flex;justify-content:space-between;padding:4px 0;font-size:13px;color:#f0ead8;"><span>👤 ${p.poste}</span><span style="color:#c9a84c;font-weight:800;">×${p.nb}</span></div>`).join('') +
+                '</div>';
+            }
+          } catch(e) {}
+          return '';
+        })()}
       </div>
       ${description ? `<div style="background:rgba(255,255,255,0.03);border:1px solid rgba(201,168,76,0.15);border-radius:8px;padding:14px;margin-bottom:20px;">
         <div style="font-size:9px;color:#9a9080;letter-spacing:1px;text-transform:uppercase;margin-bottom:6px;">Description</div>
@@ -3233,7 +3245,7 @@ function exportDevisPNG(id) {
 
       <!-- Budget total EN PRIORITÉ -->
       <div style="background:rgba(201,168,76,0.1);border:2px solid rgba(201,168,76,0.4);border-radius:10px;padding:18px;margin-bottom:20px;text-align:center;">
-        <div style="font-size:10px;font-weight:800;letter-spacing:2px;color:#9a9080;text-transform:uppercase;margin-bottom:6px;">Montant estimé</div>
+        <div style="font-size:10px;font-weight:800;letter-spacing:2px;color:#9a9080;text-transform:uppercase;margin-bottom:6px;">Montant total</div>
         <div style="font-family:Anton,Arial;font-size:42px;letter-spacing:2px;color:#c9a84c;">${budgetAffiche}</div>
         <div style="font-size:10px;color:#9a9080;margin-top:4px;">${statutLabel}</div>
       </div>
