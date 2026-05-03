@@ -1,4 +1,4 @@
-require('dotenv').config();
+﻿require('dotenv').config();
 const express = require('express');
 const path = require('path');
 const session = require('express-session');
@@ -11,25 +11,20 @@ const fs = require('fs');
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-/* ═══ MULTER — DOSSIERS RH ═══ */
-const uploadDir = path.join(__dirname, 'public', 'uploads', 'dossiers-rh');
-if (!fs.existsSync(uploadDir)) fs.mkdirSync(uploadDir, { recursive: true });
-
-const storageRH = multer.diskStorage({
-  destination: (req, file, cb) => cb(null, uploadDir),
-  filename: (req, file, cb) => {
-    const ext = path.extname(file.originalname).toLowerCase() || '.jpg';
-    cb(null, 'rh_' + Date.now() + '_' + Math.random().toString(36).slice(2) + ext);
-  }
-});
+/* ═══ MULTER — DOSSIERS RH (memoryStorage → base64 en DB) ═══ */
 const uploadRH = multer({
-  storage: storageRH,
+  storage: multer.memoryStorage(),
   limits: { fileSize: 5 * 1024 * 1024 },
   fileFilter: (req, file, cb) => {
     if (/^image\/(jpeg|png|gif|webp)$/.test(file.mimetype)) cb(null, true);
     else cb(new Error('Seules les images sont acceptées'));
   }
 });
+
+function fileToDataUrl(file) {
+  if (!file) return null;
+  return `data:${file.mimetype};base64,${file.buffer.toString('base64')}`;
+}
 
 /* ═══ SANITISATION ═══ */
 function sanitizeStr(val, maxLen = 500) {
@@ -246,6 +241,7 @@ async function initDB() {
       id_employe TEXT DEFAULT '',
       division TEXT DEFAULT '',
       photo_url TEXT DEFAULT '',
+      photo_data TEXT DEFAULT '',
       nom_libre TEXT DEFAULT '',
       prenom_libre TEXT DEFAULT '',
       poste_libre TEXT DEFAULT '',
@@ -256,6 +252,7 @@ async function initDB() {
     await getPool().query(`ALTER TABLE ec_dossiers_rh ADD COLUMN IF NOT EXISTS nom_libre TEXT DEFAULT ''`);
     await getPool().query(`ALTER TABLE ec_dossiers_rh ADD COLUMN IF NOT EXISTS prenom_libre TEXT DEFAULT ''`);
     await getPool().query(`ALTER TABLE ec_dossiers_rh ADD COLUMN IF NOT EXISTS poste_libre TEXT DEFAULT ''`);
+    await getPool().query(`ALTER TABLE ec_dossiers_rh ADD COLUMN IF NOT EXISTS photo_data TEXT DEFAULT ''`);
     await getPool().query(`ALTER TABLE ec_dossiers_rh ALTER COLUMN user_id DROP NOT NULL`).catch(() => {});
     await getPool().query(`ALTER TABLE ec_dossiers_rh DROP CONSTRAINT IF EXISTS ec_dossiers_rh_user_id_key`).catch(() => {});
     // Insérer les tarifs par défaut si la table est vide
@@ -1266,7 +1263,7 @@ app.get('/api/dossiers-rh', auth, async (req, res) => {
   try {
     const rows = (await getPool().query(
       `SELECT d.*,
-        COALESCE(u.nom, d.nom_libre) as nom,
+        COALESCE(u.nom, d.nom_libre) as nom, COALESCE(d.photo_data, d.photo_url, '') as photo_url,
         COALESCE(u.prenom, d.prenom_libre) as prenom,
         COALESCE(u.poste, d.poste_libre) as poste,
         COALESCE(u.role, 'interimaire') as role,
@@ -1288,7 +1285,7 @@ app.post('/api/dossiers-rh', admin, uploadRH.single('photo'), async (req, res) =
     const compte = sanitizeStr(req.body.compte, 500);
     const id_employe = sanitizeStr(req.body.id_employe, 100);
     const division = sanitizeStr(req.body.division, 100);
-    const photo_url = req.file ? '/uploads/dossiers-rh/' + req.file.filename : '';
+    const photo_data = req.file ? fileToDataUrl(req.file) : '';
 
     // Vérifier si un dossier existe déjà pour cet employé
     const existing = await getPool().query('SELECT id FROM ec_dossiers_rh WHERE user_id=$1', [user_id]);
@@ -1304,7 +1301,7 @@ app.post('/api/dossiers-rh', admin, uploadRH.single('photo'), async (req, res) =
     } else {
       // Insérer
       r = await getPool().query(
-        `INSERT INTO ec_dossiers_rh (user_id, perso, compte, id_employe, division, photo_url)
+        `INSERT INTO ec_dossiers_rh (user_id, perso, compte, id_employe, division, photo_data)
          VALUES ($1,$2,$3,$4,$5,$6) RETURNING *`,
         [user_id, perso, compte, id_employe, division, photo_url]
       );
@@ -1320,14 +1317,14 @@ app.put('/api/dossiers-rh/:id', admin, uploadRH.single('photo'), async (req, res
     const compte = sanitizeStr(req.body.compte, 500);
     const id_employe = sanitizeStr(req.body.id_employe, 100);
     const division = sanitizeStr(req.body.division, 100);
-    const photo_url = req.file ? '/uploads/dossiers-rh/' + req.file.filename : null;
+    const photo_data = req.file ? fileToDataUrl(req.file) : null;
     await getPool().query(
       `UPDATE ec_dossiers_rh SET
         perso=$1, compte=$2, id_employe=$3, division=$4,
         photo_url=CASE WHEN $5::TEXT IS NULL THEN photo_url ELSE $5::TEXT END,
         updated_at=NOW()
        WHERE id=$6`,
-      [perso, compte, id_employe, division, photo_url, req.params.id]
+      [perso, compte, id_employe, division, photo_data, req.params.id]
     );
     res.json({ success: true });
   } catch(e) { res.status(500).json({ error: e.message }); }
@@ -1362,7 +1359,7 @@ app.post('/api/dossiers-rh/interimaire', admin, uploadRH.single('photo'), async 
     const compte = sanitizeStr(req.body.compte, 500);
     const id_employe = sanitizeStr(req.body.id_employe, 100);
     const division = sanitizeStr(req.body.division, 100);
-    const photo_url = req.file ? '/uploads/dossiers-rh/' + req.file.filename : '';
+    const photo_data = req.file ? fileToDataUrl(req.file) : '';
 
     if (!nom || !prenom || !id_employe || !division) {
       return res.status(400).json({ error: 'Champs manquants (nom, prénom, ID employé, division)' });
@@ -1370,9 +1367,9 @@ app.post('/api/dossiers-rh/interimaire', admin, uploadRH.single('photo'), async 
 
     // Créer uniquement le dossier RH sans compte de connexion
     const dossierRes = await getPool().query(
-      `INSERT INTO ec_dossiers_rh (user_id, perso, compte, id_employe, division, photo_url, nom_libre, prenom_libre, poste_libre)
+      `INSERT INTO ec_dossiers_rh (user_id, perso, compte, id_employe, division, photo_data, nom_libre, prenom_libre, poste_libre)
        VALUES (NULL,$1,$2,$3,$4,$5,$6,$7,$8) RETURNING *`,
-      [perso, compte, id_employe, division, photo_url, nom, prenom, poste || 'Intérimaire']
+      [perso, compte, id_employe, division, photo_data, nom, prenom, poste || 'Intérimaire']
     );
     res.json({ success: true, dossier: dossierRes.rows[0] });
   } catch(e) {
