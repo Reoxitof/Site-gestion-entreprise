@@ -939,12 +939,58 @@
     </div>
     <!-- Postes requis -->
     <div class="form-group">
-      <label>👥 Employés assignés à la commande</label>
+      <label>👥 Postes requis pour la commande</label>
       <div id="postesRequisList" style="display:flex;flex-direction:column;gap:8px;margin-bottom:8px;"></div>
       <div style="display:flex;gap:8px;align-items:center;">
         <select id="posteRequisSelect" class="input-field" style="flex:1;">
-          <option value="">— Sélectionner un employé —</option>
+          <option value="">— Sélectionner un poste —</option>
+          <optgroup label="🏢 Direction">
+            <option>Directeur Général</option>
+            <option>Directeur de Division</option>
+            <option>Coordinateur</option>
+          </optgroup>
+          <optgroup label="🛡️ Penny's Elite Security">
+            <option>Chef de la Sécurité</option>
+            <option>Responsable Sécurité</option>
+            <option>Agent de Sécurité</option>
+            <option>Agent VIP / Escorte</option>
+            <option>Convoyeur</option>
+            <option>Agent de Protection Rapprochée</option>
+            <option>Superviseur Sécurité</option>
+          </optgroup>
+          <optgroup label="🎉 Événementiel">
+            <option>Responsable Événementiel</option>
+            <option>Organisateur d'Événements</option>
+            <option>Hôte / Hôtesse</option>
+            <option>Régisseur</option>
+            <option>Technicien Son / Lumière</option>
+            <option>Décorateur</option>
+          </optgroup>
+          <optgroup label="✈️ Elite Tourisme">
+            <option>Guide Touristique</option>
+            <option>Chauffeur VIP</option>
+            <option>Concierge</option>
+            <option>Agent de Voyage</option>
+          </optgroup>
+          <optgroup label="🏔️ Elite Aventure">
+            <option>Guide Aventure</option>
+            <option>Pilote / Conducteur</option>
+            <option>Expert Terrain</option>
+            <option>Instructeur</option>
+          </optgroup>
+          <optgroup label="💃 Lilly's Girls">
+            <option>Responsable Artistique</option>
+            <option>Animatrice</option>
+            <option>Danseuse / Performeuse</option>
+            <option>Chorégraphe</option>
+          </optgroup>
+          <optgroup label="⚙️ Support">
+            <option>Assistant Administratif</option>
+            <option>Comptable</option>
+            <option>Stagiaire</option>
+          </optgroup>
         </select>
+        <input id="posteRequisNb" type="number" min="1" max="20" value="1" class="input-field" style="width:70px;text-align:center;" title="Nombre"/>
         <button type="button" class="btn btn-outline" style="padding:8px 14px;white-space:nowrap;" onclick="ajouterPosteRequis()"><i class="fa-solid fa-plus"></i></button>
       </div>
     </div>
@@ -2830,80 +2876,33 @@ async function updateCmdStatut(id, statut) {
 
 // ── POSTES REQUIS ──
 window._postesRequis = [];
-window._allEmployesCache = [];
 
-async function initPosteRequisSelect() {
-  try {
-    // Charger tous les employés actifs
-    const r = await fetch('/api/employes');
-    const data = await r.json();
-    window._allEmployesCache = data.filter(e => e.actif);
-
-    const sel = document.getElementById('posteRequisSelect');
-    if (!sel) return;
-
-    const roleLabels = {
-      admin:       '👑 Admin',
-      direction:   '🎯 Direction',
-      employe:     '👤 Employé',
-      interimaire: '🔄 Intérimaire'
-    };
-    const statutEmoji = {
-      disponible: '🟢', en_mission: '🟡', absent: '🔴',
-      conge: '🟣', indisponible: '⚫'
-    };
-
-    // Grouper par rôle
-    const parRole = {};
-    window._allEmployesCache.forEach(e => {
-      if (!parRole[e.role]) parRole[e.role] = [];
-      parRole[e.role].push(e);
-    });
-
-    sel.innerHTML = '<option value="">— Sélectionner un employé —</option>';
-    for (const [role, emps] of Object.entries(parRole)) {
-      const grp = document.createElement('optgroup');
-      grp.label = roleLabels[role] || role;
-      emps.forEach(e => {
-        const statut = e.statut_employe || 'disponible';
-        const emoji = statutEmoji[statut] || '⚫';
-        const opt = document.createElement('option');
-        opt.value = e.id;
-        opt.textContent = `${emoji} ${e.prenom} ${e.nom} — ${e.poste}`;
-        opt.disabled = statut !== 'disponible';
-        grp.appendChild(opt);
-      });
-      sel.appendChild(grp);
-    }
-  } catch(e) {}
+function initPosteRequisSelect() {
+  // Le select est déjà statique dans le HTML — rien à charger
+  const sel = document.getElementById('posteRequisSelect');
+  if (sel) sel.value = '';
+  const nb = document.getElementById('posteRequisNb');
+  if (nb) nb.value = 1;
 }
 
 function ajouterPosteRequis() {
   const sel = document.getElementById('posteRequisSelect');
-  const empId = parseInt(sel?.value);
-  if (!empId) { showToast('❌ Sélectionne un employé', false); return; }
+  const nb = parseInt(document.getElementById('posteRequisNb')?.value) || 1;
+  const poste = sel?.value;
+  if (!poste) { showToast('❌ Sélectionne un poste', false); return; }
 
-  const emp = window._allEmployesCache.find(e => e.id === empId);
-  if (!emp) return;
-
-  // Vérifier si déjà ajouté
-  if (window._postesRequis.find(p => p.user_id === empId)) {
-    showToast('⚠️ Cet employé est déjà ajouté', false); return;
+  const existing = window._postesRequis.find(p => p.poste === poste);
+  if (existing) {
+    existing.nb = nb;
+  } else {
+    window._postesRequis.push({ poste, nb });
   }
-
-  window._postesRequis.push({
-    user_id: empId,
-    nom: `${emp.prenom} ${emp.nom}`,
-    poste: emp.poste,
-    role: emp.role,
-    nb: 1
-  });
   renderPostesRequis();
   sel.value = '';
+  if (document.getElementById('posteRequisNb')) document.getElementById('posteRequisNb').value = 1;
 }
-
-function supprimerPosteRequis(userId) {
-  window._postesRequis = window._postesRequis.filter(p => p.user_id !== userId);
+function supprimerPosteRequis(poste) {
+  window._postesRequis = window._postesRequis.filter(p => p.poste !== poste);
   renderPostesRequis();
 }
 
@@ -2911,17 +2910,16 @@ function renderPostesRequis() {
   const list = document.getElementById('postesRequisList');
   if (!list) return;
   if (!window._postesRequis.length) {
-    list.innerHTML = '<div style="font-size:11px;color:var(--white-dim);opacity:0.6;">Aucun employé sélectionné — le partage se fera sur les présences du jour.</div>';
+    list.innerHTML = '<div style="font-size:11px;color:var(--white-dim);opacity:0.6;">Aucun poste sélectionné — le partage se fera sur les présences du jour.</div>';
     return;
   }
-  const roleLabels = { admin:'👑', direction:'🎯', employe:'👤', interimaire:'🔄' };
   list.innerHTML = window._postesRequis.map(p => `
     <div style="display:flex;align-items:center;justify-content:space-between;background:rgba(201,168,76,0.06);border:1px solid rgba(201,168,76,0.2);border-radius:8px;padding:8px 12px;">
-      <div>
-        <span style="font-size:12px;font-weight:800;color:var(--white);">${roleLabels[p.role]||'👤'} ${p.nom}</span>
-        <span style="font-size:10px;color:var(--white-dim);margin-left:8px;">${p.poste}</span>
+      <span style="font-size:12px;font-weight:800;color:var(--white);">👤 ${p.poste}</span>
+      <div style="display:flex;align-items:center;gap:10px;">
+        <span style="font-family:'Anton',sans-serif;font-size:16px;color:var(--gold);">×${p.nb}</span>
+        <button onclick="supprimerPosteRequis('${p.poste.replace(/'/g,"\\'")}')" style="background:none;border:none;color:#ff7b7b;cursor:pointer;font-size:13px;"><i class="fa-solid fa-xmark"></i></button>
       </div>
-      <button onclick="supprimerPosteRequis(${p.user_id})" style="background:none;border:none;color:#ff7b7b;cursor:pointer;font-size:13px;"><i class="fa-solid fa-xmark"></i></button>
     </div>`).join('');
 }
 
