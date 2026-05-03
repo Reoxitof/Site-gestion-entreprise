@@ -657,6 +657,45 @@
   </div>
 </div>
 
+<!-- Modal Contrat Intérimaire -->
+<div class="modal-overlay" id="modalContrat">
+  <div class="modal" style="max-width:560px;">
+    <button class="modal-close" onclick="closeModal('modalContrat')"><i class="fa-solid fa-xmark"></i></button>
+    <div class="modal-title"><i class="fa-solid fa-file-contract" style="font-size:16px;margin-right:8px;"></i>CONTRAT INTÉRIMAIRE</div>
+    <div style="font-size:12px;color:var(--white-dim);margin-bottom:20px;">Remplis les infos de mission — le contrat sera généré en PNG.</div>
+    <input type="hidden" id="contratCmdId"/>
+    <div class="form-group">
+      <label>Mission / Poste *</label>
+      <input class="input-field" id="contratMission" placeholder="Ex: Agent de Sécurité"/>
+    </div>
+    <div class="grid-2">
+      <div class="form-group">
+        <label>Date de la mission *</label>
+        <input class="input-field" id="contratDate" type="date"/>
+      </div>
+      <div class="form-group">
+        <label>Heure début</label>
+        <input class="input-field" id="contratHeureDebut" type="time" value="21:00"/>
+      </div>
+    </div>
+    <div class="grid-2">
+      <div class="form-group">
+        <label>Heure fin</label>
+        <input class="input-field" id="contratHeureFin" type="time" value="23:00"/>
+      </div>
+      <div class="form-group">
+        <label>💰 Rémunération ($) *</label>
+        <input class="input-field" id="contratRemuneration" type="number" min="0" step="500" placeholder="Ex: 10000"/>
+      </div>
+    </div>
+    <div class="form-group">
+      <label>Description de la mission</label>
+      <textarea class="input-field" id="contratDescription" rows="3" placeholder="Ex: Surveillance et sécurité de la course organisée à Paleto."></textarea>
+    </div>
+    <div class="btn-row">
+      <button class="btn btn-gold" onclick="genererContratPNG()"><i class="fa-solid fa-file-image"></i> Générer le contrat PNG</button>
+      <button class="btn btn-outline" onclick="closeModal('modalContrat')">Annuler</button>
+
 <!-- Modal Employé -->
 <div class="modal-overlay" id="modalEmploye">
   <div class="modal">
@@ -2894,6 +2933,11 @@ function renderStatutButtons(c) {
       ${retourBtns}
       ${lockMsg}
     </div>
+    <div style="margin-top:10px;padding-top:10px;border-top:1px solid rgba(201,168,76,0.1);">
+      <button class="btn btn-outline" style="font-size:11px;padding:8px 16px;border-color:rgba(201,168,76,0.4);color:var(--gold);" onclick="ouvrirContrat(${c.id})">
+        <i class="fa-solid fa-file-contract"></i> Contrat Intérimaire
+      </button>
+    </div>
   </div>`;
 }
 
@@ -3540,6 +3584,196 @@ function genererContratPNG() {
 }
 
 window.addEventListener('load', () => { loadTarifs(); initSSE(); });
+
+/* ══════════════════════════════════════════
+   CONTRAT INTÉRIMAIRE — Auto-remplissage
+══════════════════════════════════════════ */
+function ouvrirContrat(cmdId) {
+  // Récupérer les données de la commande depuis le cache
+  const c = (_cmdDetailData || []).find(x => x.id === cmdId);
+  document.getElementById('contratCmdId').value = cmdId;
+
+  if (c) {
+    // Mission / Poste ← type_prestation
+    document.getElementById('contratMission').value = c.type_prestation || '';
+
+    // Date ← date_evenement
+    if (c.date_evenement) {
+      const d = new Date(c.date_evenement.endsWith('Z') || c.date_evenement.includes('+') ? c.date_evenement : c.date_evenement.replace(' ','T') + 'Z');
+      // Date au format YYYY-MM-DD pour input[type=date]
+      const yyyy = d.getUTCFullYear();
+      const mm = String(d.getUTCMonth() + 1).padStart(2,'0');
+      const dd = String(d.getUTCDate()).padStart(2,'0');
+      document.getElementById('contratDate').value = `${yyyy}-${mm}-${dd}`;
+      // Heure début ← heure de l'événement
+      const hh = String(d.getUTCHours()).padStart(2,'0');
+      const min = String(d.getUTCMinutes()).padStart(2,'0');
+      document.getElementById('contratHeureDebut').value = `${hh}:${min}`;
+    } else {
+      document.getElementById('contratDate').value = '';
+      document.getElementById('contratHeureDebut').value = '21:00';
+    }
+
+    // Heure fin — laisser par défaut ou calculer +2h
+    const debutVal = document.getElementById('contratHeureDebut').value;
+    if (debutVal) {
+      const [h, m] = debutVal.split(':').map(Number);
+      const finH = String((h + 2) % 24).padStart(2,'0');
+      document.getElementById('contratHeureFin').value = `${finH}:${m.toString().padStart(2,'0')}`;
+    } else {
+      document.getElementById('contratHeureFin').value = '23:00';
+    }
+
+    // Rémunération ← prix_final ou budget_estime
+    const remun = parseFloat(c.prix_final) || parseFloat(c.budget_estime) || 0;
+    document.getElementById('contratRemuneration').value = remun > 0 ? remun : '';
+
+    // Description ← description de la commande
+    document.getElementById('contratDescription').value = c.description || '';
+  }
+
+  closeModal('modalCommandeDetail');
+  openModal('modalContrat');
+}
+
+function genererContratPNG() {
+  const mission = document.getElementById('contratMission').value.trim();
+  const date = document.getElementById('contratDate').value;
+  const heureDebut = document.getElementById('contratHeureDebut').value;
+  const heureFin = document.getElementById('contratHeureFin').value;
+  const remuneration = document.getElementById('contratRemuneration').value;
+  const description = document.getElementById('contratDescription').value.trim();
+
+  if (!mission || !date || !remuneration) {
+    showToast('❌ Mission, date et rémunération sont requis', false);
+    return;
+  }
+
+  // Formater la date en DD/MM/YYYY
+  const [yyyy, mm, dd] = date.split('-');
+  const dateAffiche = `${dd}/${mm}/${yyyy}`;
+
+  // Générer le contrat via canvas
+  const canvas = document.createElement('canvas');
+  canvas.width = 900;
+  canvas.height = 620;
+  const ctx = canvas.getContext('2d');
+
+  // Fond sombre
+  ctx.fillStyle = '#0a0a0f';
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+  // Bordure dorée
+  ctx.strokeStyle = '#c9a84c';
+  ctx.lineWidth = 3;
+  ctx.strokeRect(16, 16, canvas.width - 32, canvas.height - 32);
+
+  // Ligne déco haut
+  const grad = ctx.createLinearGradient(0, 0, canvas.width, 0);
+  grad.addColorStop(0, 'transparent');
+  grad.addColorStop(0.5, '#c9a84c');
+  grad.addColorStop(1, 'transparent');
+  ctx.strokeStyle = grad;
+  ctx.lineWidth = 2;
+  ctx.beginPath(); ctx.moveTo(40, 80); ctx.lineTo(canvas.width - 40, 80); ctx.stroke();
+
+  // Titre
+  ctx.fillStyle = '#c9a84c';
+  ctx.font = 'bold 36px Anton, Arial';
+  ctx.textAlign = 'center';
+  ctx.fillText('CONTRAT INTÉRIMAIRE', canvas.width / 2, 58);
+
+  // Sous-titre
+  ctx.fillStyle = 'rgba(240,234,255,0.5)';
+  ctx.font = '13px Inter, Arial';
+  ctx.fillText('ELITE CORP. — Document officiel', canvas.width / 2, 100);
+
+  // Ligne déco bas titre
+  ctx.strokeStyle = grad;
+  ctx.lineWidth = 1;
+  ctx.beginPath(); ctx.moveTo(40, 115); ctx.lineTo(canvas.width - 40, 115); ctx.stroke();
+
+  // Champs
+  const fields = [
+    { label: 'MISSION / POSTE', value: mission },
+    { label: 'DATE DE LA MISSION', value: dateAffiche },
+    { label: 'HEURE DÉBUT', value: heureDebut },
+    { label: 'HEURE FIN', value: heureFin },
+    { label: 'RÉMUNÉRATION', value: Number(remuneration).toLocaleString('fr-FR') + ' $' },
+  ];
+
+  let y = 155;
+  fields.forEach(f => {
+    // Label
+    ctx.fillStyle = 'rgba(201,168,76,0.7)';
+    ctx.font = 'bold 10px Inter, Arial';
+    ctx.textAlign = 'left';
+    ctx.fillText(f.label, 60, y);
+    // Fond champ
+    ctx.fillStyle = 'rgba(255,255,255,0.04)';
+    ctx.beginPath();
+    ctx.roundRect(60, y + 6, canvas.width - 120, 38, 8);
+    ctx.fill();
+    ctx.strokeStyle = 'rgba(201,168,76,0.25)';
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.roundRect(60, y + 6, canvas.width - 120, 38, 8);
+    ctx.stroke();
+    // Valeur
+    ctx.fillStyle = '#f0eaff';
+    ctx.font = 'bold 16px Inter, Arial';
+    ctx.fillText(f.value, 80, y + 31);
+    y += 62;
+  });
+
+  // Description
+  if (description) {
+    ctx.fillStyle = 'rgba(201,168,76,0.7)';
+    ctx.font = 'bold 10px Inter, Arial';
+    ctx.fillText('DESCRIPTION DE LA MISSION', 60, y);
+    ctx.fillStyle = 'rgba(255,255,255,0.04)';
+    ctx.beginPath();
+    ctx.roundRect(60, y + 6, canvas.width - 120, 60, 8);
+    ctx.fill();
+    ctx.strokeStyle = 'rgba(201,168,76,0.25)';
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.roundRect(60, y + 6, canvas.width - 120, 60, 8);
+    ctx.stroke();
+    ctx.fillStyle = 'rgba(240,234,255,0.7)';
+    ctx.font = '13px Inter, Arial';
+    // Wrap texte simple
+    const words = description.split(' ');
+    let line = ''; let lineY = y + 28;
+    words.forEach(word => {
+      const test = line + word + ' ';
+      if (ctx.measureText(test).width > canvas.width - 160 && line) {
+        ctx.fillText(line.trim(), 80, lineY);
+        line = word + ' '; lineY += 18;
+      } else { line = test; }
+    });
+    if (line) ctx.fillText(line.trim(), 80, lineY);
+    y += 80;
+  }
+
+  // Pied de page
+  ctx.strokeStyle = grad;
+  ctx.lineWidth = 1;
+  ctx.beginPath(); ctx.moveTo(40, canvas.height - 50); ctx.lineTo(canvas.width - 40, canvas.height - 50); ctx.stroke();
+  ctx.fillStyle = 'rgba(201,168,76,0.5)';
+  ctx.font = '11px Inter, Arial';
+  ctx.textAlign = 'center';
+  ctx.fillText('Elite Corp. — Confidentiel — Document généré automatiquement', canvas.width / 2, canvas.height - 28);
+
+  // Télécharger
+  const link = document.createElement('a');
+  link.download = `contrat_${mission.replace(/\s+/g,'_')}_${dateAffiche.replace(/\//g,'-')}.png`;
+  link.href = canvas.toDataURL('image/png');
+  link.click();
+
+  showToast('✅ Contrat généré et téléchargé');
+  closeModal('modalContrat');
+}
 
 
 
