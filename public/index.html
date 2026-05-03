@@ -738,6 +738,47 @@
   </div>
 </div>
 
+<!-- Modal Contrat Intérimaire -->
+<div class="modal-overlay" id="modalContratInterimaire">
+  <div class="modal" style="max-width:520px;">
+    <button class="modal-close" onclick="closeModal('modalContratInterimaire')"><i class="fa-solid fa-xmark"></i></button>
+    <div class="modal-title">📄 CONTRAT INTÉRIMAIRE</div>
+    <div style="font-size:11px;color:var(--white-dim);margin-bottom:18px;">Remplis les infos de mission — le contrat sera généré en PNG.</div>
+    <div class="form-group">
+      <label>Mission / Poste *</label>
+      <input class="input-field" id="contratMission" placeholder="Ex: Agent de Sécurité"/>
+    </div>
+    <div class="grid-2">
+      <div class="form-group">
+        <label>Date de la mission *</label>
+        <input class="input-field" id="contratDate" type="date"/>
+      </div>
+      <div class="form-group">
+        <label>Heure début</label>
+        <input class="input-field" id="contratHeureDebut" type="time" value="21:00"/>
+      </div>
+    </div>
+    <div class="grid-2">
+      <div class="form-group">
+        <label>Heure fin</label>
+        <input class="input-field" id="contratHeureFin" type="time" value="23:00"/>
+      </div>
+      <div class="form-group">
+        <label>💰 Rémunération ($) *</label>
+        <input class="input-field" id="contratRemuneration" type="number" min="0" step="500" placeholder="Ex: 10000"/>
+      </div>
+    </div>
+    <div class="form-group">
+      <label>Description de la mission</label>
+      <textarea class="input-field" id="contratDescription" rows="3" placeholder="Ex: Surveillance et sécurité de la course organisée à Paleto."></textarea>
+    </div>
+    <div class="btn-row">
+      <button class="btn btn-gold" onclick="genererContratPNG()"><i class="fa-solid fa-file-image"></i> Générer le contrat PNG</button>
+      <button class="btn btn-outline" onclick="closeModal('modalContratInterimaire')">Annuler</button>
+    </div>
+  </div>
+</div>
+
 <!-- Modal Statut Employé -->
 <div class="modal-overlay" id="modalStatutEmploye">
   <div class="modal" style="max-width:420px;">
@@ -2112,6 +2153,7 @@ function renderRHCard(d) {
     <button class="btn btn-outline" style="font-size:10px;padding:6px 10px;" onclick="openEditDossier(${d.id})"><i class="fa-solid fa-pen"></i></button>
     <button class="btn btn-danger" style="font-size:10px;padding:6px 10px;" onclick="deleteDossier(${d.id},'${d.role}')"><i class="fa-solid fa-trash"></i></button>
     <button class="btn btn-outline" style="font-size:10px;padding:6px 10px;border-color:rgba(201,168,76,0.4);color:var(--gold);" onclick="exportDossierPNG(${d.id})"><i class="fa-solid fa-file-image"></i> PNG</button>
+    ${d.role === 'interimaire' ? `<button class="btn btn-outline" style="font-size:10px;padding:6px 10px;border-color:rgba(167,139,250,0.4);color:#a78bfa;" onclick="ouvrirContratInterimaire(${d.id})"><i class="fa-solid fa-file-contract"></i> Contrat</button>` : ''}
   ` : '';
 
   return `<div class="rh-card">
@@ -3395,6 +3437,102 @@ function exportDevisPNG(id) {
     link.href = canvas.toDataURL('image/png');
     link.click();
     showToast('✅ Devis exporté en PNG');
+  }).catch(e => {
+    document.body.removeChild(card);
+    showToast('❌ Erreur export', false);
+  });
+}
+
+// ── CONTRAT INTÉRIMAIRE ──
+window._contratDossier = null;
+
+function ouvrirContratInterimaire(id) {
+  const d = rhData.find(x => x.id === id);
+  if (!d) return;
+  window._contratDossier = d;
+  // Pré-remplir le poste
+  document.getElementById('contratMission').value = d.poste || d.poste_libre || '';
+  document.getElementById('contratDate').value = new Date().toISOString().slice(0,10);
+  document.getElementById('contratHeureDebut').value = '21:00';
+  document.getElementById('contratHeureFin').value = '23:00';
+  document.getElementById('contratRemuneration').value = '';
+  document.getElementById('contratDescription').value = '';
+  openModal('modalContratInterimaire');
+}
+
+function genererContratPNG() {
+  const d = window._contratDossier;
+  if (!d) return;
+
+  const mission = document.getElementById('contratMission').value.trim() || '—';
+  const dateVal = document.getElementById('contratDate').value;
+  const heureDebut = document.getElementById('contratHeureDebut').value;
+  const heureFin = document.getElementById('contratHeureFin').value;
+  const remuneration = parseFloat(document.getElementById('contratRemuneration').value) || 0;
+  const description = document.getElementById('contratDescription').value.trim();
+
+  const dateAffiche = dateVal ? new Date(dateVal + 'T12:00').toLocaleDateString('fr-FR', {day:'2-digit',month:'2-digit',year:'numeric'}) : '—';
+  const nom = ((d.prenom || '') + ' ' + (d.nom || '')).trim() || '—';
+
+  const card = document.createElement('div');
+  card.style.cssText = 'position:fixed;left:-9999px;top:0;width:430px;font-family:Inter,Arial,sans-serif;background:#0a0a0f;';
+  card.innerHTML = `
+    <div style="width:430px;background:#0a0a0f;padding:36px 32px;box-sizing:border-box;min-height:600px;">
+
+      <!-- Header -->
+      <div style="text-align:center;margin-bottom:32px;padding-bottom:20px;border-bottom:2px solid #c9a84c;">
+        <div style="font-family:Anton,Arial;font-size:28px;letter-spacing:5px;color:#c9a84c;">ELITE CORP.</div>
+        <div style="font-size:9px;letter-spacing:3px;color:#9a9080;text-transform:uppercase;margin-top:4px;">Event Planning & Services — Blaine County</div>
+        <div style="margin-top:14px;font-family:Anton,Arial;font-size:16px;letter-spacing:3px;color:#f0ead8;">CONTRAT DE MISSION</div>
+        <div style="font-size:10px;color:#9a9080;margin-top:4px;">${new Date().toLocaleDateString('fr-FR')}</div>
+      </div>
+
+      <!-- Employé -->
+      <div style="display:flex;align-items:center;gap:16px;background:rgba(201,168,76,0.06);border:1px solid rgba(201,168,76,0.25);border-radius:10px;padding:14px;margin-bottom:24px;">
+        ${d.photo_url ? `<img src="${d.photo_url}" style="width:60px;height:60px;border-radius:8px;object-fit:cover;border:1px solid rgba(201,168,76,0.3);"/>` : `<div style="width:60px;height:60px;border-radius:8px;background:rgba(201,168,76,0.1);display:flex;align-items:center;justify-content:center;font-size:28px;">👤</div>`}
+        <div>
+          <div style="font-family:Anton,Arial;font-size:18px;letter-spacing:1px;color:#f0ead8;">${nom}</div>
+          <div style="font-size:11px;color:#9a9080;margin-top:2px;">ID : ${d.id_employe || '—'} · ${d.division || '—'}</div>
+          <div style="margin-top:6px;display:inline-block;padding:3px 10px;border-radius:999px;background:rgba(167,139,250,0.15);border:1px solid rgba(167,139,250,0.4);color:#a78bfa;font-size:10px;font-weight:800;">INTÉRIMAIRE</div>
+        </div>
+      </div>
+
+      <!-- Infos mission -->
+      <div style="font-size:18px;font-weight:900;color:#f0ead8;margin-bottom:6px;">Mission ${mission}</div>
+      <div style="font-size:15px;color:#9a9080;margin-bottom:4px;">Le ${dateAffiche} de ${heureDebut}h à ${heureFin}h</div>
+      <div style="font-size:18px;font-weight:900;color:#c9a84c;margin-bottom:20px;">Rémunération ${remuneration > 0 ? remuneration.toLocaleString('fr-FR') + ' $' : '—'}</div>
+
+      ${description ? `<div style="font-size:15px;color:#f0ead8;line-height:1.7;margin-bottom:20px;">${description}</div>` : ''}
+
+      <div style="font-size:15px;color:#f0ead8;margin-bottom:32px;font-style:italic;">Merci de confirmer votre présence par signature.</div>
+
+      <!-- Signature -->
+      <div style="border-top:1px solid rgba(201,168,76,0.2);padding-top:24px;">
+        <div style="display:flex;justify-content:space-between;align-items:flex-end;">
+          <div>
+            <div style="font-size:9px;color:#9a9080;letter-spacing:1px;text-transform:uppercase;margin-bottom:24px;">Signature employé(e)</div>
+            <div style="width:150px;border-bottom:1px solid rgba(201,168,76,0.5);"></div>
+          </div>
+          <div style="text-align:right;">
+            <div style="font-size:9px;color:#9a9080;letter-spacing:1px;text-transform:uppercase;margin-bottom:24px;">Signature Elite Corp.</div>
+            <div style="width:150px;border-bottom:1px solid rgba(201,168,76,0.5);"></div>
+          </div>
+        </div>
+        <div style="text-align:center;margin-top:24px;font-size:9px;color:rgba(154,144,128,0.5);letter-spacing:1px;">ELITE CORP. — DOCUMENT OFFICIEL — BLAINE COUNTY</div>
+      </div>
+
+    </div>
+  `;
+
+  document.body.appendChild(card);
+  html2canvas(card, { scale:2, useCORS:true, allowTaint:true, width:430, backgroundColor:'#0a0a0f' }).then(canvas => {
+    document.body.removeChild(card);
+    const link = document.createElement('a');
+    link.download = `contrat-${nom.replace(/\s+/g,'_')}-${dateVal||'mission'}.png`;
+    link.href = canvas.toDataURL('image/png');
+    link.click();
+    closeModal('modalContratInterimaire');
+    showToast('✅ Contrat exporté en PNG');
   }).catch(e => {
     document.body.removeChild(card);
     showToast('❌ Erreur export', false);
