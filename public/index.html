@@ -508,6 +508,7 @@
     <div class="form-group"><label>Rôle système</label>
       <select class="input-field" id="empRole">
         <option value="employe">Employé</option>
+        <option value="interimaire">Intérimaire</option>
         <option value="admin">Admin</option>
       </select>
     </div>
@@ -1824,10 +1825,9 @@ async function loadCommandes() {
     const statsEl = document.getElementById('cmdStats');
     if (statsEl) {
       statsEl.innerHTML = [
-        { label:'Nouvelles',  val:stats.nouveau,  color:'#3fa7d6' },
-        { label:'En cours',   val:stats.en_cours, color:'#f09030' },
+        { label:'Devis',      val:stats.devis,    color:'#3fa7d6' },
         { label:'Confirmées', val:stats.confirme, color:'var(--gold)' },
-        { label:'Payées',     val:stats.paye,     color:'#a78bfa' },
+        { label:'En cours',   val:stats.en_cours, color:'#f09030' },
         { label:'Terminées',  val:stats.termine,  color:'#4caf7d' },
       ].map(s => `<div style="background:var(--card);border:1px solid var(--border);border-radius:10px;padding:14px;text-align:center;">
         <div style="font-family:'Anton',sans-serif;font-size:28px;color:${s.color};">${s.val}</div>
@@ -2045,11 +2045,11 @@ function renderStatutButtons(c) {
   const estime = parseFloat(c.budget_estime)||0;
   const dir = isAdmin();
 
-  // Nouvel ordre : nouveau → en_cours → paye → confirme → termine
-  const statutOrder = ['nouveau', 'en_cours', 'paye', 'confirme', 'termine'];
+  // Ordre : devis → confirme → en_cours → termine
+  const statutOrder = ['devis', 'confirme', 'en_cours', 'termine'];
   const currentIdx = statutOrder.indexOf(c.statut);
 
-  // Bloc édition infos (direction uniquement, statut nouveau)
+  // Bloc édition infos (direction uniquement, statut devis)
   const editBlock = (dir && c.statut === 'devis') ? `
     <div style="margin-bottom:12px;background:rgba(201,168,76,0.05);border:1px solid rgba(201,168,76,0.2);border-radius:8px;padding:12px;">
       <div style="font-size:9px;font-weight:800;letter-spacing:1px;text-transform:uppercase;color:var(--gold);margin-bottom:10px;"><i class="fa-solid fa-pen"></i> Modifier les infos</div>
@@ -2076,13 +2076,11 @@ function renderStatutButtons(c) {
 
   // Bouton avancement (sens unique : devis→confirme→en_cours→termine)
   let avanceBtn = '';
-  if (c.statut === 'nouveau') {
-    avanceBtn = `<button class="btn btn-outline" style="font-size:11px;padding:8px 16px;" onclick="ouvrirDevis(${c.id},${estime})"><i class="fa-solid fa-file-invoice-dollar"></i> ⚙️ Mettre en cours</button>`;
-  } else if (c.statut === 'en_cours') {
-    avanceBtn = `<button class="btn" style="font-size:11px;padding:8px 16px;background:rgba(167,139,250,0.15);border:1px solid rgba(167,139,250,0.4);color:#a78bfa;" onclick="ouvrirPaiement(${c.id},${prixFinal||estime})"><i class="fa-solid fa-money-bill-wave"></i> 💰 Marquer payé</button>`;
-  } else if (c.statut === 'paye') {
-    avanceBtn = `<button class="btn btn-gold" style="font-size:11px;padding:8px 16px;" onclick="updateCmdStatut(${c.id},'confirme')"><i class="fa-solid fa-check"></i> ✅ Confirmer</button>`;
+  if (c.statut === 'devis') {
+    avanceBtn = `<button class="btn btn-gold" style="font-size:11px;padding:8px 16px;" onclick="updateCmdStatut(${c.id},'confirme')"><i class="fa-solid fa-check"></i> ✅ Confirmer le devis</button>`;
   } else if (c.statut === 'confirme') {
+    avanceBtn = `<button class="btn btn-outline" style="font-size:11px;padding:8px 16px;" onclick="ouvrirPaiement(${c.id},${prixFinal||estime})"><i class="fa-solid fa-money-bill-wave"></i> 💰 Payer & Terminer</button>`;
+  } else if (c.statut === 'en_cours') {
     avanceBtn = `<button class="btn btn-green" style="font-size:11px;padding:8px 16px;" onclick="updateCmdStatut(${c.id},'termine')"><i class="fa-solid fa-flag-checkered"></i> 🏁 Terminer</button>`;
   }
 
