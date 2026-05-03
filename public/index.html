@@ -146,6 +146,7 @@
     .section-title span{color:var(--gold);}
     .gold-line{width:60px;height:2px;background:linear-gradient(90deg,transparent,var(--gold),transparent);margin-bottom:20px;}
   </style>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 </head>
 <body>
 
@@ -2117,65 +2118,64 @@ function exportDossierPNG(id) {
   const d = rhData.find(x => x.id === id);
   if (!d) return;
 
-  const W = 1024, H = 512;
-  const canvas = document.createElement('canvas');
-  canvas.width = W; canvas.height = H;
-  const ctx = canvas.getContext('2d');
+  const nom = (d.prenom || '') + ' ' + (d.nom || '');
+  const statut = d.role === 'interimaire' ? 'Intérimaire' : d.role === 'admin' ? 'Admin' : d.role === 'direction' ? 'Direction' : 'Employé';
+  const dateEmb = d.created_at ? new Date(d.created_at).toLocaleDateString('fr-FR') : '—';
 
-  // Positions des cases blanches sur visite.png (1024x512)
-  // Haut droite : NOM COMPLET, POSTE, FILIERE, ID EMPLOYE, DATE, STATUT
-  const infoFields = [
-    { value: (d.prenom + ' ' + d.nom).toUpperCase(), x: 432, y: 148 },
-    { value: d.poste || '—',                          x: 432, y: 178 },
-    { value: d.division || '—',                       x: 432, y: 208 },
-    { value: d.id_employe || '—',                     x: 432, y: 238 },
-    { value: d.created_at ? new Date(d.created_at).toLocaleDateString('fr-FR') : '—', x: 432, y: 268 },
-    { value: d.role === 'interimaire' ? 'Intérimaire' : d.role === 'admin' ? 'Admin' : d.role === 'direction' ? 'Direction' : 'Employé', x: 432, y: 298 },
-  ];
-  // Bas gauche : TELEPHONE EMPLOYE, COMPTE
-  const contactFields = [
-    { value: d.perso || '—',  x: 155, y: 355 },
-    { value: '205-7586',      x: 155, y: 408 }, // TÉLÉPHONE DU PATRON (fixe)
-  ];
-  // Zone photo
-  const photoX = 40, photoY = 28, photoW = 158, photoH = 272;
+  // Créer la div HTML de la carte
+  const card = document.createElement('div');
+  card.id = 'rhExportCard';
+  card.style.cssText = `
+    position:fixed; left:-9999px; top:0;
+    width:1024px; height:512px; overflow:hidden;
+    font-family:'Inter',Arial,sans-serif;
+  `;
 
-  function drawText(text, x, y, maxW) {
-    ctx.font = 'bold 13px Inter, Arial, sans-serif';
-    ctx.fillStyle = '#1a1209';
-    ctx.textAlign = 'left';
-    ctx.textBaseline = 'middle';
-    let t = String(text || '—');
-    while (ctx.measureText(t).width > (maxW || 190) - 6 && t.length > 1) t = t.slice(0, -1);
-    ctx.fillText(t, x + 4, y);
-  }
+  card.innerHTML = `
+    <div style="position:relative;width:1024px;height:512px;">
+      <!-- Image de fond -->
+      <img src="/visite.png" style="position:absolute;top:0;left:0;width:1024px;height:512px;"/>
 
-  function renderAll(photoImg) {
-    ctx.drawImage(bgImg, 0, 0, W, H);
-    if (photoImg) {
-      ctx.save();
-      ctx.beginPath(); ctx.rect(photoX, photoY, photoW, photoH); ctx.clip();
-      const sc = Math.max(photoW / photoImg.width, photoH / photoImg.height);
-      const sw = photoImg.width * sc, sh = photoImg.height * sc;
-      ctx.drawImage(photoImg, photoX + (photoW-sw)/2, photoY + (photoH-sh)/2, sw, sh);
-      ctx.restore();
-    }
-    infoFields.forEach(f => drawText(f.value, f.x, f.y, 195));
-    contactFields.forEach(f => drawText(f.value, f.x, f.y, 130));
-    downloadCanvas(canvas, d.prenom + '_' + d.nom);
-  }
+      <!-- Photo employé -->
+      <div style="position:absolute;top:28px;left:40px;width:158px;height:272px;overflow:hidden;border-radius:4px;">
+        ${d.photo_url ? `<img src="${d.photo_url}" style="width:100%;height:100%;object-fit:cover;object-position:top;"/>` : ''}
+      </div>
 
-  const bgImg = new Image();
-  bgImg.onload = () => {
-    if (d.photo_url) {
-      const pi = new Image(); pi.crossOrigin = 'anonymous';
-      pi.onload = () => renderAll(pi);
-      pi.onerror = () => renderAll(null);
-      pi.src = d.photo_url;
-    } else { renderAll(null); }
-  };
-  bgImg.onerror = () => { showToast('❌ visite.png introuvable', false); };
-  bgImg.src = '/visite.png';
+      <!-- Champs haut droite -->
+      <div style="position:absolute;top:130px;left:432px;width:200px;display:flex;flex-direction:column;gap:0px;">
+        <div style="height:30px;display:flex;align-items:center;padding-left:6px;font-size:13px;font-weight:700;color:#1a1209;">${nom.trim().toUpperCase() || '—'}</div>
+        <div style="height:30px;display:flex;align-items:center;padding-left:6px;font-size:13px;font-weight:700;color:#1a1209;">${d.poste || '—'}</div>
+        <div style="height:30px;display:flex;align-items:center;padding-left:6px;font-size:13px;font-weight:700;color:#1a1209;">${d.division || '—'}</div>
+        <div style="height:30px;display:flex;align-items:center;padding-left:6px;font-size:13px;font-weight:700;color:#1a1209;">${d.id_employe || '—'}</div>
+        <div style="height:30px;display:flex;align-items:center;padding-left:6px;font-size:13px;font-weight:700;color:#1a1209;">${dateEmb}</div>
+        <div style="height:30px;display:flex;align-items:center;padding-left:6px;font-size:13px;font-weight:700;color:#1a1209;">${statut}</div>
+      </div>
+
+      <!-- Téléphone employé -->
+      <div style="position:absolute;top:348px;left:155px;width:130px;height:24px;display:flex;align-items:center;padding-left:6px;font-size:13px;font-weight:700;color:#1a1209;">${d.perso || '—'}</div>
+
+      <!-- Téléphone patron -->
+      <div style="position:absolute;top:400px;left:155px;width:130px;height:24px;display:flex;align-items:center;padding-left:6px;font-size:13px;font-weight:700;color:#1a1209;">205-7586</div>
+    </div>
+  `;
+
+  document.body.appendChild(card);
+
+  html2canvas(card, {
+    scale: 1,
+    useCORS: true,
+    allowTaint: true,
+    width: 1024,
+    height: 512,
+    backgroundColor: null
+  }).then(canvas => {
+    document.body.removeChild(card);
+    downloadCanvas(canvas, (d.prenom || 'employe') + '_' + (d.nom || ''));
+  }).catch(e => {
+    document.body.removeChild(card);
+    showToast('❌ Erreur export PNG', false);
+    console.error(e);
+  });
 }
 
 function downloadCanvas(canvas, name) {
