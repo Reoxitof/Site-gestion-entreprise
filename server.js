@@ -767,25 +767,19 @@ app.post('/api/commandes/:id/payer', admin, async (req, res) => {
     try { postesRequis = JSON.parse(cmd.postes_requis || '[]'); } catch(e) {}
 
     if (postesRequis.length > 0) {
-      // Partage basé sur les postes requis définis dans la commande
+      // Partage basé sur les employés sélectionnés directement
       const montantTotal = Number(prix_final);
-      const nbTotal = postesRequis.reduce((sum, p) => sum + (parseInt(p.nb) || 0), 0);
+      const nbTotal = postesRequis.filter(p => p.user_id).length;
       if (nbTotal > 0) {
         const montantParPersonne = Math.round((montantTotal / nbTotal) * 100) / 100;
         for (const pr of postesRequis) {
-          const nb = parseInt(pr.nb) || 0;
-          // Récupérer les employés actifs avec ce poste
-          const empRes = await getPool().query(
-            `SELECT id, nom, prenom, poste FROM ec_users WHERE poste=$1 AND actif=true LIMIT $2`,
-            [pr.poste, nb]
-          );
-          for (const emp of empRes.rows) {
-            partage.push({ user_id: emp.id, nom: emp.prenom + ' ' + emp.nom, poste: emp.poste, montant: montantParPersonne });
-          }
-          // Si pas assez d'employés trouvés, ajouter des entrées sans user_id
-          for (let i = empRes.rows.length; i < nb; i++) {
-            partage.push({ user_id: null, nom: `${pr.poste} (non assigné)`, poste: pr.poste, montant: montantParPersonne });
-          }
+          if (!pr.user_id) continue;
+          partage.push({
+            user_id: pr.user_id,
+            nom: pr.nom || `Employé #${pr.user_id}`,
+            poste: pr.poste || '',
+            montant: montantParPersonne
+          });
         }
       }
     } else if (cmd.date_evenement) {

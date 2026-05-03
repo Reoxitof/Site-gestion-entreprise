@@ -724,13 +724,12 @@
     </div>
     <!-- Postes requis -->
     <div class="form-group">
-      <label>👥 Employés requis par poste</label>
+      <label>👥 Employés assignés à la commande</label>
       <div id="postesRequisList" style="display:flex;flex-direction:column;gap:8px;margin-bottom:8px;"></div>
       <div style="display:flex;gap:8px;align-items:center;">
         <select id="posteRequisSelect" class="input-field" style="flex:1;">
-          <option value="">— Sélectionner un poste —</option>
+          <option value="">— Sélectionner un employé —</option>
         </select>
-        <input id="posteRequisNb" type="number" min="1" max="50" value="1" class="input-field" style="width:70px;" placeholder="Nb"/>
         <button type="button" class="btn btn-outline" style="padding:8px 14px;white-space:nowrap;" onclick="ajouterPosteRequis()"><i class="fa-solid fa-plus"></i></button>
       </div>
     </div>
@@ -2337,45 +2336,80 @@ async function updateCmdStatut(id, statut) {
 
 // ── POSTES REQUIS ──
 window._postesRequis = [];
+window._allEmployesCache = [];
 
 async function initPosteRequisSelect() {
   try {
-    const r = await fetch('/api/employes/par-role');
+    // Charger tous les employés actifs
+    const r = await fetch('/api/employes');
     const data = await r.json();
+    window._allEmployesCache = data.filter(e => e.actif);
+
     const sel = document.getElementById('posteRequisSelect');
     if (!sel) return;
+
     const roleLabels = {
       admin:       '👑 Admin',
       direction:   '🎯 Direction',
       employe:     '👤 Employé',
       interimaire: '🔄 Intérimaire'
     };
-    sel.innerHTML = '<option value="">— Sélectionner un rôle —</option>' +
-      data.map(d => {
-        const nbDispo = parseInt(d.nb_dispo || 0);
-        const nbTotal = parseInt(d.nb_total || 0);
-        const label = roleLabels[d.role] || d.role;
-        const dispo = nbDispo > 0 ? `${nbDispo} dispo` : `${nbTotal} — aucun dispo`;
-        return `<option value="${d.role}">${label} (${dispo})</option>`;
-      }).join('');
+    const statutEmoji = {
+      disponible: '🟢', en_mission: '🟡', absent: '🔴',
+      conge: '🟣', indisponible: '⚫'
+    };
+
+    // Grouper par rôle
+    const parRole = {};
+    window._allEmployesCache.forEach(e => {
+      if (!parRole[e.role]) parRole[e.role] = [];
+      parRole[e.role].push(e);
+    });
+
+    sel.innerHTML = '<option value="">— Sélectionner un employé —</option>';
+    for (const [role, emps] of Object.entries(parRole)) {
+      const grp = document.createElement('optgroup');
+      grp.label = roleLabels[role] || role;
+      emps.forEach(e => {
+        const statut = e.statut_employe || 'disponible';
+        const emoji = statutEmoji[statut] || '⚫';
+        const opt = document.createElement('option');
+        opt.value = e.id;
+        opt.textContent = `${emoji} ${e.prenom} ${e.nom} — ${e.poste}`;
+        opt.disabled = statut !== 'disponible';
+        grp.appendChild(opt);
+      });
+      sel.appendChild(grp);
+    }
   } catch(e) {}
 }
 
 function ajouterPosteRequis() {
   const sel = document.getElementById('posteRequisSelect');
-  const nb = parseInt(document.getElementById('posteRequisNb').value) || 1;
-  const poste = sel?.value;
-  if (!poste) { showToast('❌ Sélectionne un poste', false); return; }
-  const existing = window._postesRequis.find(p => p.poste === poste);
-  if (existing) { existing.nb = nb; }
-  else { window._postesRequis.push({ poste, nb }); }
+  const empId = parseInt(sel?.value);
+  if (!empId) { showToast('❌ Sélectionne un employé', false); return; }
+
+  const emp = window._allEmployesCache.find(e => e.id === empId);
+  if (!emp) return;
+
+  // Vérifier si déjà ajouté
+  if (window._postesRequis.find(p => p.user_id === empId)) {
+    showToast('⚠️ Cet employé est déjà ajouté', false); return;
+  }
+
+  window._postesRequis.push({
+    user_id: empId,
+    nom: `${emp.prenom} ${emp.nom}`,
+    poste: emp.poste,
+    role: emp.role,
+    nb: 1
+  });
   renderPostesRequis();
   sel.value = '';
-  document.getElementById('posteRequisNb').value = 1;
 }
 
-function supprimerPosteRequis(poste) {
-  window._postesRequis = window._postesRequis.filter(p => p.poste !== poste);
+function supprimerPosteRequis(userId) {
+  window._postesRequis = window._postesRequis.filter(p => p.user_id !== userId);
   renderPostesRequis();
 }
 
@@ -2383,16 +2417,17 @@ function renderPostesRequis() {
   const list = document.getElementById('postesRequisList');
   if (!list) return;
   if (!window._postesRequis.length) {
-    list.innerHTML = '<div style="font-size:11px;color:var(--white-dim);opacity:0.6;">Aucun poste requis défini — le partage se fera sur les présences du jour.</div>';
+    list.innerHTML = '<div style="font-size:11px;color:var(--white-dim);opacity:0.6;">Aucun employé sélectionné — le partage se fera sur les présences du jour.</div>';
     return;
   }
+  const roleLabels = { admin:'👑', direction:'🎯', employe:'👤', interimaire:'🔄' };
   list.innerHTML = window._postesRequis.map(p => `
     <div style="display:flex;align-items:center;justify-content:space-between;background:rgba(201,168,76,0.06);border:1px solid rgba(201,168,76,0.2);border-radius:8px;padding:8px 12px;">
-      <span style="font-size:12px;font-weight:700;color:var(--white);">👤 ${p.poste}</span>
-      <div style="display:flex;align-items:center;gap:10px;">
-        <span style="font-family:'Anton',sans-serif;font-size:16px;color:var(--gold);">×${p.nb}</span>
-        <button onclick="supprimerPosteRequis('${p.poste}')" style="background:none;border:none;color:#ff7b7b;cursor:pointer;font-size:13px;"><i class="fa-solid fa-xmark"></i></button>
+      <div>
+        <span style="font-size:12px;font-weight:800;color:var(--white);">${roleLabels[p.role]||'👤'} ${p.nom}</span>
+        <span style="font-size:10px;color:var(--white-dim);margin-left:8px;">${p.poste}</span>
       </div>
+      <button onclick="supprimerPosteRequis(${p.user_id})" style="background:none;border:none;color:#ff7b7b;cursor:pointer;font-size:13px;"><i class="fa-solid fa-xmark"></i></button>
     </div>`).join('');
 }
 
