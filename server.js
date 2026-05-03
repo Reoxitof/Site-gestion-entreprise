@@ -369,16 +369,17 @@ app.post('/api/employes', admin, async (req, res) => {
 });
 app.put('/api/employes/:id', admin, async (req, res) => {
   try {
-    const { nom, prenom, poste, role, actif } = req.body;
+    const { nom, prenom, poste, role, actif, statut_employe } = req.body;
     await getPool().query(
       `UPDATE ec_users SET
         nom = COALESCE($1, nom),
         prenom = COALESCE($2, prenom),
         poste = COALESCE($3, poste),
         role = COALESCE($4, role),
-        actif = COALESCE($5, actif)
-       WHERE id = $6`,
-      [nom || null, prenom || null, poste || null, role || null, actif !== undefined ? actif : null, req.params.id]
+        actif = COALESCE($5, actif),
+        statut_employe = COALESCE($6, statut_employe)
+       WHERE id = $7`,
+      [nom || null, prenom || null, poste || null, role || null, actif !== undefined ? actif : null, statut_employe || null, req.params.id]
     );
     clearCache('employes');
     res.json({ success: true });

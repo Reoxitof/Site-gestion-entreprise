@@ -256,7 +256,7 @@
         <div class="card-title"><i class="fa-solid fa-users"></i> Équipe Elite Corp.</div>
         <div class="table-wrap">
           <table>
-            <thead><tr><th>Nom</th><th>Identifiant</th><th>Poste</th><th>Rôle</th><th>Statut</th><th>Actions</th></tr></thead>
+            <thead><tr><th>Nom</th><th>Identifiant</th><th>Poste</th><th>Rôle</th><th>Actif</th><th>Statut</th><th>Actions</th></tr></thead>
             <tbody id="employesTable"><tr><td colspan="6" style="text-align:center;color:var(--white-dim);">Chargement...</td></tr></tbody>
           </table>
         </div>
@@ -511,6 +511,19 @@
     <div class="btn-row">
       <button class="btn btn-gold" onclick="saveEmploye()"><i class="fa-solid fa-floppy-disk"></i> Enregistrer</button>
       <button class="btn btn-outline" onclick="closeModal('modalEmploye')">Annuler</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal Statut Employé -->
+<div class="modal-overlay" id="modalStatutEmploye">
+  <div class="modal" style="max-width:420px;">
+    <button class="modal-close" onclick="closeModal('modalStatutEmploye')"><i class="fa-solid fa-xmark"></i></button>
+    <div class="modal-title">🔄 STATUT EMPLOYÉ</div>
+    <div style="font-size:12px;color:var(--white-dim);margin-bottom:18px;">Modifier le statut de <strong id="statutEmpNom" style="color:var(--white);"></strong></div>
+    <div id="statutEmpBtns" style="display:grid;grid-template-columns:1fr 1fr;gap:10px;"></div>
+    <div class="btn-row" style="margin-top:16px;">
+      <button class="btn btn-outline" onclick="closeModal('modalStatutEmploye')">Annuler</button>
     </div>
   </div>
 </div>
@@ -1441,6 +1454,7 @@ async function loadEmployes() {
           ? `<button onclick="toggleStatutEmploye(${e.id},${e.actif})" class="badge ${e.actif ? 'badge-green' : 'badge-red'}" style="cursor:pointer;border:none;font-family:inherit;font-size:10px;font-weight:800;letter-spacing:1px;text-transform:uppercase;" title="Cliquer pour ${e.actif ? 'désactiver' : 'activer'}">${e.actif ? '✅ Actif' : '❌ Inactif'}</button>`
           : `<span class="badge ${e.actif ? 'badge-green' : 'badge-red'}">${e.actif ? 'Actif' : 'Inactif'}</span>`
         }</td>
+        <td>${isAdmin() ? `<button onclick="ouvrirStatutEmploye(${e.id},'${e.prenom} ${e.nom}','${e.statut_employe||'disponible'}')" style="background:none;border:none;cursor:pointer;padding:0;" title="Changer le statut">${getStatutBadge(e.statut_employe||'disponible')}</button>` : getStatutBadge(e.statut_employe||'disponible')}</td>
         ${actions}
       </tr>`;
     }).join('');
@@ -1543,6 +1557,61 @@ async function supprimerEmploye(id, nom) {
     const data = await r.json();
     if (data.success) { showToast('✅ Compte supprimé définitivement'); loadEmployes(); }
     else showToast('❌ ' + (data.error || 'Erreur'), false);
+  } catch(e) { showToast('❌ Erreur réseau', false); }
+}
+
+function getStatutBadge(statut) {
+  const cfg = {
+    disponible:   { emoji: '🟢', label: 'Disponible',   color: 'rgba(76,175,125,0.15)',  border: 'rgba(76,175,125,0.4)',  text: '#4caf7d' },
+    en_mission:   { emoji: '🟡', label: 'En mission',   color: 'rgba(201,168,76,0.15)',  border: 'rgba(201,168,76,0.4)',  text: 'var(--gold)' },
+    absent:       { emoji: '🔴', label: 'Absent',       color: 'rgba(226,64,64,0.15)',   border: 'rgba(226,64,64,0.4)',   text: '#ff7b7b' },
+    conge:        { emoji: '🟣', label: 'En congé',     color: 'rgba(167,139,250,0.15)', border: 'rgba(167,139,250,0.4)', text: '#a78bfa' },
+    indisponible: { emoji: '⚫', label: 'Indisponible', color: 'rgba(154,144,128,0.1)',  border: 'rgba(154,144,128,0.3)', text: 'var(--white-dim)' },
+  };
+  const s = cfg[statut] || cfg.disponible;
+  return `<span style="display:inline-flex;align-items:center;gap:5px;padding:4px 10px;border-radius:999px;background:${s.color};border:1px solid ${s.border};color:${s.text};font-size:10px;font-weight:800;letter-spacing:1px;">${s.emoji} ${s.label}</span>`;
+}
+
+let _statutEmpId = null;
+function ouvrirStatutEmploye(id, nom, statutActuel) {
+  _statutEmpId = id;
+  const statuts = [
+    { key: 'disponible',   emoji: '🟢', label: 'Disponible',   color: 'rgba(76,175,125,0.15)',  border: 'rgba(76,175,125,0.4)',  text: '#4caf7d' },
+    { key: 'en_mission',   emoji: '🟡', label: 'En mission',   color: 'rgba(201,168,76,0.15)',  border: 'rgba(201,168,76,0.4)',  text: 'var(--gold)' },
+    { key: 'absent',       emoji: '🔴', label: 'Absent',       color: 'rgba(226,64,64,0.15)',   border: 'rgba(226,64,64,0.4)',   text: '#ff7b7b' },
+    { key: 'conge',        emoji: '🟣', label: 'En congé',     color: 'rgba(167,139,250,0.15)', border: 'rgba(167,139,250,0.4)', text: '#a78bfa' },
+    { key: 'indisponible', emoji: '⚫', label: 'Indisponible', color: 'rgba(154,144,128,0.1)',  border: 'rgba(154,144,128,0.3)', text: 'var(--white-dim)', full: true },
+  ];
+  const btns = statuts.map(s => `
+    <button onclick="setStatutEmploye('${s.key}')" style="
+      padding:12px 16px;border-radius:12px;border:1px solid ${s.border};
+      background:${s.key === statutActuel ? s.color.replace('0.15','0.35') : s.color};
+      color:${s.text};font-weight:${s.key === statutActuel ? '900' : '700'};
+      font-size:13px;cursor:pointer;transition:all 0.2s;
+      ${s.full ? 'grid-column:1/-1;' : ''}
+      outline:${s.key === statutActuel ? `2px solid ${s.text}` : 'none'};
+    ">${s.emoji} ${s.label}</button>
+  `).join('');
+
+  document.getElementById('statutEmpNom').textContent = nom;
+  document.getElementById('statutEmpBtns').innerHTML = btns;
+  openModal('modalStatutEmploye');
+}
+
+async function setStatutEmploye(statut) {
+  if (!_statutEmpId) return;
+  try {
+    const r = await fetch('/api/employes/' + _statutEmpId, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ statut_employe: statut })
+    });
+    const data = await r.json();
+    if (data.success) {
+      showToast('✅ Statut mis à jour', true);
+      closeModal('modalStatutEmploye');
+      loadEmployes();
+    } else showToast('❌ ' + (data.error || 'Erreur'), false);
   } catch(e) { showToast('❌ Erreur réseau', false); }
 }
 
