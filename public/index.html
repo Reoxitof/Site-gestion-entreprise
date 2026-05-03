@@ -2063,195 +2063,65 @@ function exportDossierPNG(id) {
   const d = rhData.find(x => x.id === id);
   if (!d) return;
 
+  const W = 1024, H = 512;
   const canvas = document.createElement('canvas');
-  canvas.width = 800;
-  canvas.height = 1100;
+  canvas.width = W; canvas.height = H;
   const ctx = canvas.getContext('2d');
 
-  const gold = '#c9a84c';
-  const goldLight = '#f0d080';
-  const bg = '#0a0a0f';
-  const white = '#f0ead8';
-  const whiteDim = '#9a9080';
+  // Positions des cases blanches sur visite.png (1024x512)
+  // Haut droite : NOM COMPLET, POSTE, FILIERE, ID EMPLOYE, DATE, STATUT
+  const infoFields = [
+    { value: (d.prenom + ' ' + d.nom).toUpperCase(), x: 432, y: 163 },
+    { value: d.poste || '—',                          x: 432, y: 193 },
+    { value: d.division || '—',                       x: 432, y: 223 },
+    { value: d.id_employe || '—',                     x: 432, y: 253 },
+    { value: d.created_at ? new Date(d.created_at).toLocaleDateString('fr-FR') : '—', x: 432, y: 283 },
+    { value: d.role === 'interimaire' ? 'Intérimaire' : d.role === 'admin' ? 'Admin' : d.role === 'direction' ? 'Direction' : 'Employé', x: 432, y: 313 },
+  ];
+  // Bas gauche : TELEPHONE EMPLOYE, COMPTE
+  const contactFields = [
+    { value: d.perso || '—',  x: 148, y: 400 },
+    { value: d.compte || '—', x: 148, y: 450 },
+  ];
+  // Zone photo
+  const photoX = 40, photoY = 28, photoW = 158, photoH = 272;
 
-  // Background
-  ctx.fillStyle = bg;
-  ctx.fillRect(0, 0, 800, 1100);
-
-  // Gold border frame
-  ctx.strokeStyle = gold;
-  ctx.lineWidth = 3;
-  ctx.strokeRect(20, 20, 760, 1060);
-  ctx.lineWidth = 1;
-  ctx.strokeStyle = 'rgba(201,168,76,0.3)';
-  ctx.strokeRect(28, 28, 744, 1044);
-
-  // Corner decorations
-  const corners = [[20,20],[780,20],[20,1080],[780,1080]];
-  corners.forEach(([x,y]) => {
-    ctx.fillStyle = gold;
-    ctx.fillRect(x-4, y-4, 8, 8);
-  });
-
-  // Header background
-  ctx.fillStyle = 'rgba(201,168,76,0.08)';
-  ctx.fillRect(20, 20, 760, 120);
-
-  // ELITE CORP. title
-  ctx.font = 'bold 52px Anton, sans-serif';
-  ctx.fillStyle = gold;
-  ctx.textAlign = 'center';
-  ctx.fillText('ELITE CORP.', 400, 90);
-
-  // Subtitle
-  const isInterimaire = d.role === 'interimaire';
-  ctx.font = 'bold 14px Inter, sans-serif';
-  ctx.fillStyle = whiteDim;
-  ctx.letterSpacing = '4px';
-  ctx.fillText(isInterimaire ? 'CONTRAT INTÉRIMAIRE' : "CONTRAT D'EMPLOYÉ", 400, 118);
-
-  // Gold separator
-  ctx.strokeStyle = gold;
-  ctx.lineWidth = 2;
-  ctx.beginPath();
-  ctx.moveTo(60, 148);
-  ctx.lineTo(740, 148);
-  ctx.stroke();
-
-  // Thin separator
-  ctx.strokeStyle = 'rgba(201,168,76,0.3)';
-  ctx.lineWidth = 1;
-  ctx.beginPath();
-  ctx.moveTo(60, 153);
-  ctx.lineTo(740, 153);
-  ctx.stroke();
-
-  function drawField(label, value, x, y, maxWidth) {
-    ctx.font = 'bold 9px Inter, sans-serif';
-    ctx.fillStyle = whiteDim;
+  function drawText(text, x, y, maxW) {
+    ctx.font = 'bold 13px Inter, Arial, sans-serif';
+    ctx.fillStyle = '#1a1209';
     ctx.textAlign = 'left';
-    ctx.fillText(label.toUpperCase(), x, y);
-    ctx.font = 'bold 14px Inter, sans-serif';
-    ctx.fillStyle = white;
-    ctx.fillText(value || '—', x, y + 18);
+    ctx.textBaseline = 'middle';
+    let t = String(text || '—');
+    while (ctx.measureText(t).width > (maxW || 190) - 6 && t.length > 1) t = t.slice(0, -1);
+    ctx.fillText(t, x + 4, y);
   }
 
-  const photoX = 60, photoY = 170, photoW = 200, photoH = 250;
-
-  // Photo placeholder
-  ctx.fillStyle = 'rgba(201,168,76,0.08)';
-  ctx.fillRect(photoX, photoY, photoW, photoH);
-  ctx.strokeStyle = 'rgba(201,168,76,0.4)';
-  ctx.lineWidth = 1;
-  ctx.strokeRect(photoX, photoY, photoW, photoH);
-
-  // Info fields on the right
-  const infoX = 290;
-  let infoY = 185;
-  const lineH = 52;
-
-  drawField('Nom complet', d.prenom + ' ' + d.nom, infoX, infoY, 450);
-  infoY += lineH;
-  drawField('Division', d.division || d.poste || '—', infoX, infoY, 450);
-  infoY += lineH;
-  drawField('ID Employé', d.id_employe || '—', infoX, infoY, 450);
-  infoY += lineH;
-  drawField('Perso (personnage)', d.perso || '—', infoX, infoY, 450);
-  infoY += lineH;
-  drawField('Compte', d.compte || '—', infoX, infoY, 450);
-
-  // Role badge
-  const roleLabels = { admin:'ADMIN', direction:'DIRECTION', employe:'EMPLOYÉ', interimaire:'INTÉRIMAIRE' };
-  const roleColors = { admin:'#c9a84c', direction:'#3fa7d6', employe:'#4caf7d', interimaire:'#a78bfa' };
-  const roleLabel = roleLabels[d.role] || d.role?.toUpperCase() || '—';
-  const roleColor = roleColors[d.role] || whiteDim;
-  ctx.fillStyle = roleColor + '22';
-  ctx.strokeStyle = roleColor + '88';
-  ctx.lineWidth = 1;
-  const badgeW = 120, badgeH = 26, badgeX = infoX, badgeY = infoY + lineH;
-  ctx.beginPath();
-  ctx.roundRect(badgeX, badgeY, badgeW, badgeH, 13);
-  ctx.fill();
-  ctx.stroke();
-  ctx.font = 'bold 11px Inter, sans-serif';
-  ctx.fillStyle = roleColor;
-  ctx.textAlign = 'center';
-  ctx.fillText(roleLabel, badgeX + badgeW/2, badgeY + 17);
-
-  // Separator after photo section
-  const sepY = photoY + photoH + 40;
-  ctx.strokeStyle = 'rgba(201,168,76,0.3)';
-  ctx.lineWidth = 1;
-  ctx.beginPath();
-  ctx.moveTo(60, sepY);
-  ctx.lineTo(740, sepY);
-  ctx.stroke();
-
-  // Signature section
-  const sigY = sepY + 40;
-  ctx.font = 'bold 11px Inter, sans-serif';
-  ctx.fillStyle = whiteDim;
-  ctx.textAlign = 'left';
-  ctx.fillText('SIGNATURE EN JEU :', 60, sigY);
-  ctx.strokeStyle = 'rgba(201,168,76,0.5)';
-  ctx.lineWidth = 1;
-  ctx.setLineDash([6, 4]);
-  ctx.beginPath();
-  ctx.moveTo(60, sigY + 50);
-  ctx.lineTo(400, sigY + 50);
-  ctx.stroke();
-  ctx.setLineDash([]);
-
-  // Date
-  ctx.font = 'bold 10px Inter, sans-serif';
-  ctx.fillStyle = whiteDim;
-  ctx.textAlign = 'right';
-  ctx.fillText('Date : ' + new Date().toLocaleDateString('fr-FR'), 740, sigY + 50);
-
-  // Footer separator
-  ctx.strokeStyle = gold;
-  ctx.lineWidth = 1;
-  ctx.beginPath();
-  ctx.moveTo(60, 1040);
-  ctx.lineTo(740, 1040);
-  ctx.stroke();
-
-  // Footer text
-  ctx.font = 'bold 11px Inter, sans-serif';
-  ctx.fillStyle = gold;
-  ctx.textAlign = 'center';
-  ctx.fillText('Elite Corp. — Document officiel', 400, 1065);
-
-  // Draw photo if available
-  if (d.photo_url) {
-    const img = new Image();
-    img.crossOrigin = 'anonymous';
-    img.onload = () => {
+  function renderAll(photoImg) {
+    ctx.drawImage(bgImg, 0, 0, W, H);
+    if (photoImg) {
       ctx.save();
-      ctx.beginPath();
-      ctx.rect(photoX, photoY, photoW, photoH);
-      ctx.clip();
-      ctx.drawImage(img, photoX, photoY, photoW, photoH);
+      ctx.beginPath(); ctx.rect(photoX, photoY, photoW, photoH); ctx.clip();
+      const sc = Math.max(photoW / photoImg.width, photoH / photoImg.height);
+      const sw = photoImg.width * sc, sh = photoImg.height * sc;
+      ctx.drawImage(photoImg, photoX + (photoW-sw)/2, photoY + (photoH-sh)/2, sw, sh);
       ctx.restore();
-      downloadCanvas(canvas, d.prenom + '_' + d.nom);
-    };
-    img.onerror = () => {
-      // Draw avatar icon if photo fails
-      ctx.font = '80px sans-serif';
-      ctx.fillStyle = 'rgba(201,168,76,0.3)';
-      ctx.textAlign = 'center';
-      ctx.fillText('👤', photoX + photoW/2, photoY + photoH/2 + 30);
-      downloadCanvas(canvas, d.prenom + '_' + d.nom);
-    };
-    img.src = d.photo_url;
-  } else {
-    // Avatar placeholder
-    ctx.font = '80px sans-serif';
-    ctx.fillStyle = 'rgba(201,168,76,0.3)';
-    ctx.textAlign = 'center';
-    ctx.fillText('👤', photoX + photoW/2, photoY + photoH/2 + 30);
+    }
+    infoFields.forEach(f => drawText(f.value, f.x, f.y, 195));
+    contactFields.forEach(f => drawText(f.value, f.x, f.y, 130));
     downloadCanvas(canvas, d.prenom + '_' + d.nom);
   }
+
+  const bgImg = new Image();
+  bgImg.onload = () => {
+    if (d.photo_url) {
+      const pi = new Image(); pi.crossOrigin = 'anonymous';
+      pi.onload = () => renderAll(pi);
+      pi.onerror = () => renderAll(null);
+      pi.src = d.photo_url;
+    } else { renderAll(null); }
+  };
+  bgImg.onerror = () => { showToast('❌ visite.png introuvable', false); };
+  bgImg.src = '/visite.png';
 }
 
 function downloadCanvas(canvas, name) {
