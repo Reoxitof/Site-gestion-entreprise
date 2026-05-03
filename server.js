@@ -205,6 +205,15 @@ async function initDB() {
       details TEXT DEFAULT '',
       created_at TIMESTAMP DEFAULT NOW()
     )`);
+
+    // Table logs admin
+    await getPool().query(`CREATE TABLE IF NOT EXISTS ec_logs (
+      id SERIAL PRIMARY KEY,
+      user_id INTEGER REFERENCES ec_users(id),
+      action TEXT NOT NULL,
+      details TEXT DEFAULT '',
+      created_at TIMESTAMP DEFAULT NOW()
+    )`);
     // Insérer les tarifs par défaut si la table est vide
     const tc = await getPool().query('SELECT COUNT(*) FROM ec_tarifs');
     if (parseInt(tc.rows[0].count) === 0) {
@@ -370,6 +379,28 @@ app.post('/api/employes', admin, async (req, res) => {
 app.put('/api/employes/:id', admin, async (req, res) => {
   try {
     const { nom, prenom, poste, role, actif, statut_employe } = req.body;
+
+    // Récupérer l'ancien statut pour le log
+    let oldStatut = null;
+    if (statut_employe) {
+      const old = await getPool().query('SELECT statut_employe, nom, prenom FROM ec_users WHERE id=$1', [req.params.id]);
+      if (old.rows[0]) {
+        oldStatut = old.rows[0].statut_employe;
+        if (oldStatut !== statut_employe) {
+          const nom_ = `${old.rows[0].prenom} ${old.rows[0].nom}`;
+          await logStatutChange(req.session.user.id, req.params.id, nom_, oldStatut, statut_employe);
+          broadcastEvent('employe_statut', { id: parseInt(req.params.id), statut_employe });
+        }
+      }
+    }
+    if (actif !== undefined) {
+      const old = await getPool().query('SELECT nom, prenom FROM ec_users WHERE id=$1', [req.params.id]);
+      if (old.rows[0]) {
+        await logAdminAction(req.session.user.id, 'toggle_actif', `${old.rows[0].prenom} ${old.rows[0].nom} → actif=${actif}`);
+        broadcastEvent('employe_actif', { id: parseInt(req.params.id), actif });
+      }
+    }
+
     await getPool().query(
       `UPDATE ec_users SET
         nom = COALESCE($1, nom),
@@ -638,6 +669,44 @@ app.put('/api/commandes/:id', auth, notInterimaire, async (req, res) => {
         );
       }
     } catch(histErr) { console.error('[HISTORIQUE]', histErr.message); }
+
+    // Broadcast SSE
+    if (statut) {
+      broadcastEvent('commande_update', { id: req.params.id, statut });
+    }
+
+    // Fiches de paye auto quand terminé
+    if (statut === 'termine') {
+      try {
+        const cmdFull = await getPool().query('SELECT * FROM ec_commandes WHERE id=$1', [req.params.id]);
+        const cmd = cmdFull.rows[0];
+        if (cmd && cmd.prix_final > 0) {
+          const partage = JSON.parse(cmd.paiement_partage || '[]');
+          if (partage.length > 0 && cmd.date_evenement) {
+            const d = new Date(cmd.date_evenement);
+            const day = d.getDay();
+            const diffLundi = day === 0 ? -6 : 1 - day;
+            const lundi = new Date(d); lundi.setDate(d.getDate() + diffLundi); lundi.setHours(0,0,0,0);
+            const dimanche = new Date(lundi); dimanche.setDate(lundi.getDate() + 6);
+            const lundiStr = lundi.toISOString().split('T')[0];
+            const dimancheStr = dimanche.toISOString().split('T')[0];
+            for (const p of partage) {
+              if (!p.user_id) continue;
+              await getPool().query(
+                `INSERT INTO ec_fiches_paye (user_id, semaine_debut, semaine_fin, montant_total, statut, details)
+                 VALUES ($1,$2,$3,$4,'en_attente',$5)
+                 ON CONFLICT (user_id, semaine_debut) DO UPDATE
+                 SET montant_total = ec_fiches_paye.montant_total + EXCLUDED.montant_total,
+                     details = EXCLUDED.details`,
+                [p.user_id, lundiStr, dimancheStr, p.montant,
+                 JSON.stringify([{ commande_id: cmd.id, client_nom: cmd.client_nom, type_prestation: cmd.type_prestation, montant: p.montant }])]
+              );
+            }
+            console.log(`[FICHES AUTO] Générées pour commande #${cmd.id}`);
+          }
+        }
+      } catch(ficheErr) { console.error('[FICHES AUTO]', ficheErr.message); }
+    }
 
     res.json({ success: true });
   } catch(e) { res.status(500).json({ error: e.message }); }
@@ -1053,15 +1122,85 @@ app.delete('/api/annonces/:id', admin, async (req, res) => {
 app.get('/api/stats', auth, async (req, res) => {
   try {
     const today = new Date().toISOString().split('T')[0];
-    const [a, b, c, d] = await Promise.all([
+    const [a, b, c, d, e] = await Promise.all([
       getPool().query('SELECT COUNT(*) FROM ec_users WHERE actif=true'),
       getPool().query("SELECT COUNT(*) FROM ec_presences WHERE date=$1 AND statut='present'", [today]),
       getPool().query('SELECT COUNT(*) FROM ec_planning WHERE date_debut >= NOW()'),
-      getPool().query('SELECT COUNT(*) FROM ec_annonces')
+      getPool().query('SELECT COUNT(*) FROM ec_annonces'),
+      getPool().query("SELECT COUNT(*) FILTER (WHERE statut='confirme') as confirme, COUNT(*) FILTER (WHERE statut='en_cours') as en_cours, COUNT(*) FILTER (WHERE statut='devis') as devis FROM ec_commandes")
     ]);
-    res.json({ employes: +a.rows[0].count, presents_aujourd_hui: +b.rows[0].count, evenements_a_venir: +c.rows[0].count, annonces: +d.rows[0].count });
+    res.json({
+      employes: +a.rows[0].count,
+      presents_aujourd_hui: +b.rows[0].count,
+      evenements_a_venir: +c.rows[0].count,
+      annonces: +d.rows[0].count,
+      commandes_confirme: +e.rows[0].confirme,
+      commandes_en_cours: +e.rows[0].en_cours,
+      commandes_devis: +e.rows[0].devis
+    });
+  } catch(err) { res.status(500).json({ error: err.message }); }
+});
+
+/* ═══ LOGS ADMIN ═══ */
+app.get('/api/logs', admin, async (req, res) => {
+  try {
+    const rows = (await getPool().query(
+      `SELECT l.*, u.nom, u.prenom FROM ec_logs l
+       LEFT JOIN ec_users u ON l.user_id = u.id
+       ORDER BY l.created_at DESC LIMIT 100`
+    )).rows;
+    res.json(rows);
   } catch(e) { res.status(500).json({ error: e.message }); }
 });
+
+/* ═══ NOTIFICATIONS SSE (temps réel) ═══ */
+const sseClients = new Map(); // sessionId → res
+
+app.get('/api/events', auth, (req, res) => {
+  res.setHeader('Content-Type', 'text/event-stream');
+  res.setHeader('Cache-Control', 'no-cache');
+  res.setHeader('Connection', 'keep-alive');
+  res.flushHeaders();
+
+  const clientId = req.session.user.id + '_' + Date.now();
+  sseClients.set(clientId, res);
+
+  // Ping toutes les 25s pour garder la connexion
+  const ping = setInterval(() => {
+    try { res.write(': ping\n\n'); } catch(e) { clearInterval(ping); }
+  }, 25000);
+
+  req.on('close', () => {
+    clearInterval(ping);
+    sseClients.delete(clientId);
+  });
+});
+
+function broadcastEvent(type, data) {
+  const msg = `data: ${JSON.stringify({ type, data, ts: Date.now() })}\n\n`;
+  for (const [, res] of sseClients) {
+    try { res.write(msg); } catch(e) {}
+  }
+}
+
+/* ═══ HISTORIQUE STATUTS EMPLOYÉ ═══ */
+async function logStatutChange(userId, targetId, targetNom, oldStatut, newStatut) {
+  try {
+    await getPool().query(
+      `INSERT INTO ec_logs (user_id, action, details, created_at) VALUES ($1,$2,$3,NOW())`,
+      [userId, 'statut_employe', `${targetNom} : ${oldStatut} → ${newStatut}`]
+    );
+  } catch(e) {}
+}
+
+async function logAdminAction(userId, action, details) {
+  try {
+    await getPool().query(
+      `INSERT INTO ec_logs (user_id, action, details, created_at) VALUES ($1,$2,$3,NOW())`,
+      [userId, action, details]
+    );
+  } catch(e) {}
+}
 
 /* ═══ PAGES ═══ */
 app.get('/login', (req, res) => res.sendFile(path.join(__dirname, 'public', 'login.html')));

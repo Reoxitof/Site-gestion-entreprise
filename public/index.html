@@ -224,6 +224,8 @@
         <div class="card-title"><i class="fa-solid fa-calendar-days"></i> Prochains événements</div>
         <div id="dashPlanning"><div style="color:var(--white-dim);font-size:12px;">Chargement...</div></div>
       </div>
+      <!-- Compteurs commandes live -->
+      <div id="dashCmdBar"></div>
     </div>
 
 
@@ -249,7 +251,15 @@
 
     <!-- ═══ TAB: EMPLOYÉS ═══ -->
     <div class="tab-content" id="tab-employes">
-      <div style="display:flex;justify-content:flex-end;margin-bottom:20px;">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;flex-wrap:wrap;gap:10px;">
+        <select id="filtreStatutEmploye" class="input-field" style="width:200px;" onchange="loadEmployes()">
+          <option value="">Tous les statuts</option>
+          <option value="disponible">🟢 Disponible</option>
+          <option value="en_mission">🟡 En mission</option>
+          <option value="absent">🔴 Absent</option>
+          <option value="conge">🟣 En congé</option>
+          <option value="indisponible">⚫ Indisponible</option>
+        </select>
         <button class="btn btn-gold" onclick="openModal('modalEmploye')"><i class="fa-solid fa-user-plus"></i> Ajouter un employé</button>
       </div>
       <div class="card">
@@ -1149,6 +1159,26 @@ async function loadDashboard() {
     document.getElementById('statEvenements').textContent = stats.evenements_a_venir || 0;
     document.getElementById('statAnnonces').textContent = stats.annonces || 0;
 
+    // Compteurs commandes live sur le dashboard
+    const cmdBar = document.getElementById('dashCmdBar');
+    if (cmdBar) {
+      cmdBar.innerHTML = `
+        <div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:16px;">
+          <div style="background:rgba(63,167,214,0.1);border:1px solid rgba(63,167,214,0.3);border-radius:8px;padding:8px 16px;display:flex;align-items:center;gap:8px;">
+            <span style="font-family:'Anton',sans-serif;font-size:20px;color:#3fa7d6;">${stats.commandes_devis||0}</span>
+            <span style="font-size:10px;font-weight:800;letter-spacing:1px;color:#3fa7d6;text-transform:uppercase;">Devis</span>
+          </div>
+          <div style="background:rgba(201,168,76,0.1);border:1px solid rgba(201,168,76,0.3);border-radius:8px;padding:8px 16px;display:flex;align-items:center;gap:8px;">
+            <span style="font-family:'Anton',sans-serif;font-size:20px;color:var(--gold);">${stats.commandes_confirme||0}</span>
+            <span style="font-size:10px;font-weight:800;letter-spacing:1px;color:var(--gold);text-transform:uppercase;">Confirmées</span>
+          </div>
+          <div style="background:rgba(240,144,48,0.1);border:1px solid rgba(240,144,48,0.3);border-radius:8px;padding:8px 16px;display:flex;align-items:center;gap:8px;">
+            <span style="font-family:'Anton',sans-serif;font-size:20px;color:#f09030;">${stats.commandes_en_cours||0}</span>
+            <span style="font-size:10px;font-weight:800;letter-spacing:1px;color:#f09030;text-transform:uppercase;">En cours</span>
+          </div>
+        </div>`;
+    }
+
     // Annonces
     const da = document.getElementById('dashAnnonces');
     if (!annonces.length) { da.innerHTML = '<div style="color:var(--white-dim);font-size:12px;padding:8px 0;">Aucune annonce.</div>'; }
@@ -1420,10 +1450,12 @@ async function deletePlanning(id) {
 /* ── EMPLOYÉS ── */
 async function loadEmployes() {
   try {
+    const filtre = document.getElementById('filtreStatutEmploye')?.value || '';
     const data = await fetch('/api/employes').then(r => r.json());
+    const filtered = filtre ? data.filter(e => (e.statut_employe || 'disponible') === filtre) : data;
     const tbody = document.getElementById('employesTable');
-    if (!data.length) { tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;color:var(--white-dim);">Aucun employé.</td></tr>'; return; }
-    tbody.innerHTML = data.map(e => {
+    if (!filtered.length) { tbody.innerHTML = `<tr><td colspan="7" style="text-align:center;color:var(--white-dim);">${filtre ? 'Aucun employé avec ce statut.' : 'Aucun employé.'}</td></tr>`; return; }
+    tbody.innerHTML = filtered.map(e => {
       const roleBadge = e.role === 'admin' ? 'badge-gold' : (e.role === 'direction' ? 'badge-blue' : 'badge-dim');
       const roleLabel = e.role === 'admin' ? 'Admin' : (e.role === 'direction' ? 'Direction' : 'Employé');
       // Identifiant visible uniquement pour admin/direction
@@ -2395,7 +2427,42 @@ window.openModal = function(id) {
   }
 };
 
-window.addEventListener('load', () => loadTarifs());
+// ── SSE TEMPS RÉEL ──
+function initSSE() {
+  try {
+    const es = new EventSource('/api/events');
+    es.onmessage = (e) => {
+      try {
+        const { type, data } = JSON.parse(e.data);
+        if (type === 'commande_update') {
+          showToast(`📋 Commande #${data.id} → ${data.statut}`);
+          if (document.getElementById('tab-commandes')?.classList.contains('active')) loadCommandes();
+          if (document.getElementById('tab-dashboard')?.classList.contains('active')) loadDashboard();
+        } else if (type === 'employe_statut') {
+          if (document.getElementById('tab-employes')?.classList.contains('active')) loadEmployes();
+        } else if (type === 'employe_actif') {
+          if (document.getElementById('tab-employes')?.classList.contains('active')) loadEmployes();
+        }
+      } catch(err) {}
+    };
+    es.onerror = () => { setTimeout(initSSE, 5000); };
+  } catch(e) {}
+}
+
+// ── SESSION TIMEOUT (30 min d'inactivité) ──
+let _lastActivity = Date.now();
+['click','keydown','mousemove','touchstart'].forEach(ev =>
+  document.addEventListener(ev, () => { _lastActivity = Date.now(); }, { passive: true })
+);
+setInterval(() => {
+  if (Date.now() - _lastActivity > 30 * 60 * 1000) {
+    fetch('/api/logout', { method: 'POST' }).finally(() => {
+      window.location.href = '/login';
+    });
+  }
+}, 60 * 1000);
+
+window.addEventListener('load', () => { loadTarifs(); initSSE(); });
 
 
 
