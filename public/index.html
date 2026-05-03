@@ -3531,34 +3531,32 @@ function genererContratPNG() {
     ctx.font = 'bold 14px Arial';
     ctx.fillText('✓', 150, 288);
 
-    // INFORMATIONS EMPLOYÉ
-    // NOM COMPLET ← nom
-    txt(nom,         228, 338, 18, '#ffffff', true);
-    // POSTE / FONCTION ← mission
-    txt(mission,     228, 358, 18, '#ffffff', true);
-    // FILIÈRE / DÉPARTEMENT ← division
-    txt(division,    228, 378, 18, '#ffffff', false);
-    // ID EMPLOYÉ
-    txt(idEmploye,   228, 398, 18, '#ffffff', false);
-    // DATE D'EMBAUCHE ← date
-    txt(dateAffiche, 228, 418, 18, '#ffffff', false);
+    // INFORMATIONS EMPLOYÉ — coordonnées calibrées depuis Paint (image 1536×1024)
+    // NOM COMPLET field top ≈ y:413 → texte à y:430
+    txt(nom,         238, 430, 18, '#ffffff', true);
+    // POSTE / FONCTION ← mission  (+38px)
+    txt(mission,     238, 468, 18, '#ffffff', true);
+    // FILIÈRE / DÉPARTEMENT ← division  (+38px)
+    txt(division,    238, 506, 18, '#ffffff', false);
+    // ID EMPLOYÉ  (+38px)
+    txt(idEmploye,   238, 544, 18, '#ffffff', false);
+    // DATE D'EMBAUCHE ← date  (+38px)
+    txt(dateAffiche, 238, 582, 18, '#ffffff', false);
 
     // CONDITIONS DE TRAVAIL — INTÉRIMAIRE
-    // HORAIRES DU CONTRAT ← heureDebut - heureFin
-    txt(horaires,    218, 478, 16, '#ffffff', true);
-    // DURÉE / MISSION ← date
-    txt(dateAffiche, 218, 516, 15, '#c9a84c', false);
-    // RÉMUNÉRATION
-    txt(remuStr,     218, 554, 16, '#c9a84c', true);
+    txt(horaires,    222, 650, 16, '#ffffff', true);
+    txt(dateAffiche, 222, 700, 15, '#c9a84c', false);
+    txt(remuStr,     222, 748, 16, '#c9a84c', true);
 
     // ══ COLONNE DROITE (768 → 1536) ══
 
-    // INFORMATIONS COMPLÉMENTAIRES ← description (zone ~x:820, y:345, largeur:310)
+    // INFORMATIONS COMPLÉMENTAIRES ← description
+    // Zone blanche droite : x≈820, y≈345, largeur≈310, hauteur≈100
     if (description) {
       txtWrap(description, 820, 358, 310, 15, '#f0ead8');
     }
 
-    // DATE signatures (bas)
+    // DATE signatures
     txt(dateAffiche, 820, 502, 15, '#ffffff', false);
     txt(dateAffiche, 1100, 502, 15, '#ffffff', false);
 
