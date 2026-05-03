@@ -1437,7 +1437,10 @@ async function loadEmployes() {
         ${identifiantCell}
         ${posteCell}
         <td><span class="badge ${roleBadge}">${roleLabel}</span></td>
-        <td><span class="badge ${e.actif ? 'badge-green' : 'badge-red'}">${e.actif ? 'Actif' : 'Inactif'}</span></td>
+        <td>${isAdmin() && e.id !== currentUser?.id
+          ? `<button onclick="toggleStatutEmploye(${e.id},${e.actif})" class="badge ${e.actif ? 'badge-green' : 'badge-red'}" style="cursor:pointer;border:none;font-family:inherit;font-size:10px;font-weight:800;letter-spacing:1px;text-transform:uppercase;" title="Cliquer pour ${e.actif ? 'désactiver' : 'activer'}">${e.actif ? '✅ Actif' : '❌ Inactif'}</button>`
+          : `<span class="badge ${e.actif ? 'badge-green' : 'badge-red'}">${e.actif ? 'Actif' : 'Inactif'}</span>`
+        }</td>
         ${actions}
       </tr>`;
     }).join('');
@@ -1540,6 +1543,24 @@ async function supprimerEmploye(id, nom) {
     const data = await r.json();
     if (data.success) { showToast('✅ Compte supprimé définitivement'); loadEmployes(); }
     else showToast('❌ ' + (data.error || 'Erreur'), false);
+  } catch(e) { showToast('❌ Erreur réseau', false); }
+}
+
+async function toggleStatutEmploye(id, actifActuel) {
+  const newStatut = !actifActuel;
+  const label = newStatut ? 'activer' : 'désactiver';
+  if (!confirm(`${newStatut ? '✅' : '❌'} Voulez-vous ${label} cet employé ?`)) return;
+  try {
+    const r = await fetch('/api/employes/' + id, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ actif: newStatut })
+    });
+    const data = await r.json();
+    if (data.success) {
+      showToast(newStatut ? '✅ Employé activé' : '✅ Employé désactivé', true);
+      loadEmployes();
+    } else showToast('❌ ' + (data.error || 'Erreur'), false);
   } catch(e) { showToast('❌ Erreur réseau', false); }
 }
 
