@@ -2065,11 +2065,13 @@ async function deleteDossier(id, role) {
 }
 
 function openCreateInterimaire() {
-  ['interimairePrenom','interimaireNom','interimaireUsername','interimairePassword',
-   'interimairePoste','interimairePerso','interimaireCompte','interimaireIdEmploye'].forEach(id => {
+  ['interimairePrenom','interimaireNom',
+   'interimairePerso','interimaireCompte','interimaireIdEmploye'].forEach(id => {
     const el = document.getElementById(id);
     if (el) el.value = '';
   });
+  const poste = document.getElementById('interimairePoste');
+  if (poste) poste.value = '';
   document.getElementById('interimaireDivision').value = '';
   document.getElementById('interimairePhoto').value = '';
   document.getElementById('interimairePreview').style.display = 'none';
@@ -2079,19 +2081,19 @@ function openCreateInterimaire() {
 async function submitCreateInterimaire() {
   const prenom = document.getElementById('interimairePrenom').value.trim();
   const nom = document.getElementById('interimaireNom').value.trim();
-  const username = document.getElementById('interimaireUsername').value.trim();
-  const password = document.getElementById('interimairePassword').value;
-  if (!prenom || !nom || !username || !password) { showToast('❌ Champs obligatoires manquants', false); return; }
+  const id_employe = document.getElementById('interimaireIdEmploye').value.trim();
+  const division = document.getElementById('interimaireDivision').value;
+  if (!prenom || !nom || !id_employe || !division) {
+    showToast('❌ Prénom, Nom, ID Employé et Division sont obligatoires', false); return;
+  }
   const fd = new FormData();
   fd.append('prenom', prenom);
   fd.append('nom', nom);
-  fd.append('username', username);
-  fd.append('password', password);
   fd.append('poste', document.getElementById('interimairePoste').value);
   fd.append('perso', document.getElementById('interimairePerso').value);
   fd.append('compte', document.getElementById('interimaireCompte').value);
-  fd.append('id_employe', document.getElementById('interimaireIdEmploye').value);
-  fd.append('division', document.getElementById('interimaireDivision').value);
+  fd.append('id_employe', id_employe);
+  fd.append('division', division);
   const photo = document.getElementById('interimairePhoto').files[0];
   if (photo) fd.append('photo', photo);
   try {
