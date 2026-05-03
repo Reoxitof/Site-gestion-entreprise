@@ -1029,7 +1029,10 @@
 <div class="modal-overlay" id="modalCommandeDetail">
   <div class="modal" style="max-width:560px;">
     <button class="modal-close" onclick="closeModal('modalCommandeDetail')"><i class="fa-solid fa-xmark"></i></button>
-    <div class="modal-title" id="cmdDetailTitle">COMMANDE</div>
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px;">
+      <div class="modal-title" id="cmdDetailTitle" style="margin-bottom:0;">COMMANDE</div>
+      <button class="btn btn-gold" style="font-size:11px;padding:7px 14px;" onclick="exportDevisPNG(window._currentCmdId)"><i class="fa-solid fa-file-image"></i> Devis PNG</button>
+    </div>
     <div id="cmdDetailContent"></div>
   </div>
 </div>
@@ -2566,6 +2569,7 @@ async function openCmdDetail(id) {
       ${isAdmin() && c.statut === 'confirme' ? renderAssignBlock(c) : ''}
       ${isAdmin() ? renderStatutButtons(c) : ''}`;
     openModal('modalCommandeDetail');
+    window._currentCmdId = id;
 
     // Charger et afficher l'historique
     try {
@@ -2966,6 +2970,129 @@ setInterval(() => {
     });
   }
 }, 60 * 1000);
+
+// ── EXPORT DEVIS PNG (format portrait téléphone) ──
+function exportDevisPNG(id) {
+  const c = _cmdDetailData.find(x => x.id === id);
+  if (!c) return;
+
+  const prixFinal = parseFloat(c.prix_final) || parseFloat(c.budget_estime) || 0;
+  const budgetAffiche = prixFinal > 0 ? prixFinal.toLocaleString('fr-FR') + ' $' : c.budget || 'À définir';
+  const dateEv = c.date_evenement ? fmtDate(c.date_evenement, {weekday:'long',day:'numeric',month:'long',year:'numeric'}) : 'À confirmer';
+  const statutLabel = { devis:'📋 Devis', confirme:'✅ Confirmé', en_cours:'⚙️ En cours', termine:'🏁 Terminé' }[c.statut] || c.statut;
+  const prioLabel = { urgente:'🔴 Urgente', haute:'🟠 Haute', normale:'🟡 Normale', basse:'⚪ Basse' }[c.priorite] || c.priorite;
+
+  // Prestations
+  let prestHtml = '';
+  try {
+    const ids = JSON.parse(c.prestations_ids || '[]');
+    if (ids.length && allTarifs.length) {
+      const pts = allTarifs.filter(t => ids.includes(t.code));
+      prestHtml = pts.map(t => `
+        <div style="display:flex;justify-content:space-between;align-items:center;padding:10px 0;border-bottom:1px solid rgba(201,168,76,0.15);">
+          <span style="font-size:14px;color:#f0ead8;">${t.emoji} ${t.label}</span>
+          <span style="font-size:14px;font-weight:800;color:#c9a84c;">${t.prix > 0 ? t.prix.toLocaleString('fr-FR') + ' $' : 'Sur devis'}</span>
+        </div>`).join('');
+    }
+  } catch(e) {}
+
+  const card = document.createElement('div');
+  card.style.cssText = 'position:fixed;left:-9999px;top:0;width:430px;font-family:Inter,Arial,sans-serif;background:#0a0a0f;';
+  card.innerHTML = `
+    <div style="width:430px;background:#0a0a0f;padding:32px 28px;box-sizing:border-box;">
+
+      <!-- Header -->
+      <div style="text-align:center;margin-bottom:28px;padding-bottom:20px;border-bottom:2px solid #c9a84c;">
+        <div style="font-family:Anton,Arial;font-size:32px;letter-spacing:6px;color:#c9a84c;margin-bottom:4px;">ELITE CORP.</div>
+        <div style="font-size:10px;letter-spacing:3px;color:#9a9080;text-transform:uppercase;">Event Planning & Services — Blaine County</div>
+        <div style="margin-top:16px;font-family:Anton,Arial;font-size:18px;letter-spacing:3px;color:#f0ead8;">DEVIS OFFICIEL</div>
+        <div style="font-size:11px;color:#9a9080;margin-top:4px;">Réf. CMD#${c.id} — ${new Date().toLocaleDateString('fr-FR')}</div>
+      </div>
+
+      <!-- Client -->
+      <div style="background:rgba(201,168,76,0.06);border:1px solid rgba(201,168,76,0.25);border-radius:10px;padding:16px;margin-bottom:20px;">
+        <div style="font-size:9px;font-weight:800;letter-spacing:2px;color:#9a9080;text-transform:uppercase;margin-bottom:10px;">Client</div>
+        <div style="font-size:18px;font-weight:900;color:#f0ead8;margin-bottom:6px;">${c.client_nom}</div>
+        ${c.client_contact ? `<div style="font-size:13px;color:#9a9080;">📞 ${c.client_contact}</div>` : ''}
+      </div>
+
+      <!-- Infos événement -->
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:20px;">
+        <div style="background:rgba(255,255,255,0.03);border:1px solid rgba(201,168,76,0.15);border-radius:8px;padding:12px;">
+          <div style="font-size:9px;color:#9a9080;letter-spacing:1px;text-transform:uppercase;margin-bottom:4px;">Division</div>
+          <div style="font-size:13px;font-weight:700;color:#f0ead8;">${c.division || '—'}</div>
+        </div>
+        <div style="background:rgba(255,255,255,0.03);border:1px solid rgba(201,168,76,0.15);border-radius:8px;padding:12px;">
+          <div style="font-size:9px;color:#9a9080;letter-spacing:1px;text-transform:uppercase;margin-bottom:4px;">Priorité</div>
+          <div style="font-size:13px;font-weight:700;color:#f0ead8;">${prioLabel}</div>
+        </div>
+        <div style="background:rgba(255,255,255,0.03);border:1px solid rgba(201,168,76,0.15);border-radius:8px;padding:12px;">
+          <div style="font-size:9px;color:#9a9080;letter-spacing:1px;text-transform:uppercase;margin-bottom:4px;">Date</div>
+          <div style="font-size:12px;font-weight:700;color:#f0ead8;">${dateEv}</div>
+        </div>
+        <div style="background:rgba(255,255,255,0.03);border:1px solid rgba(201,168,76,0.15);border-radius:8px;padding:12px;">
+          <div style="font-size:9px;color:#9a9080;letter-spacing:1px;text-transform:uppercase;margin-bottom:4px;">Lieu</div>
+          <div style="font-size:12px;font-weight:700;color:#f0ead8;">${c.lieu || '—'}</div>
+        </div>
+      </div>
+
+      <!-- Prestations -->
+      <div style="margin-bottom:20px;">
+        <div style="font-size:10px;font-weight:800;letter-spacing:2px;color:#c9a84c;text-transform:uppercase;margin-bottom:12px;padding-bottom:6px;border-bottom:1px solid rgba(201,168,76,0.3);">Prestations</div>
+        ${prestHtml || `<div style="font-size:13px;color:#9a9080;padding:8px 0;">${c.type_prestation || '—'}</div>`}
+      </div>
+
+      ${c.description ? `
+      <!-- Description -->
+      <div style="background:rgba(255,255,255,0.03);border:1px solid rgba(201,168,76,0.15);border-radius:8px;padding:14px;margin-bottom:20px;">
+        <div style="font-size:9px;color:#9a9080;letter-spacing:1px;text-transform:uppercase;margin-bottom:6px;">Description</div>
+        <div style="font-size:12px;color:#9a9080;line-height:1.6;">${c.description}</div>
+      </div>` : ''}
+
+      <!-- Budget total -->
+      <div style="background:rgba(201,168,76,0.1);border:2px solid rgba(201,168,76,0.4);border-radius:10px;padding:18px;margin-bottom:24px;text-align:center;">
+        <div style="font-size:10px;font-weight:800;letter-spacing:2px;color:#9a9080;text-transform:uppercase;margin-bottom:6px;">Montant estimé</div>
+        <div style="font-family:Anton,Arial;font-size:36px;letter-spacing:2px;color:#c9a84c;">${budgetAffiche}</div>
+        <div style="font-size:10px;color:#9a9080;margin-top:4px;">${statutLabel}</div>
+      </div>
+
+      <!-- Signature -->
+      <div style="border-top:1px solid rgba(201,168,76,0.2);padding-top:20px;">
+        <div style="display:flex;justify-content:space-between;align-items:flex-end;">
+          <div>
+            <div style="font-size:9px;color:#9a9080;letter-spacing:1px;text-transform:uppercase;margin-bottom:20px;">Signature client</div>
+            <div style="width:140px;border-bottom:1px solid rgba(201,168,76,0.4);"></div>
+          </div>
+          <div style="text-align:right;">
+            <div style="font-size:9px;color:#9a9080;letter-spacing:1px;text-transform:uppercase;margin-bottom:20px;">Signature Elite Corp.</div>
+            <div style="width:140px;border-bottom:1px solid rgba(201,168,76,0.4);"></div>
+          </div>
+        </div>
+        <div style="text-align:center;margin-top:20px;font-size:10px;color:rgba(154,144,128,0.5);letter-spacing:1px;">ELITE CORP. — DOCUMENT OFFICIEL — BLAINE COUNTY</div>
+      </div>
+
+    </div>
+  `;
+
+  document.body.appendChild(card);
+  html2canvas(card, {
+    scale: 2,
+    useCORS: true,
+    allowTaint: true,
+    width: 430,
+    backgroundColor: '#0a0a0f'
+  }).then(canvas => {
+    document.body.removeChild(card);
+    const link = document.createElement('a');
+    link.download = `devis-${c.client_nom.replace(/\s+/g,'_')}-CMD${c.id}.png`;
+    link.href = canvas.toDataURL('image/png');
+    link.click();
+    showToast('✅ Devis exporté en PNG');
+  }).catch(e => {
+    document.body.removeChild(card);
+    showToast('❌ Erreur export', false);
+  });
+}
 
 window.addEventListener('load', () => { loadTarifs(); initSSE(); });
 
