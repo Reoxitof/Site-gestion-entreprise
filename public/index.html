@@ -563,23 +563,19 @@
   <div class="modal" style="max-width:580px;">
     <button class="modal-close" onclick="closeModal('modalInterimaire')"><i class="fa-solid fa-xmark"></i></button>
     <div class="modal-title">NOUVEL INTÉRIMAIRE</div>
-    <div style="font-size:11px;color:var(--white-dim);margin-bottom:16px;">Crée un compte intérimaire et son dossier RH en une seule opération.</div>
+    <div style="font-size:11px;color:var(--white-dim);margin-bottom:16px;">Crée un dossier RH intérimaire.</div>
     <div class="grid-2">
       <div class="form-group"><label>Prénom *</label><input class="input-field" id="interimairePrenom" placeholder="Jean"/></div>
       <div class="form-group"><label>Nom *</label><input class="input-field" id="interimaireNom" placeholder="Dupont"/></div>
     </div>
-    <div class="grid-2">
-      <div class="form-group"><label>Identifiant *</label><input class="input-field" id="interimaireUsername" placeholder="jean.dupont"/></div>
-      <div class="form-group"><label>Mot de passe *</label><input class="input-field" id="interimairePassword" type="password" placeholder="••••••••"/></div>
-    </div>
     <div class="form-group"><label>Poste</label><input class="input-field" id="interimairePoste" placeholder="Ex: Agent de Sécurité"/></div>
     <div class="grid-2">
-      <div class="form-group"><label>Perso (personnage RP)</label><input class="input-field" id="interimairePerso" placeholder="Ex: John Smith"/></div>
-      <div class="form-group"><label>Compte (numéro)</label><input class="input-field" id="interimaireCompte" placeholder="Ex: 1234567"/></div>
+      <div class="form-group"><label>Perso (téléphone RP)</label><input class="input-field" id="interimairePerso" placeholder="Ex: 480-5934"/></div>
+      <div class="form-group"><label>Compte (bancaire RP)</label><input class="input-field" id="interimaireCompte" placeholder="Ex: #5631"/></div>
     </div>
     <div class="grid-2">
-      <div class="form-group"><label>ID Employé</label><input class="input-field" id="interimaireIdEmploye" placeholder="Ex: EC-INT-001"/></div>
-      <div class="form-group"><label>Division</label>
+      <div class="form-group"><label>ID Employé *</label><input class="input-field" id="interimaireIdEmploye" placeholder="Ex: 43011"/></div>
+      <div class="form-group"><label>Division *</label>
         <select class="input-field" id="interimaireDivision">
           <option value="">— Sélectionner —</option>
           <option value="Penny's Elite Security">🛡️ Penny's Elite Security</option>
@@ -2081,7 +2077,7 @@ function exportDossierPNG(id) {
   // Bas gauche : TELEPHONE EMPLOYE, COMPTE
   const contactFields = [
     { value: d.perso || '—',  x: 148, y: 400 },
-    { value: d.compte || '—', x: 148, y: 450 },
+    { value: '205-7586',      x: 148, y: 450 }, // TÉLÉPHONE DU PATRON (fixe)
   ];
   // Zone photo
   const photoX = 40, photoY = 28, photoW = 158, photoH = 272;

@@ -246,10 +246,18 @@ async function initDB() {
       id_employe TEXT DEFAULT '',
       division TEXT DEFAULT '',
       photo_url TEXT DEFAULT '',
+      nom_libre TEXT DEFAULT '',
+      prenom_libre TEXT DEFAULT '',
+      poste_libre TEXT DEFAULT '',
       created_at TIMESTAMP DEFAULT NOW(),
-      updated_at TIMESTAMP DEFAULT NOW(),
-      UNIQUE(user_id)
+      updated_at TIMESTAMP DEFAULT NOW()
     )`);
+    // Migrations pour les nouvelles colonnes
+    await getPool().query(`ALTER TABLE ec_dossiers_rh ADD COLUMN IF NOT EXISTS nom_libre TEXT DEFAULT ''`);
+    await getPool().query(`ALTER TABLE ec_dossiers_rh ADD COLUMN IF NOT EXISTS prenom_libre TEXT DEFAULT ''`);
+    await getPool().query(`ALTER TABLE ec_dossiers_rh ADD COLUMN IF NOT EXISTS poste_libre TEXT DEFAULT ''`);
+    await getPool().query(`ALTER TABLE ec_dossiers_rh ALTER COLUMN user_id DROP NOT NULL`).catch(() => {});
+    await getPool().query(`ALTER TABLE ec_dossiers_rh DROP CONSTRAINT IF EXISTS ec_dossiers_rh_user_id_key`).catch(() => {});
     // Insérer les tarifs par défaut si la table est vide
     const tc = await getPool().query('SELECT COUNT(*) FROM ec_tarifs');
     if (parseInt(tc.rows[0].count) === 0) {
@@ -1257,10 +1265,15 @@ async function logAdminAction(userId, action, details) {
 app.get('/api/dossiers-rh', auth, async (req, res) => {
   try {
     const rows = (await getPool().query(
-      `SELECT d.*, u.nom, u.prenom, u.poste, u.role, u.actif, u.username
+      `SELECT d.*,
+        COALESCE(u.nom, d.nom_libre) as nom,
+        COALESCE(u.prenom, d.prenom_libre) as prenom,
+        COALESCE(u.poste, d.poste_libre) as poste,
+        COALESCE(u.role, 'interimaire') as role,
+        u.actif, u.username
        FROM ec_dossiers_rh d
-       JOIN ec_users u ON d.user_id = u.id
-       ORDER BY u.nom, u.prenom`
+       LEFT JOIN ec_users u ON d.user_id = u.id
+       ORDER BY COALESCE(u.nom, d.nom_libre), COALESCE(u.prenom, d.prenom_libre)`
     )).rows;
     res.json(rows);
   } catch(e) { res.status(500).json({ error: e.message }); }
@@ -1331,47 +1344,39 @@ app.delete('/api/dossiers-rh/:id', admin, async (req, res) => {
 
 // Créer un compte intérimaire + dossier RH en une seule transaction
 app.post('/api/dossiers-rh/interimaire', admin, uploadRH.single('photo'), async (req, res) => {
-  const client = await getPool().connect();
   try {
-    await client.query('BEGIN');
-    const { username, password, poste } = req.body;
     const nom = sanitizeStr(req.body.nom, 100);
     const prenom = sanitizeStr(req.body.prenom, 100);
+    const poste = sanitizeStr(req.body.poste, 100);
     const perso = sanitizeStr(req.body.perso, 500);
     const compte = sanitizeStr(req.body.compte, 500);
     const id_employe = sanitizeStr(req.body.id_employe, 100);
     const division = sanitizeStr(req.body.division, 100);
     const photo_url = req.file ? '/uploads/dossiers-rh/' + req.file.filename : '';
 
-    if (!username || !password || !nom || !prenom) {
-      await client.query('ROLLBACK');
-      return res.status(400).json({ error: 'Champs manquants (nom, prénom, username, password)' });
+    if (!nom || !prenom || !id_employe || !division) {
+      return res.status(400).json({ error: 'Champs manquants (nom, prénom, ID employé, division)' });
     }
-    if (!/^[a-z0-9_]{3,32}$/.test(username)) {
-      await client.query('ROLLBACK');
-      return res.status(400).json({ error: 'Identifiant invalide (3-32 caractères, lettres minuscules, chiffres, underscore)' });
-    }
-    const hash = await bcrypt.hash(password, 12);
-    const userRes = await client.query(
-      `INSERT INTO ec_users (username, password_hash, nom, prenom, poste, role)
-       VALUES ($1,$2,$3,$4,$5,'interimaire') RETURNING id`,
-      [username.toLowerCase(), hash, nom, prenom, poste || 'Intérimaire']
+
+    // Créer uniquement le dossier RH sans compte de connexion
+    const dossierRes = await getPool().query(
+      `INSERT INTO ec_dossiers_rh (user_id, perso, compte, id_employe, division, photo_url, nom_libre, prenom_libre, poste_libre)
+       VALUES (NULL,$1,$2,$3,$4,$5,$6,$7,$8) RETURNING *`,
+      [perso, compte, id_employe, division, photo_url, nom, prenom, poste || 'Intérimaire']
     );
-    const user_id = userRes.rows[0].id;
-    const dossierRes = await client.query(
-      `INSERT INTO ec_dossiers_rh (user_id, perso, compte, id_employe, division, photo_url)
-       VALUES ($1,$2,$3,$4,$5,$6) RETURNING *`,
-      [user_id, perso, compte, id_employe, division, photo_url]
-    );
-    await client.query('COMMIT');
-    clearCache('employes');
-    res.json({ success: true, user_id, dossier: dossierRes.rows[0] });
+    res.json({ success: true, dossier: dossierRes.rows[0] });
   } catch(e) {
-    await client.query('ROLLBACK');
-    if (e.code === '23505') return res.status(400).json({ error: 'Identifiant déjà pris' });
+    // Si les colonnes nom_libre/prenom_libre/poste_libre n'existent pas encore, les créer
+    if (e.message.includes('column') && e.message.includes('does not exist')) {
+      try {
+        await getPool().query(`ALTER TABLE ec_dossiers_rh ADD COLUMN IF NOT EXISTS nom_libre TEXT DEFAULT ''`);
+        await getPool().query(`ALTER TABLE ec_dossiers_rh ADD COLUMN IF NOT EXISTS prenom_libre TEXT DEFAULT ''`);
+        await getPool().query(`ALTER TABLE ec_dossiers_rh ADD COLUMN IF NOT EXISTS poste_libre TEXT DEFAULT ''`);
+        await getPool().query(`ALTER TABLE ec_dossiers_rh ALTER COLUMN user_id DROP NOT NULL`);
+        return res.status(500).json({ error: 'Migration effectuée, réessaie.' });
+      } catch(migErr) {}
+    }
     res.status(500).json({ error: e.message });
-  } finally {
-    client.release();
   }
 });
 
