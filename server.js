@@ -1289,16 +1289,26 @@ app.post('/api/dossiers-rh', admin, uploadRH.single('photo'), async (req, res) =
     const id_employe = sanitizeStr(req.body.id_employe, 100);
     const division = sanitizeStr(req.body.division, 100);
     const photo_url = req.file ? '/uploads/dossiers-rh/' + req.file.filename : '';
-    const r = await getPool().query(
-      `INSERT INTO ec_dossiers_rh (user_id, perso, compte, id_employe, division, photo_url)
-       VALUES ($1,$2,$3,$4,$5,$6)
-       ON CONFLICT (user_id) DO UPDATE
-       SET perso=$2, compte=$3, id_employe=$4, division=$5,
-           photo_url=CASE WHEN $6='' THEN ec_dossiers_rh.photo_url ELSE $6 END,
-           updated_at=NOW()
-       RETURNING *`,
-      [user_id, perso, compte, id_employe, division, photo_url]
-    );
+
+    // Vérifier si un dossier existe déjà pour cet employé
+    const existing = await getPool().query('SELECT id FROM ec_dossiers_rh WHERE user_id=$1', [user_id]);
+    let r;
+    if (existing.rows.length > 0) {
+      // Mettre à jour
+      r = await getPool().query(
+        `UPDATE ec_dossiers_rh SET perso=$2, compte=$3, id_employe=$4, division=$5,
+         photo_url=CASE WHEN $6='' THEN photo_url ELSE $6 END, updated_at=NOW()
+         WHERE user_id=$1 RETURNING *`,
+        [user_id, perso, compte, id_employe, division, photo_url]
+      );
+    } else {
+      // Insérer
+      r = await getPool().query(
+        `INSERT INTO ec_dossiers_rh (user_id, perso, compte, id_employe, division, photo_url)
+         VALUES ($1,$2,$3,$4,$5,$6) RETURNING *`,
+        [user_id, perso, compte, id_employe, division, photo_url]
+      );
+    }
     res.json({ success: true, dossier: r.rows[0] });
   } catch(e) { res.status(500).json({ error: e.message }); }
 });
