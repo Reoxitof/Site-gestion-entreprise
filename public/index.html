@@ -3008,10 +3008,17 @@ function exportDevisPNG(id) {
       </div>
 
       <!-- Client -->
-      <div style="background:rgba(201,168,76,0.06);border:1px solid rgba(201,168,76,0.25);border-radius:10px;padding:16px;margin-bottom:20px;">
+      <div style="background:rgba(201,168,76,0.06);border:1px solid rgba(201,168,76,0.25);border-radius:10px;padding:16px;margin-bottom:16px;">
         <div style="font-size:9px;font-weight:800;letter-spacing:2px;color:#9a9080;text-transform:uppercase;margin-bottom:10px;">Client</div>
         <div style="font-size:18px;font-weight:900;color:#f0ead8;margin-bottom:6px;">${c.client_nom}</div>
         ${c.client_contact ? `<div style="font-size:13px;color:#9a9080;">📞 ${c.client_contact}</div>` : ''}
+      </div>
+
+      <!-- Budget total EN PRIORITÉ -->
+      <div style="background:rgba(201,168,76,0.1);border:2px solid rgba(201,168,76,0.4);border-radius:10px;padding:18px;margin-bottom:20px;text-align:center;">
+        <div style="font-size:10px;font-weight:800;letter-spacing:2px;color:#9a9080;text-transform:uppercase;margin-bottom:6px;">Montant estimé</div>
+        <div style="font-family:Anton,Arial;font-size:42px;letter-spacing:2px;color:#c9a84c;">${budgetAffiche}</div>
+        <div style="font-size:10px;color:#9a9080;margin-top:4px;">${statutLabel}</div>
       </div>
 
       <!-- Infos événement -->
@@ -3046,13 +3053,6 @@ function exportDevisPNG(id) {
         <div style="font-size:9px;color:#9a9080;letter-spacing:1px;text-transform:uppercase;margin-bottom:6px;">Description</div>
         <div style="font-size:12px;color:#9a9080;line-height:1.6;">${c.description}</div>
       </div>` : ''}
-
-      <!-- Budget total -->
-      <div style="background:rgba(201,168,76,0.1);border:2px solid rgba(201,168,76,0.4);border-radius:10px;padding:18px;margin-bottom:24px;text-align:center;">
-        <div style="font-size:10px;font-weight:800;letter-spacing:2px;color:#9a9080;text-transform:uppercase;margin-bottom:6px;">Montant estimé</div>
-        <div style="font-family:Anton,Arial;font-size:36px;letter-spacing:2px;color:#c9a84c;">${budgetAffiche}</div>
-        <div style="font-size:10px;color:#9a9080;margin-top:4px;">${statutLabel}</div>
-      </div>
 
       <!-- Signature -->
       <div style="border-top:1px solid rgba(201,168,76,0.2);padding-top:20px;">
