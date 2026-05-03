@@ -1037,6 +1037,78 @@
   </div>
 </div>
 
+<!-- Modal Prévisualisation Devis PNG -->
+<div class="modal-overlay" id="modalDevisPreview">
+  <div class="modal" style="max-width:560px;">
+    <button class="modal-close" onclick="closeModal('modalDevisPreview')"><i class="fa-solid fa-xmark"></i></button>
+    <div class="modal-title">📄 DEVIS PNG — ÉDITION</div>
+    <div style="font-size:11px;color:var(--white-dim);margin-bottom:18px;">Modifie les informations avant de générer le PNG.</div>
+
+    <div class="grid-2">
+      <div class="form-group">
+        <label>Nom du client *</label>
+        <input class="input-field" id="devisClientNom" placeholder="Ex: M. Dupont"/>
+      </div>
+      <div class="form-group">
+        <label>Contact (téléphone/Discord)</label>
+        <input class="input-field" id="devisClientContact" placeholder="Ex: 555-0123"/>
+      </div>
+    </div>
+    <div class="grid-2">
+      <div class="form-group">
+        <label>Division</label>
+        <select class="input-field" id="devisDivision">
+          <option value="securite">🛡️ Penny's Elite Security</option>
+          <option value="soiree">🎉 Événementiel</option>
+          <option value="tourisme">✈️ Elite Tourisme</option>
+          <option value="aventure">🏔️ Elite Aventure</option>
+          <option value="lillys">💃 Lilly's Girls</option>
+          <option value="multi">🏢 Multi-divisions</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>Priorité</label>
+        <select class="input-field" id="devisPriorite">
+          <option value="urgente">🔴 Urgente</option>
+          <option value="haute">🟠 Haute</option>
+          <option value="normale">🟡 Normale</option>
+          <option value="basse">⚪ Basse</option>
+        </select>
+      </div>
+    </div>
+    <div class="grid-2">
+      <div class="form-group">
+        <label>Date événement</label>
+        <input class="input-field" id="devisDate" type="date"/>
+      </div>
+      <div class="form-group">
+        <label>Heure</label>
+        <input class="input-field" id="devisHeure" type="time"/>
+      </div>
+    </div>
+    <div class="form-group">
+      <label>Lieu</label>
+      <input class="input-field" id="devisLieu" placeholder="Ex: Galaxy, Blaine County"/>
+    </div>
+    <div class="form-group">
+      <label>Prestation(s)</label>
+      <input class="input-field" id="devisPrestation" placeholder="Ex: Sécurité événement, Escorte VIP"/>
+    </div>
+    <div class="form-group">
+      <label>Description</label>
+      <textarea class="input-field" id="devisDescription" rows="3" placeholder="Détails de la demande..."></textarea>
+    </div>
+    <div class="form-group">
+      <label>💰 Montant estimé ($)</label>
+      <input class="input-field" id="devisMontant" type="number" min="0" step="500" placeholder="Ex: 25000" style="font-size:18px;font-weight:800;color:var(--gold);"/>
+    </div>
+    <div class="btn-row">
+      <button class="btn btn-gold" onclick="genererDevisPNG()"><i class="fa-solid fa-file-image"></i> Générer le PNG</button>
+      <button class="btn btn-outline" onclick="closeModal('modalDevisPreview')">Annuler</button>
+    </div>
+  </div>
+</div>
+
 <!-- Modal Paiement -->
 <div class="modal-overlay" id="modalPaiement">
   <div class="modal" style="max-width:500px;">
@@ -1077,7 +1149,7 @@
     <button class="modal-close" onclick="closeModal('modalCommandeDetail')"><i class="fa-solid fa-xmark"></i></button>
     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px;">
       <div class="modal-title" id="cmdDetailTitle" style="margin-bottom:0;">COMMANDE</div>
-      <button class="btn btn-gold" style="font-size:11px;padding:7px 14px;" onclick="exportDevisPNG(window._currentCmdId)"><i class="fa-solid fa-file-image"></i> Devis PNG</button>
+      <button class="btn btn-gold" style="font-size:11px;padding:7px 14px;" onclick="ouvrirModalDevis(window._currentCmdId)"><i class="fa-solid fa-file-image"></i> Devis PNG</button>
     </div>
     <div id="cmdDetailContent"></div>
   </div>
@@ -2968,6 +3040,151 @@ setInterval(() => {
     });
   }
 }, 60 * 1000);
+
+// ── MODAL ÉDITION DEVIS AVANT PNG ──
+function ouvrirModalDevis(id) {
+  const c = _cmdDetailData.find(x => x.id === id);
+  if (!c) return;
+  window._devisEditId = id;
+
+  document.getElementById('devisClientNom').value = c.client_nom || '';
+  document.getElementById('devisClientContact').value = c.client_contact || '';
+  document.getElementById('devisDivision').value = c.division || 'multi';
+  document.getElementById('devisPriorite').value = c.priorite || 'normale';
+  document.getElementById('devisLieu').value = c.lieu || '';
+  document.getElementById('devisDescription').value = c.description || '';
+
+  // Date et heure
+  if (c.date_evenement) {
+    const d = new Date(c.date_evenement);
+    document.getElementById('devisDate').value = d.toISOString().slice(0,10);
+    document.getElementById('devisHeure').value = d.toTimeString().slice(0,5);
+  } else {
+    document.getElementById('devisDate').value = '';
+    document.getElementById('devisHeure').value = '';
+  }
+
+  // Prestation
+  try {
+    const ids = JSON.parse(c.prestations_ids || '[]');
+    const pts = allTarifs.filter(t => ids.includes(t.code));
+    document.getElementById('devisPrestation').value = pts.length ? pts.map(t => t.label).join(', ') : (c.type_prestation || '');
+  } catch(e) {
+    document.getElementById('devisPrestation').value = c.type_prestation || '';
+  }
+
+  // Montant
+  const montant = parseFloat(c.prix_final) || parseFloat(c.budget_estime) || 0;
+  document.getElementById('devisMontant').value = montant > 0 ? montant : '';
+
+  closeModal('modalCommandeDetail');
+  openModal('modalDevisPreview');
+}
+
+function genererDevisPNG() {
+  const id = window._devisEditId;
+  const c = _cmdDetailData.find(x => x.id === id);
+  if (!c) return;
+
+  // Lire les valeurs éditées
+  const clientNom = document.getElementById('devisClientNom').value.trim() || c.client_nom;
+  const clientContact = document.getElementById('devisClientContact').value.trim();
+  const division = document.getElementById('devisDivision').value;
+  const priorite = document.getElementById('devisPriorite').value;
+  const lieu = document.getElementById('devisLieu').value.trim();
+  const description = document.getElementById('devisDescription').value.trim();
+  const prestation = document.getElementById('devisPrestation').value.trim();
+  const montant = parseFloat(document.getElementById('devisMontant').value) || 0;
+  const dateVal = document.getElementById('devisDate').value;
+  const heureVal = document.getElementById('devisHeure').value;
+
+  const budgetAffiche = montant > 0 ? montant.toLocaleString('fr-FR') + ' $' : (c.budget || 'À définir');
+  const prioLabel = { urgente:'🔴 Urgente', haute:'🟠 Haute', normale:'🟡 Normale', basse:'⚪ Basse' }[priorite] || priorite;
+  const statutLabel = { devis:'📋 Devis', confirme:'✅ Confirmé', en_cours:'⚙️ En cours', termine:'🏁 Terminé' }[c.statut] || c.statut;
+
+  let dateAffiche = 'À confirmer';
+  if (dateVal) {
+    const d = new Date(dateVal + (heureVal ? 'T' + heureVal : 'T00:00'));
+    dateAffiche = d.toLocaleDateString('fr-FR', {weekday:'long',day:'numeric',month:'long',year:'numeric'});
+    if (heureVal) dateAffiche += ' à ' + heureVal;
+  }
+
+  const card = document.createElement('div');
+  card.style.cssText = 'position:fixed;left:-9999px;top:0;width:430px;font-family:Inter,Arial,sans-serif;background:#0a0a0f;';
+  card.innerHTML = `
+    <div style="width:430px;background:#0a0a0f;padding:32px 28px;box-sizing:border-box;">
+      <div style="text-align:center;margin-bottom:28px;padding-bottom:20px;border-bottom:2px solid #c9a84c;">
+        <div style="font-family:Anton,Arial;font-size:32px;letter-spacing:6px;color:#c9a84c;margin-bottom:4px;">ELITE CORP.</div>
+        <div style="font-size:10px;letter-spacing:3px;color:#9a9080;text-transform:uppercase;">Event Planning & Services — Blaine County</div>
+        <div style="margin-top:16px;font-family:Anton,Arial;font-size:18px;letter-spacing:3px;color:#f0ead8;">DEVIS OFFICIEL</div>
+        <div style="font-size:11px;color:#9a9080;margin-top:4px;">Réf. CMD#${c.id} — ${new Date().toLocaleDateString('fr-FR')}</div>
+      </div>
+      <div style="background:rgba(201,168,76,0.06);border:1px solid rgba(201,168,76,0.25);border-radius:10px;padding:16px;margin-bottom:16px;">
+        <div style="font-size:9px;font-weight:800;letter-spacing:2px;color:#9a9080;text-transform:uppercase;margin-bottom:10px;">Client</div>
+        <div style="font-size:18px;font-weight:900;color:#f0ead8;margin-bottom:6px;">${clientNom}</div>
+        ${clientContact ? `<div style="font-size:13px;color:#9a9080;">📞 ${clientContact}</div>` : ''}
+      </div>
+      <div style="background:rgba(201,168,76,0.1);border:2px solid rgba(201,168,76,0.4);border-radius:10px;padding:18px;margin-bottom:20px;text-align:center;">
+        <div style="font-size:10px;font-weight:800;letter-spacing:2px;color:#9a9080;text-transform:uppercase;margin-bottom:6px;">Montant estimé</div>
+        <div style="font-family:Anton,Arial;font-size:42px;letter-spacing:2px;color:#c9a84c;">${budgetAffiche}</div>
+        <div style="font-size:10px;color:#9a9080;margin-top:4px;">${statutLabel}</div>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:20px;">
+        <div style="background:rgba(255,255,255,0.03);border:1px solid rgba(201,168,76,0.15);border-radius:8px;padding:12px;">
+          <div style="font-size:9px;color:#9a9080;letter-spacing:1px;text-transform:uppercase;margin-bottom:4px;">Division</div>
+          <div style="font-size:13px;font-weight:700;color:#f0ead8;">${division}</div>
+        </div>
+        <div style="background:rgba(255,255,255,0.03);border:1px solid rgba(201,168,76,0.15);border-radius:8px;padding:12px;">
+          <div style="font-size:9px;color:#9a9080;letter-spacing:1px;text-transform:uppercase;margin-bottom:4px;">Priorité</div>
+          <div style="font-size:13px;font-weight:700;color:#f0ead8;">${prioLabel}</div>
+        </div>
+        <div style="background:rgba(255,255,255,0.03);border:1px solid rgba(201,168,76,0.15);border-radius:8px;padding:12px;">
+          <div style="font-size:9px;color:#9a9080;letter-spacing:1px;text-transform:uppercase;margin-bottom:4px;">Date</div>
+          <div style="font-size:12px;font-weight:700;color:#f0ead8;">${dateAffiche}</div>
+        </div>
+        <div style="background:rgba(255,255,255,0.03);border:1px solid rgba(201,168,76,0.15);border-radius:8px;padding:12px;">
+          <div style="font-size:9px;color:#9a9080;letter-spacing:1px;text-transform:uppercase;margin-bottom:4px;">Lieu</div>
+          <div style="font-size:12px;font-weight:700;color:#f0ead8;">${lieu || '—'}</div>
+        </div>
+      </div>
+      <div style="margin-bottom:20px;">
+        <div style="font-size:10px;font-weight:800;letter-spacing:2px;color:#c9a84c;text-transform:uppercase;margin-bottom:12px;padding-bottom:6px;border-bottom:1px solid rgba(201,168,76,0.3);">Prestations</div>
+        <div style="font-size:14px;color:#f0ead8;padding:8px 0;">${prestation || '—'}</div>
+      </div>
+      ${description ? `<div style="background:rgba(255,255,255,0.03);border:1px solid rgba(201,168,76,0.15);border-radius:8px;padding:14px;margin-bottom:20px;">
+        <div style="font-size:9px;color:#9a9080;letter-spacing:1px;text-transform:uppercase;margin-bottom:6px;">Description</div>
+        <div style="font-size:12px;color:#9a9080;line-height:1.6;">${description}</div>
+      </div>` : ''}
+      <div style="border-top:1px solid rgba(201,168,76,0.2);padding-top:20px;">
+        <div style="display:flex;justify-content:space-between;align-items:flex-end;">
+          <div>
+            <div style="font-size:9px;color:#9a9080;letter-spacing:1px;text-transform:uppercase;margin-bottom:20px;">Signature client</div>
+            <div style="width:140px;border-bottom:1px solid rgba(201,168,76,0.4);"></div>
+          </div>
+          <div style="text-align:right;">
+            <div style="font-size:9px;color:#9a9080;letter-spacing:1px;text-transform:uppercase;margin-bottom:20px;">Signature Elite Corp.</div>
+            <div style="width:140px;border-bottom:1px solid rgba(201,168,76,0.4);"></div>
+          </div>
+        </div>
+        <div style="text-align:center;margin-top:20px;font-size:10px;color:rgba(154,144,128,0.5);letter-spacing:1px;">ELITE CORP. — DOCUMENT OFFICIEL — BLAINE COUNTY</div>
+      </div>
+    </div>
+  `;
+
+  document.body.appendChild(card);
+  html2canvas(card, { scale:2, useCORS:true, allowTaint:true, width:430, backgroundColor:'#0a0a0f' }).then(canvas => {
+    document.body.removeChild(card);
+    const link = document.createElement('a');
+    link.download = `devis-${clientNom.replace(/\s+/g,'_')}-CMD${c.id}.png`;
+    link.href = canvas.toDataURL('image/png');
+    link.click();
+    closeModal('modalDevisPreview');
+    showToast('✅ Devis exporté en PNG');
+  }).catch(e => {
+    document.body.removeChild(card);
+    showToast('❌ Erreur export', false);
+  });
+}
 
 // ── EXPORT DEVIS PNG (format portrait téléphone) ──
 function exportDevisPNG(id) {
