@@ -224,8 +224,6 @@
         <div class="card-title"><i class="fa-solid fa-calendar-days"></i> Prochains événements</div>
         <div id="dashPlanning"><div style="color:var(--white-dim);font-size:12px;">Chargement...</div></div>
       </div>
-      <!-- Compteurs commandes live -->
-      <div id="dashCmdBar"></div>
     </div>
 
 
@@ -1158,26 +1156,6 @@ async function loadDashboard() {
     document.getElementById('statPresents').textContent = stats.presents_aujourd_hui || 0;
     document.getElementById('statEvenements').textContent = stats.evenements_a_venir || 0;
     document.getElementById('statAnnonces').textContent = stats.annonces || 0;
-
-    // Compteurs commandes live sur le dashboard
-    const cmdBar = document.getElementById('dashCmdBar');
-    if (cmdBar) {
-      cmdBar.innerHTML = `
-        <div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:16px;">
-          <div style="background:rgba(63,167,214,0.1);border:1px solid rgba(63,167,214,0.3);border-radius:8px;padding:8px 16px;display:flex;align-items:center;gap:8px;">
-            <span style="font-family:'Anton',sans-serif;font-size:20px;color:#3fa7d6;">${stats.commandes_devis||0}</span>
-            <span style="font-size:10px;font-weight:800;letter-spacing:1px;color:#3fa7d6;text-transform:uppercase;">Devis</span>
-          </div>
-          <div style="background:rgba(201,168,76,0.1);border:1px solid rgba(201,168,76,0.3);border-radius:8px;padding:8px 16px;display:flex;align-items:center;gap:8px;">
-            <span style="font-family:'Anton',sans-serif;font-size:20px;color:var(--gold);">${stats.commandes_confirme||0}</span>
-            <span style="font-size:10px;font-weight:800;letter-spacing:1px;color:var(--gold);text-transform:uppercase;">Confirmées</span>
-          </div>
-          <div style="background:rgba(240,144,48,0.1);border:1px solid rgba(240,144,48,0.3);border-radius:8px;padding:8px 16px;display:flex;align-items:center;gap:8px;">
-            <span style="font-family:'Anton',sans-serif;font-size:20px;color:#f09030;">${stats.commandes_en_cours||0}</span>
-            <span style="font-size:10px;font-weight:800;letter-spacing:1px;color:#f09030;text-transform:uppercase;">En cours</span>
-          </div>
-        </div>`;
-    }
 
     // Annonces
     const da = document.getElementById('dashAnnonces');
