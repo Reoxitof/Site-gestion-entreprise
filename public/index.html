@@ -3539,33 +3539,30 @@ function genererContratPNG() {
     ctx.fillText('✓', 150, 288);
 
     // INFORMATIONS EMPLOYÉ — calibré sur capture (image 1536×1024)
-    // Les champs blancs sont visibles dans la capture
-    // NOM COMPLET : champ blanc commence x≈175, y≈253 → texte à y≈268
-    txt(nom,         175, 268, 18, '#1a1a1a', true);
+    // NOM COMPLET : y≈268
+    txt(nom,         175, 268, 18, '#c9a84c', true);
     // POSTE / FONCTION : y≈288
-    txt(mission,     175, 288, 18, '#1a1a1a', true);
+    txt(mission,     175, 288, 18, '#c9a84c', true);
     // FILIÈRE / DÉPARTEMENT : y≈308
-    txt(division,    175, 308, 18, '#1a1a1a', false);
+    txt(division,    175, 308, 18, '#c9a84c', false);
     // ID EMPLOYÉ : y≈328
-    txt(idEmploye,   175, 328, 18, '#1a1a1a', false);
+    txt(idEmploye,   175, 328, 18, '#c9a84c', false);
     // DATE D'EMBAUCHE : y≈348
-    txt(dateAffiche, 175, 348, 18, '#1a1a1a', false);
+    txt(dateAffiche, 175, 348, 18, '#c9a84c', false);
 
     // CONDITIONS DE TRAVAIL — INTÉRIMAIRE
-    // HORAIRES : petit champ à droite du label, x≈175, y≈430
-    txt(horaires,    175, 430, 15, '#1a1a1a', true);
+    // HORAIRES : x≈175, y≈430
+    txt(horaires,    175, 430, 15, '#c9a84c', true);
     // DURÉE / MISSION : y≈468
-    txt(dateAffiche, 175, 468, 14, '#1a1a1a', false);
+    txt(dateAffiche, 175, 468, 14, '#c9a84c', false);
     // RÉMUNÉRATION : y≈506
     txt(remuStr,     175, 506, 15, '#c9a84c', true);
 
     // ══ COLONNE DROITE ══
     // INFORMATIONS COMPLÉMENTAIRES : x≈820, y≈268, largeur≈310
     if (description) {
-      txtWrap(description, 820, 268, 310, 15, '#1a1a1a');
+      txtWrap(description, 820, 268, 310, 15, '#c9a84c');
     }
-
-    // Pas de dates de signature (laisser vides pour signature manuelle)
 
     // Télécharger
     const link = document.createElement('a');
