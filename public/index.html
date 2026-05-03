@@ -2340,21 +2340,23 @@ window._postesRequis = [];
 
 async function initPosteRequisSelect() {
   try {
-    const r = await fetch('/api/employes/par-poste');
+    const r = await fetch('/api/employes/par-role');
     const data = await r.json();
     const sel = document.getElementById('posteRequisSelect');
     if (!sel) return;
-    // Aussi récupérer les postes uniques depuis la liste employés
-    const postes = [...new Set(data.map(d => d.poste))].sort();
-    sel.innerHTML = '<option value="">— Sélectionner un poste —</option>' +
-      postes.map(p => {
-        const d = data.find(d => d.poste === p);
-        const nbDispo = parseInt(d?.nb_dispo || 0);
-        const nbTotal = parseInt(d?.nb_total || 0);
-        const label = nbDispo > 0
-          ? `${p} (${nbDispo} dispo)`
-          : `${p} (${nbTotal} — aucun dispo)`;
-        return `<option value="${p}">${label}</option>`;
+    const roleLabels = {
+      admin:       '👑 Admin',
+      direction:   '🎯 Direction',
+      employe:     '👤 Employé',
+      interimaire: '🔄 Intérimaire'
+    };
+    sel.innerHTML = '<option value="">— Sélectionner un rôle —</option>' +
+      data.map(d => {
+        const nbDispo = parseInt(d.nb_dispo || 0);
+        const nbTotal = parseInt(d.nb_total || 0);
+        const label = roleLabels[d.role] || d.role;
+        const dispo = nbDispo > 0 ? `${nbDispo} dispo` : `${nbTotal} — aucun dispo`;
+        return `<option value="${d.role}">${label} (${dispo})</option>`;
       }).join('');
   } catch(e) {}
 }

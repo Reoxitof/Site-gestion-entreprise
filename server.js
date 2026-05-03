@@ -538,6 +538,19 @@ app.get('/api/commandes/mes-tickets', auth, async (req, res) => {
   } catch(e) { res.status(500).json({ error: e.message }); }
 });
 
+/* Employés actifs par rôle (pour sélection dans les commandes) */
+app.get('/api/employes/par-role', auth, async (req, res) => {
+  try {
+    const rows = (await getPool().query(
+      `SELECT role,
+        COUNT(*) FILTER (WHERE statut_employe = 'disponible') as nb_dispo,
+        COUNT(*) as nb_total
+       FROM ec_users WHERE actif=true GROUP BY role ORDER BY role`
+    )).rows;
+    res.json(rows);
+  } catch(e) { res.status(500).json({ error: e.message }); }
+});
+
 /* Employés actifs par poste (pour sélection dans les commandes) */
 app.get('/api/employes/par-poste', auth, async (req, res) => {
   try {
