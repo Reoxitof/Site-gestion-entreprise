@@ -3525,43 +3525,42 @@ function genererContratPNG() {
     // ══ COLONNE GAUCHE (0 → 768) ══
 
     // TYPE DE CONTRAT — cocher "EMPLOYÉ INTÉRIMAIRE"
-    // Case à cocher intérimaire ≈ x:57, y:218
     ctx.fillStyle = '#c9a84c';
-    ctx.fillRect(57, 204, 22, 22);
+    ctx.fillRect(148, 274, 18, 18);
     ctx.fillStyle = '#000';
-    ctx.font = 'bold 16px Arial';
-    ctx.fillText('✓', 60, 221);
+    ctx.font = 'bold 14px Arial';
+    ctx.fillText('✓', 150, 288);
 
     // INFORMATIONS EMPLOYÉ
-    // NOM COMPLET ≈ x:175, y:310
-    txt(nom,       175, 310, 20, '#ffffff', true);
+    // NOM COMPLET ← nom (champ blanc commence ~x:228, y:330)
+    txt(nom,        228, 340, 18, '#ffffff', true);
     // POSTE / FONCTION ← mission
-    txt(mission,   175, 355, 20, '#ffffff', true);
+    txt(mission,    228, 358, 18, '#ffffff', true);
     // FILIÈRE / DÉPARTEMENT ← division
-    txt(division,  175, 400, 20, '#ffffff', false);
+    txt(division,   228, 376, 18, '#ffffff', false);
     // ID EMPLOYÉ
-    txt(idEmploye, 175, 445, 20, '#ffffff', false);
+    txt(idEmploye,  228, 394, 18, '#ffffff', false);
     // DATE D'EMBAUCHE ← date
-    txt(dateAffiche, 175, 490, 20, '#ffffff', false);
+    txt(dateAffiche, 228, 412, 18, '#ffffff', false);
 
     // CONDITIONS DE TRAVAIL — INTÉRIMAIRE
     // HORAIRES DU CONTRAT ← heureDebut - heureFin
-    txt(horaires,    100, 600, 18, '#ffffff', true);
+    txt(horaires,    218, 472, 16, '#ffffff', true);
     // DURÉE / MISSION ← date
-    txt('Le ' + dateAffiche, 100, 655, 16, '#c9a84c', false);
+    txt('Le ' + dateAffiche, 218, 510, 15, '#c9a84c', false);
     // RÉMUNÉRATION
-    txt(remuStr,     100, 710, 18, '#c9a84c', true);
+    txt(remuStr,     218, 548, 16, '#c9a84c', true);
 
     // ══ COLONNE DROITE (768 → 1536) ══
 
-    // INFORMATIONS COMPLÉMENTAIRES ← description
+    // INFORMATIONS COMPLÉMENTAIRES ← description (zone ~x:538, y:340, largeur:240)
     if (description) {
-      txtWrap(description, 820, 490, 640, 16, '#f0ead8');
+      txtWrap(description, 538, 355, 240, 15, '#f0ead8');
     }
 
-    // DATE signature (bas droite) ← date
-    txt(dateAffiche, 820, 820, 16, '#ffffff', false);
-    txt(dateAffiche, 1100, 820, 16, '#ffffff', false);
+    // DATE signatures
+    txt(dateAffiche, 538, 500, 15, '#ffffff', false);
+    txt(dateAffiche, 730, 500, 15, '#ffffff', false);
 
     // Télécharger
     const link = document.createElement('a');
