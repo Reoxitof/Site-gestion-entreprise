@@ -1102,6 +1102,43 @@
       <label>💰 Montant total ($)</label>
       <input class="input-field" id="devisMontant" type="number" min="0" step="500" placeholder="Ex: 25000" style="font-size:18px;font-weight:800;color:var(--gold);"/>
     </div>
+    <!-- Postes requis éditables -->
+    <div class="form-group">
+      <label>👥 Personnel prévu</label>
+      <div id="devisPostesList" style="display:flex;flex-direction:column;gap:8px;margin-bottom:8px;"></div>
+      <div style="display:flex;gap:8px;align-items:center;">
+        <select id="devisPosteSelect" class="input-field" style="flex:1;">
+          <option value="">— Ajouter un poste —</option>
+          <optgroup label="🛡️ Penny's Elite Security">
+            <option>Agent de Sécurité</option>
+            <option>Agent VIP / Escorte</option>
+            <option>Convoyeur</option>
+            <option>Chef de la Sécurité</option>
+            <option>Superviseur Sécurité</option>
+          </optgroup>
+          <optgroup label="🎉 Événementiel">
+            <option>Hôte / Hôtesse</option>
+            <option>Régisseur</option>
+            <option>Organisateur d'Événements</option>
+          </optgroup>
+          <optgroup label="✈️ Elite Tourisme">
+            <option>Chauffeur VIP</option>
+            <option>Guide Touristique</option>
+            <option>Concierge</option>
+          </optgroup>
+          <optgroup label="🏔️ Elite Aventure">
+            <option>Guide Aventure</option>
+            <option>Pilote / Conducteur</option>
+          </optgroup>
+          <optgroup label="💃 Lilly's Girls">
+            <option>Animatrice</option>
+            <option>Danseuse / Performeuse</option>
+          </optgroup>
+        </select>
+        <input id="devisPosteNb" type="number" min="1" max="20" value="1" class="input-field" style="width:70px;text-align:center;"/>
+        <button type="button" class="btn btn-outline" style="padding:8px 14px;" onclick="ajouterDevisPoste()"><i class="fa-solid fa-plus"></i></button>
+      </div>
+    </div>
     <div class="btn-row">
       <button class="btn btn-gold" onclick="genererDevisPNG()"><i class="fa-solid fa-file-image"></i> Générer le PNG</button>
       <button class="btn btn-outline" onclick="closeModal('modalDevisPreview')">Annuler</button>
@@ -3077,8 +3114,51 @@ function ouvrirModalDevis(id) {
   const montant = parseFloat(c.prix_final) || parseFloat(c.budget_estime) || 0;
   document.getElementById('devisMontant').value = montant > 0 ? montant : '';
 
+  // Postes requis
+  try {
+    window._devisPostes = JSON.parse(c.postes_requis || '[]');
+  } catch(e) { window._devisPostes = []; }
+  renderDevisPostes();
+
   closeModal('modalCommandeDetail');
   openModal('modalDevisPreview');
+}
+
+window._devisPostes = [];
+
+function ajouterDevisPoste() {
+  const sel = document.getElementById('devisPosteSelect');
+  const nb = parseInt(document.getElementById('devisPosteNb')?.value) || 1;
+  const poste = sel?.value;
+  if (!poste) { showToast('❌ Sélectionne un poste', false); return; }
+  const existing = window._devisPostes.find(p => p.poste === poste);
+  if (existing) { existing.nb = nb; }
+  else { window._devisPostes.push({ poste, nb }); }
+  renderDevisPostes();
+  sel.value = '';
+  if (document.getElementById('devisPosteNb')) document.getElementById('devisPosteNb').value = 1;
+}
+
+function supprimerDevisPoste(poste) {
+  window._devisPostes = window._devisPostes.filter(p => p.poste !== poste);
+  renderDevisPostes();
+}
+
+function renderDevisPostes() {
+  const list = document.getElementById('devisPostesList');
+  if (!list) return;
+  if (!window._devisPostes.length) {
+    list.innerHTML = '<div style="font-size:11px;color:var(--white-dim);opacity:0.6;">Aucun personnel défini.</div>';
+    return;
+  }
+  list.innerHTML = window._devisPostes.map(p => `
+    <div style="display:flex;align-items:center;justify-content:space-between;background:rgba(201,168,76,0.06);border:1px solid rgba(201,168,76,0.2);border-radius:8px;padding:8px 12px;">
+      <span style="font-size:12px;font-weight:800;color:var(--white);">👤 ${p.poste}</span>
+      <div style="display:flex;align-items:center;gap:10px;">
+        <span style="font-family:'Anton',sans-serif;font-size:16px;color:var(--gold);">×${p.nb}</span>
+        <button onclick="supprimerDevisPoste('${p.poste.replace(/'/g,"\\'")}')" style="background:none;border:none;color:#ff7b7b;cursor:pointer;font-size:13px;"><i class="fa-solid fa-xmark"></i></button>
+      </div>
+    </div>`).join('');
 }
 
 function genererDevisPNG() {
@@ -3152,7 +3232,7 @@ function genererDevisPNG() {
         <div style="font-size:14px;color:#f0ead8;padding:8px 0;">${prestation || '—'}</div>
         ${(() => {
           try {
-            const postes = JSON.parse(c.postes_requis || '[]');
+            const postes = window._devisPostes || JSON.parse(c.postes_requis || '[]');
             if (postes.length) {
               return '<div style="margin-top:10px;padding-top:10px;border-top:1px solid rgba(201,168,76,0.15);">' +
                 '<div style="font-size:9px;color:#9a9080;letter-spacing:1px;text-transform:uppercase;margin-bottom:8px;">Personnel prévu</div>' +
