@@ -4213,6 +4213,21 @@ function closeMobileMenu() {
 }
 // Sync mobile nav active state via MutationObserver sur les tab-content
 document.addEventListener('DOMContentLoaded', function() {
+  // Intercepteur fetch pour FiveM/CEF — ajoute le token dans toutes les requêtes
+  const _origFetch = window.fetch;
+  window.fetch = function(url, opts = {}) {
+    const token = localStorage.getItem('ec_token') || sessionStorage.getItem('ec_token');
+    if (token && typeof url === 'string' && (url.startsWith('/api') || url.startsWith('/dashboard'))) {
+      opts.headers = opts.headers || {};
+      if (opts.headers instanceof Headers) {
+        opts.headers.set('x-ec-token', token);
+      } else {
+        opts.headers['x-ec-token'] = token;
+      }
+      opts.credentials = opts.credentials || 'include';
+    }
+    return _origFetch.call(this, url, opts);
+  };
   const map = { 'tab-dashboard':'mobileNavDash', 'tab-planning':'mobileNavPlanning', 'tab-dossiers-rh':'mobileNavRH', 'tab-annonces':'mobileNavAnnonces' };
   const observer = new MutationObserver(function() {
     document.querySelectorAll('.mobile-nav-btn').forEach(b => b.classList.remove('active'));

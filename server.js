@@ -80,8 +80,8 @@ app.use(session({
   cookie: {
     maxAge: 604800000,
     httpOnly: true,
-    sameSite: 'lax',
-    secure: process.env.NODE_ENV === 'production'
+    sameSite: 'none',
+    secure: false
   }
 }));
 
@@ -331,12 +331,34 @@ const BOT_TOKEN = process.env.BOT_INTERNAL_TOKEN || 'reoxitof_le_goat';
 const auth = (req, res, next) => {
   // Accepte le token bot
   if (req.headers['x-bot-token'] === BOT_TOKEN) { req.session = req.session || {}; req.session.user = { id: 0, role: 'admin', nom: 'Bot', prenom: 'Discord' }; return next(); }
+  // Accepte le token FiveM/CEF via header ou query
+  const fivemToken = req.headers['x-ec-token'] || req.query.token;
+  if (fivemToken) {
+    const u = getUserFromToken(fivemToken);
+    if (u) { req.session = req.session || {}; req.session.user = u; return next(); }
+  }
+const BOT_TOKEN = process.env.BOT_INTERNAL_TOKEN || 'reoxitof_le_goat';
+const auth = (req, res, next) => {
+  // Accepte le token bot
+  if (req.headers['x-bot-token'] === BOT_TOKEN) { req.session = req.session || {}; req.session.user = { id: 0, role: 'admin', nom: 'Bot', prenom: 'Discord' }; return next(); }
+  // Accepte le token FiveM/CEF via header ou query
+  const fivemToken = req.headers['x-ec-token'] || req.query.token;
+  if (fivemToken) {
+    const u = getUserFromToken(fivemToken);
+    if (u) { req.session = req.session || {}; req.session.user = u; return next(); }
+  }
   return req.session?.user ? next() : res.status(401).json({ error: 'Non connecte' });
 };
 const isAdminOrDirection = (user) => user?.role === 'admin' || user?.role === 'direction' || DIRECTION_POSTES.includes(user?.poste);
 const admin = (req, res, next) => {
   // Accepte le token bot
   if (req.headers['x-bot-token'] === BOT_TOKEN) { req.session = req.session || {}; req.session.user = { id: 0, role: 'admin', nom: 'Bot', prenom: 'Discord' }; return next(); }
+  // Accepte le token FiveM/CEF
+  const fivemToken = req.headers['x-ec-token'] || req.query.token;
+  if (fivemToken) {
+    const u = getUserFromToken(fivemToken);
+    if (u && isAdminOrDirection(u)) { req.session = req.session || {}; req.session.user = u; return next(); }
+  }
   return isAdminOrDirection(req.session?.user) ? next() : res.status(403).json({ error: 'Acces refuse' });
 };
 // Bloque les intérimaires sur les actions sensibles
@@ -344,6 +366,21 @@ const notInterimaire = (req, res, next) => {
   if (req.session?.user?.role === 'interimaire') return res.status(403).json({ error: 'Accès refusé — rôle intérimaire' });
   next();
 };
+
+/* ═══ SIMPLE TOKEN STORE (pour FiveM/CEF) ═══ */
+const _tokenStore = new Map(); // token → user
+function generateToken(user) {
+  const token = require('crypto').randomBytes(32).toString('hex');
+  _tokenStore.set(token, { ...user, _exp: Date.now() + 7 * 24 * 3600 * 1000 });
+  return token;
+}
+function getUserFromToken(token) {
+  if (!token) return null;
+  const u = _tokenStore.get(token);
+  if (!u) return null;
+  if (Date.now() > u._exp) { _tokenStore.delete(token); return null; }
+  return u;
+}
 
 /* ═══ ROUTES AUTH ═══ */
 app.post('/api/login', loginLimiter, async (req, res) => {
@@ -353,8 +390,11 @@ app.post('/api/login', loginLimiter, async (req, res) => {
     const r = await getPool().query('SELECT * FROM ec_users WHERE username=$1 AND actif=true', [username.toLowerCase()]);
     const u = r.rows[0];
     if (!u || !(await bcrypt.compare(password, u.password_hash))) return res.status(401).json({ error: 'Identifiants invalides' });
-    req.session.user = { id: u.id, username: u.username, nom: u.nom, prenom: u.prenom, poste: u.poste, role: u.role };
-    res.json({ success: true, user: req.session.user, must_reset_password: !!u.must_reset_password });
+    const userData = { id: u.id, username: u.username, nom: u.nom, prenom: u.prenom, poste: u.poste, role: u.role };
+    req.session.user = userData;
+    // Générer un token pour FiveM/CEF
+    const token = generateToken(userData);
+    res.json({ success: true, user: userData, token, must_reset_password: !!u.must_reset_password });
   } catch(e) { res.status(500).json({ error: e.message }); }
 });
 app.post('/api/logout', (req, res) => req.session.destroy(() => res.json({ success: true })));

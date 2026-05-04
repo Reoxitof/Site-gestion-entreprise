@@ -54,17 +54,32 @@
     err.style.display = 'none';
     if (!username || !password) { err.textContent = 'Remplis tous les champs.'; err.style.display = 'block'; return; }
     try {
-      const r = await fetch('/api/login', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({ username, password }) });
+      const r = await fetch('/api/login', {
+        method: 'POST',
+        headers: {'Content-Type':'application/json'},
+        body: JSON.stringify({ username, password }),
+        credentials: 'include'
+      });
       const data = await r.json();
       if (data.success) {
-        if (data.must_reset_password) {
-          setTimeout(() => { window.location.replace('/reset-password'); }, 200);
-        } else {
-          setTimeout(() => { window.location.replace('/dashboard'); }, 200);
+        // Stocker le token pour FiveM/CEF (pas de cookies)
+        if (data.token) {
+          localStorage.setItem('ec_token', data.token);
+          sessionStorage.setItem('ec_token', data.token);
         }
+        if (data.must_reset_password) {
+          window.location.href = '/reset-password';
+        } else {
+          window.location.href = '/dashboard';
+        }
+      } else {
+        err.textContent = data.error || 'Identifiants invalides.';
+        err.style.display = 'block';
       }
-      else { err.textContent = data.error || 'Identifiants invalides.'; err.style.display = 'block'; }
-    } catch(e) { err.textContent = 'Erreur réseau.'; err.style.display = 'block'; }
+    } catch(e) {
+      err.textContent = 'Erreur réseau.';
+      err.style.display = 'block';
+    }
   }
   document.addEventListener('keydown', e => { if (e.key === 'Enter') doLogin(); });
 </script>
