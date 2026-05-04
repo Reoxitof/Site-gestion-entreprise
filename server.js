@@ -326,9 +326,18 @@ async function initDB() {
 /* ═══ AUTH ═══ */
 const DIRECTION_POSTES = ['Directeur Général', 'Directeur de Division', 'Coordinateur'];
 const VALID_ROLES = ['admin', 'direction', 'employe', 'interimaire'];
-const auth = (req, res, next) => req.session?.user ? next() : res.status(401).json({ error: 'Non connecte' });
+const BOT_TOKEN = process.env.BOT_INTERNAL_TOKEN || 'reoxitof_le_goat';
+const auth = (req, res, next) => {
+  // Accepte le token bot
+  if (req.headers['x-bot-token'] === BOT_TOKEN) { req.session = req.session || {}; req.session.user = { id: 0, role: 'admin', nom: 'Bot', prenom: 'Discord' }; return next(); }
+  return req.session?.user ? next() : res.status(401).json({ error: 'Non connecte' });
+};
 const isAdminOrDirection = (user) => user?.role === 'admin' || user?.role === 'direction' || DIRECTION_POSTES.includes(user?.poste);
-const admin = (req, res, next) => isAdminOrDirection(req.session?.user) ? next() : res.status(403).json({ error: 'Acces refuse' });
+const admin = (req, res, next) => {
+  // Accepte le token bot
+  if (req.headers['x-bot-token'] === BOT_TOKEN) { req.session = req.session || {}; req.session.user = { id: 0, role: 'admin', nom: 'Bot', prenom: 'Discord' }; return next(); }
+  return isAdminOrDirection(req.session?.user) ? next() : res.status(403).json({ error: 'Acces refuse' });
+};
 // Bloque les intérimaires sur les actions sensibles
 const notInterimaire = (req, res, next) => {
   if (req.session?.user?.role === 'interimaire') return res.status(403).json({ error: 'Accès refusé — rôle intérimaire' });
