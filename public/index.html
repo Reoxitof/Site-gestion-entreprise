@@ -2194,8 +2194,8 @@ function renderDossiersRH(data) {
     return;
   }
   grid.innerHTML = sorted.map(d => renderRHCard(d)).join('');
-  // Charger les contrats pour les intérimaires/consultants
-  sorted.filter(d => d.role === 'interimaire' || d.role === 'consultant')
+  // Charger les contrats pour intérimaires, consultants ET employés
+  sorted.filter(d => d.role === 'interimaire' || d.role === 'consultant' || d.role === 'employe')
         .forEach(d => loadContratsRH(d.id));
 }
 
