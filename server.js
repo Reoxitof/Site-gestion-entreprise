@@ -81,7 +81,7 @@ app.use(session({
     maxAge: 604800000,
     httpOnly: true,
     sameSite: 'none',
-    secure: false
+    secure: true  // Requis avec sameSite:'none' — le site tourne en HTTPS sur Sliplane
   }
 }));
 
@@ -327,16 +327,6 @@ async function initDB() {
 /* ═══ AUTH ═══ */
 const DIRECTION_POSTES = ['Directeur Général', 'Directeur de Division', 'Coordinateur'];
 const VALID_ROLES = ['admin', 'direction', 'employe', 'interimaire'];
-const BOT_TOKEN = process.env.BOT_INTERNAL_TOKEN || 'reoxitof_le_goat';
-const auth = (req, res, next) => {
-  // Accepte le token bot
-  if (req.headers['x-bot-token'] === BOT_TOKEN) { req.session = req.session || {}; req.session.user = { id: 0, role: 'admin', nom: 'Bot', prenom: 'Discord' }; return next(); }
-  // Accepte le token FiveM/CEF via header ou query
-  const fivemToken = req.headers['x-ec-token'] || req.query.token;
-  if (fivemToken) {
-    const u = getUserFromToken(fivemToken);
-    if (u) { req.session = req.session || {}; req.session.user = u; return next(); }
-  }
 const BOT_TOKEN = process.env.BOT_INTERNAL_TOKEN || 'reoxitof_le_goat';
 const auth = (req, res, next) => {
   // Accepte le token bot
