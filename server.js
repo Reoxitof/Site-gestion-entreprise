@@ -254,6 +254,7 @@ async function initDB() {
     await getPool().query(`ALTER TABLE ec_dossiers_rh ADD COLUMN IF NOT EXISTS prenom_libre TEXT DEFAULT ''`);
     await getPool().query(`ALTER TABLE ec_dossiers_rh ADD COLUMN IF NOT EXISTS poste_libre TEXT DEFAULT ''`);
     await getPool().query(`ALTER TABLE ec_dossiers_rh ADD COLUMN IF NOT EXISTS photo_data TEXT DEFAULT ''`);
+    await getPool().query(`ALTER TABLE ec_dossiers_rh ADD COLUMN IF NOT EXISTS role_dossier TEXT DEFAULT 'interimaire'`);
     await getPool().query(`ALTER TABLE ec_dossiers_rh ALTER COLUMN user_id DROP NOT NULL`).catch(() => {});
     await getPool().query(`ALTER TABLE ec_dossiers_rh DROP CONSTRAINT IF EXISTS ec_dossiers_rh_user_id_key`).catch(() => {});
     // Insérer les tarifs par défaut si la table est vide
@@ -1267,7 +1268,7 @@ app.get('/api/dossiers-rh', auth, async (req, res) => {
         COALESCE(u.nom, d.nom_libre) as nom, COALESCE(d.photo_data, d.photo_url, '') as photo_url,
         COALESCE(u.prenom, d.prenom_libre) as prenom,
         COALESCE(u.poste, d.poste_libre) as poste,
-        COALESCE(u.role, 'interimaire') as role,
+        COALESCE(d.role_dossier, u.role, 'interimaire') as role,
         u.actif, u.username
        FROM ec_dossiers_rh d
        LEFT JOIN ec_users u ON d.user_id = u.id
@@ -1317,13 +1318,16 @@ app.put('/api/dossiers-rh/:id', admin, uploadRH.single('photo'), async (req, res
     const id_employe = sanitizeStr(req.body.id_employe, 100);
     const division = sanitizeStr(req.body.division, 100);
     const photo_data = req.file ? fileToDataUrl(req.file) : null;
+    const VALID_DOSSIER_ROLES = ['interimaire', 'employe', 'consultant'];
+    const role_dossier = VALID_DOSSIER_ROLES.includes(req.body.role_dossier) ? req.body.role_dossier : null;
     await getPool().query(
       `UPDATE ec_dossiers_rh SET
         perso=$1, compte=$2, id_employe=$3, division=$4,
         photo_data=CASE WHEN $5::TEXT IS NULL THEN photo_data ELSE $5::TEXT END,
+        role_dossier=COALESCE($6, role_dossier),
         updated_at=NOW()
-       WHERE id=$6`,
-      [perso, compte, id_employe, division, photo_data, req.params.id]
+       WHERE id=$7`,
+      [perso, compte, id_employe, division, photo_data, role_dossier, req.params.id]
     );
     res.json({ success: true });
   } catch(e) { res.status(500).json({ error: e.message }); }
@@ -1359,25 +1363,29 @@ app.post('/api/dossiers-rh/interimaire', admin, uploadRH.single('photo'), async 
     const id_employe = sanitizeStr(req.body.id_employe, 100);
     const division = sanitizeStr(req.body.division, 100);
     const photo_data = req.file ? fileToDataUrl(req.file) : '';
+    const VALID_DOSSIER_ROLES = ['interimaire', 'employe', 'consultant'];
+    const role = VALID_DOSSIER_ROLES.includes(req.body.role) ? req.body.role : 'interimaire';
 
     if (!nom || !prenom || !id_employe || !division) {
       return res.status(400).json({ error: 'Champs manquants (nom, prénom, ID employé, division)' });
     }
 
-    // Créer uniquement le dossier RH sans compte de connexion
+    // Assurer que la colonne role existe
+    await getPool().query(`ALTER TABLE ec_dossiers_rh ADD COLUMN IF NOT EXISTS role_dossier TEXT DEFAULT 'interimaire'`).catch(() => {});
+
     const dossierRes = await getPool().query(
-      `INSERT INTO ec_dossiers_rh (user_id, perso, compte, id_employe, division, photo_data, nom_libre, prenom_libre, poste_libre)
-       VALUES (NULL,$1,$2,$3,$4,$5,$6,$7,$8) RETURNING *`,
-      [perso, compte, id_employe, division, photo_data, nom, prenom, poste || 'Intérimaire']
+      `INSERT INTO ec_dossiers_rh (user_id, perso, compte, id_employe, division, photo_data, nom_libre, prenom_libre, poste_libre, role_dossier)
+       VALUES (NULL,$1,$2,$3,$4,$5,$6,$7,$8,$9) RETURNING *`,
+      [perso, compte, id_employe, division, photo_data, nom, prenom, poste || role, role]
     );
     res.json({ success: true, dossier: dossierRes.rows[0] });
   } catch(e) {
-    // Si les colonnes nom_libre/prenom_libre/poste_libre n'existent pas encore, les créer
     if (e.message.includes('column') && e.message.includes('does not exist')) {
       try {
         await getPool().query(`ALTER TABLE ec_dossiers_rh ADD COLUMN IF NOT EXISTS nom_libre TEXT DEFAULT ''`);
         await getPool().query(`ALTER TABLE ec_dossiers_rh ADD COLUMN IF NOT EXISTS prenom_libre TEXT DEFAULT ''`);
         await getPool().query(`ALTER TABLE ec_dossiers_rh ADD COLUMN IF NOT EXISTS poste_libre TEXT DEFAULT ''`);
+        await getPool().query(`ALTER TABLE ec_dossiers_rh ADD COLUMN IF NOT EXISTS role_dossier TEXT DEFAULT 'interimaire'`);
         await getPool().query(`ALTER TABLE ec_dossiers_rh ALTER COLUMN user_id DROP NOT NULL`);
         return res.status(500).json({ error: 'Migration effectuée, réessaie.' });
       } catch(migErr) {}

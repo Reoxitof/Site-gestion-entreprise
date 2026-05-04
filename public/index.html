@@ -528,6 +528,14 @@
     <div class="modal-title">MODIFIER DOSSIER RH</div>
     <input type="hidden" id="dossierEditId"/>
     <div style="font-size:12px;font-weight:700;color:var(--gold);margin-bottom:14px;" id="dossierEditNom"></div>
+    <div class="form-group">
+      <label>Type de contrat</label>
+      <select class="input-field" id="dossierEditRole">
+        <option value="interimaire">🟣 Intérimaire</option>
+        <option value="employe">🟢 Employé</option>
+        <option value="consultant">🔵 Consultant</option>
+      </select>
+    </div>
     <div class="grid-2">
       <div class="form-group"><label>Perso (personnage RP)</label><input class="input-field" id="dossierEditPerso" placeholder="Ex: John Smith"/></div>
       <div class="form-group"><label>Compte (numéro)</label><input class="input-field" id="dossierEditCompte" placeholder="Ex: 1234567"/></div>
@@ -563,8 +571,16 @@
 <div class="modal-overlay" id="modalInterimaire">
   <div class="modal" style="max-width:580px;">
     <button class="modal-close" onclick="closeModal('modalInterimaire')"><i class="fa-solid fa-xmark"></i></button>
-    <div class="modal-title">NOUVEL INTÉRIMAIRE</div>
-    <div style="font-size:11px;color:var(--white-dim);margin-bottom:16px;">Crée un dossier RH intérimaire.</div>
+    <div class="modal-title">NOUVEAU DOSSIER</div>
+    <div style="font-size:11px;color:var(--white-dim);margin-bottom:16px;">Crée un dossier RH.</div>
+    <div class="form-group">
+      <label>Type de contrat *</label>
+      <select class="input-field" id="interimaireType">
+        <option value="interimaire">🟣 Intérimaire</option>
+        <option value="employe">🟢 Employé</option>
+        <option value="consultant">🔵 Consultant</option>
+      </select>
+    </div>
     <div class="grid-2">
       <div class="form-group"><label>Prénom *</label><input class="input-field" id="interimairePrenom" placeholder="Jean"/></div>
       <div class="form-group"><label>Nom *</label><input class="input-field" id="interimaireNom" placeholder="Dupont"/></div>
@@ -729,6 +745,7 @@
       <select class="input-field" id="empRole">
         <option value="employe">Employé</option>
         <option value="interimaire">Intérimaire</option>
+        <option value="consultant">Consultant</option>
         <option value="admin">Admin</option>
       </select>
     </div>
@@ -2147,7 +2164,8 @@ function renderRHCard(d) {
     admin: '<span class="badge badge-gold">Admin</span>',
     direction: '<span class="badge badge-blue">Direction</span>',
     employe: '<span class="badge badge-green">Employé</span>',
-    interimaire: '<span class="badge badge-purple">Intérimaire</span>'
+    interimaire: '<span class="badge badge-purple">Intérimaire</span>',
+    consultant: '<span class="badge" style="background:rgba(63,167,214,0.15);border:1px solid rgba(63,167,214,0.3);color:#3fa7d6;">Consultant</span>'
   }[d.role] || '<span class="badge badge-dim">—</span>';
 
   const photoHtml = d.photo_url
@@ -2158,7 +2176,7 @@ function renderRHCard(d) {
     <button class="btn btn-outline" style="font-size:10px;padding:6px 10px;" onclick="openEditDossier(${d.id})"><i class="fa-solid fa-pen"></i></button>
     <button class="btn btn-danger" style="font-size:10px;padding:6px 10px;" onclick="deleteDossier(${d.id},'${d.role}')"><i class="fa-solid fa-trash"></i></button>
     <button class="btn btn-outline" style="font-size:10px;padding:6px 10px;border-color:rgba(201,168,76,0.4);color:var(--gold);" onclick="exportDossierPNG(${d.id})"><i class="fa-solid fa-file-image"></i> PNG</button>
-    ${d.role === 'interimaire' ? `<button class="btn btn-outline" style="font-size:10px;padding:6px 10px;border-color:rgba(167,139,250,0.4);color:#a78bfa;" onclick="ouvrirContratInterimaire(${d.id})"><i class="fa-solid fa-file-contract"></i> Contrat</button>` : ''}
+    <button class="btn btn-outline" style="font-size:10px;padding:6px 10px;border-color:rgba(167,139,250,0.4);color:#a78bfa;" onclick="ouvrirContratInterimaire(${d.id})"><i class="fa-solid fa-file-contract"></i> Contrat</button>
   ` : '';
 
   return `<div class="rh-card">
@@ -2233,6 +2251,9 @@ function openEditDossier(id) {
   document.getElementById('dossierEditCompte').value = d.compte || '';
   document.getElementById('dossierEditIdEmploye').value = d.id_employe || '';
   document.getElementById('dossierEditDivision').value = d.division || '';
+  // Pré-sélectionner le type
+  const roleEl = document.getElementById('dossierEditRole');
+  if (roleEl) roleEl.value = d.role || 'interimaire';
   document.getElementById('dossierEditPhoto').value = '';
   const prev = document.getElementById('dossierEditPreview');
   if (d.photo_url) { prev.src = d.photo_url; prev.style.display = 'block'; }
@@ -2247,6 +2268,7 @@ async function submitEditDossier() {
   fd.append('compte', document.getElementById('dossierEditCompte').value);
   fd.append('id_employe', document.getElementById('dossierEditIdEmploye').value);
   fd.append('division', document.getElementById('dossierEditDivision').value);
+  fd.append('role_dossier', document.getElementById('dossierEditRole')?.value || 'interimaire');
   const photo = document.getElementById('dossierEditPhoto').files[0];
   if (photo) fd.append('photo', photo);
   try {
@@ -2289,6 +2311,7 @@ async function submitCreateInterimaire() {
   const nom = document.getElementById('interimaireNom').value.trim();
   const id_employe = document.getElementById('interimaireIdEmploye').value.trim();
   const division = document.getElementById('interimaireDivision').value;
+  const type = document.getElementById('interimaireType')?.value || 'interimaire';
   if (!prenom || !nom || !id_employe || !division) {
     showToast('❌ Prénom, Nom, ID Employé et Division sont obligatoires', false); return;
   }
@@ -2300,12 +2323,14 @@ async function submitCreateInterimaire() {
   fd.append('compte', document.getElementById('interimaireCompte').value);
   fd.append('id_employe', id_employe);
   fd.append('division', division);
+  fd.append('role', type);
   const photo = document.getElementById('interimairePhoto').files[0];
   if (photo) fd.append('photo', photo);
   try {
     const r = await fetch('/api/dossiers-rh/interimaire', { method: 'POST', body: fd });
     const d = await r.json();
-    if (d.success) { showToast('✅ Intérimaire créé'); closeModal('modalInterimaire'); loadDossiersRH(); }
+    const labels = { interimaire: 'Intérimaire', employe: 'Employé', consultant: 'Consultant' };
+    if (d.success) { showToast('✅ ' + (labels[type]||'Dossier') + ' créé'); closeModal('modalInterimaire'); loadDossiersRH(); }
     else showToast('❌ ' + (d.error || 'Erreur'), false);
   } catch(e) { showToast('❌ Erreur réseau', false); }
 }
@@ -3531,12 +3556,23 @@ function genererContratPNG() {
 
     // ══ COLONNE GAUCHE (0 → 768) ══
 
-    // TYPE DE CONTRAT — cocher "EMPLOYÉ INTÉRIMAIRE" (x=91, y=318 depuis Paint)
-    ctx.fillStyle = '#c9a84c';
-    ctx.fillRect(91, 318, 16, 16);
-    ctx.fillStyle = '#000';
-    ctx.font = 'bold 13px Arial';
-    ctx.fillText('✓', 93, 331);
+    // TYPE DE CONTRAT — cocher selon le rôle du dossier
+    const roleContrat = window._contratDossier?.role || 'interimaire';
+    if (roleContrat === 'employe' || roleContrat === 'consultant') {
+      // EMPLOYÉ TEMPS PLEIN — case droite (x≈320, y=318)
+      ctx.fillStyle = '#c9a84c';
+      ctx.fillRect(320, 318, 16, 16);
+      ctx.fillStyle = '#000';
+      ctx.font = 'bold 13px Arial';
+      ctx.fillText('✓', 322, 331);
+    } else {
+      // EMPLOYÉ INTÉRIMAIRE — case gauche (x=91, y=318)
+      ctx.fillStyle = '#c9a84c';
+      ctx.fillRect(91, 318, 16, 16);
+      ctx.fillStyle = '#000';
+      ctx.font = 'bold 13px Arial';
+      ctx.fillText('✓', 93, 331);
+    }
 
     // INFORMATIONS EMPLOYÉ — coordonnées exactes depuis Paint
     // NOM COMPLET field haut-gauche : x=235, y=413 → texte à y=430
