@@ -2219,7 +2219,7 @@ function renderRHCard(d) {
       <div style="margin-top:8px;display:flex;align-items:center;gap:8px;flex-wrap:wrap;">${roleBadge}</div>
       <div style="margin-top:8px;">${statutSelect}</div>
       <div class="rh-card-actions">${adminBtns}</div>
-      ${(d.role === 'interimaire' || d.role === 'consultant') ? `
+      ${(d.role === 'interimaire' || d.role === 'consultant' || d.role === 'employe') ? `
       <div id="contrats-list-${d.id}" style="margin-top:10px;border-top:1px solid rgba(201,168,76,0.15);padding-top:10px;">
         <div style="font-size:9px;font-weight:800;letter-spacing:1px;text-transform:uppercase;color:var(--white-dim);margin-bottom:6px;display:flex;align-items:center;justify-content:space-between;">
           <span><i class="fa-solid fa-file-contract" style="color:var(--gold);margin-right:4px;"></i> Contrats / Missions</span>
