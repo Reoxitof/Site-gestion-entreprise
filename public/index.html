@@ -3532,11 +3532,12 @@ function genererContratPNG() {
     // ══ COLONNE GAUCHE (0 → 768) ══
 
     // TYPE DE CONTRAT — cocher "EMPLOYÉ INTÉRIMAIRE"
+    // Case blanche à x≈152, y≈281 dans l'image 1536×1024
     ctx.fillStyle = '#c9a84c';
-    ctx.fillRect(155, 281, 16, 16);
+    ctx.fillRect(152, 281, 16, 16);
     ctx.fillStyle = '#000';
     ctx.font = 'bold 13px Arial';
-    ctx.fillText('✓', 157, 294);
+    ctx.fillText('✓', 154, 294);
 
     // INFORMATIONS EMPLOYÉ — coordonnées exactes depuis Paint
     // NOM COMPLET field haut-gauche : x=235, y=413 → texte à y=430
