@@ -2154,6 +2154,9 @@ function renderDossiersRH(data) {
     return;
   }
   grid.innerHTML = sorted.map(d => renderRHCard(d)).join('');
+  // Charger les contrats pour les intérimaires/consultants
+  sorted.filter(d => d.role === 'interimaire' || d.role === 'consultant')
+        .forEach(d => loadContratsRH(d.id));
 }
 
 function renderRHCard(d) {
@@ -2186,6 +2189,14 @@ function renderRHCard(d) {
       <div class="rh-card-info"><i class="fa-solid fa-id-badge" style="width:14px;color:var(--gold);"></i> ID : <span>${d.id_employe || '—'}</span></div>
       <div style="margin-top:8px;">${roleBadge}</div>
       <div class="rh-card-actions">${adminBtns}</div>
+      ${(d.role === 'interimaire' || d.role === 'consultant') ? `
+      <div id="contrats-list-${d.id}" style="margin-top:10px;border-top:1px solid rgba(201,168,76,0.15);padding-top:10px;">
+        <div style="font-size:9px;font-weight:800;letter-spacing:1px;text-transform:uppercase;color:var(--white-dim);margin-bottom:6px;display:flex;align-items:center;justify-content:space-between;">
+          <span><i class="fa-solid fa-file-contract" style="color:var(--gold);margin-right:4px;"></i> Contrats / Missions</span>
+          <button onclick="loadContratsRH(${d.id})" style="background:none;border:none;color:var(--gold);cursor:pointer;font-size:10px;padding:0;">↻ Actualiser</button>
+        </div>
+        <div id="contrats-items-${d.id}" style="font-size:11px;color:var(--white-dim);">Chargement...</div>
+      </div>` : ''}
     </div>
   </div>`;
 }
@@ -3476,6 +3487,44 @@ function exportDevisPNG(id) {
 }
 
 // ── CONTRATS RH (missions intérimaires/consultants) ──
+async function loadContratsRH(dossierId) {
+  const el = document.getElementById(`contrats-items-${dossierId}`);
+  if (!el) return;
+  try {
+    const r = await fetch(`/api/dossiers-rh/${dossierId}/contrats`);
+    const contrats = await r.json();
+    if (!contrats.length) {
+      el.innerHTML = '<span style="font-style:italic;opacity:0.6;">Aucun contrat enregistré.</span>';
+      return;
+    }
+    const statutColor = { actif: '#4caf7d', termine: '#9a9080', annule: '#e24040' };
+    el.innerHTML = contrats.map(c => `
+      <div style="display:flex;align-items:center;justify-content:space-between;padding:5px 8px;background:rgba(255,255,255,0.03);border-radius:6px;margin-bottom:4px;border:1px solid rgba(201,168,76,0.1);">
+        <div style="flex:1;min-width:0;">
+          <div style="font-weight:700;color:var(--white);font-size:11px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${c.intitule}</div>
+          <div style="font-size:10px;color:var(--white-dim);">${new Date(c.date_debut).toLocaleDateString('fr-FR',{day:'numeric',month:'short',year:'numeric'})}${c.heures?' · '+c.heures+'h':''}</div>
+        </div>
+        <div style="text-align:right;flex-shrink:0;margin-left:8px;">
+          <div style="font-weight:800;color:var(--gold);font-size:12px;">${Number(c.remuneration).toLocaleString('fr-FR')} $</div>
+          <div style="font-size:9px;color:${statutColor[c.statut]||'#9a9080'};font-weight:700;text-transform:uppercase;">${c.statut}${c.fiche_paye_id?' ✅':''}</div>
+        </div>
+        ${isAdmin() ? `<button onclick="deleteContratRH(${c.id},${dossierId})" style="background:none;border:none;color:var(--red);cursor:pointer;font-size:11px;padding:2px 6px;margin-left:4px;" title="Supprimer"><i class="fa-solid fa-trash"></i></button>` : ''}
+      </div>`).join('');
+  } catch(e) {
+    el.innerHTML = '<span style="color:var(--red);font-size:10px;">Erreur chargement</span>';
+  }
+}
+
+async function deleteContratRH(contratId, dossierId) {
+  if (!confirm('Supprimer ce contrat ?')) return;
+  try {
+    const r = await fetch(`/api/contrats-rh/${contratId}`, { method: 'DELETE' });
+    const d = await r.json();
+    if (d.success) { showToast('✅ Contrat supprimé'); loadContratsRH(dossierId); }
+    else showToast('❌ ' + (d.error || 'Erreur'), false);
+  } catch(e) { showToast('❌ Erreur réseau', false); }
+}
+
 function ouvrirAjoutContrat(dossierId) {
   document.getElementById('ajoutContratDossierId').value = dossierId;
   document.getElementById('ajoutContratIntitule').value = '';
@@ -3664,7 +3713,7 @@ function genererContratPNG() {
           heures: heures,
           remuneration: remuneration
         })
-      }).catch(() => {}); // silencieux si erreur
+      }).then(() => loadContratsRH(parseInt(dossierId))).catch(() => {});
     }
 
     closeModal('modalContratInterimaire');
