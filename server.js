@@ -1189,13 +1189,32 @@ app.get('/api/fiches-paye', auth, async (req, res) => {
     if (semaine) {
       const { lundi } = getSemaineBornes(semaine);
       params.push(lundi.toISOString().split('T')[0]);
-      semaineClause =  AND f.semaine_debut = +$+${params.length};
+      semaineClause = ` AND f.semaine_debut = $${params.length}`;
     }
     let userClause = '';
-    if (!isDir) { params.push(req.session.user.id); userClause =  AND f.user_id = +$+${params.length}; }
-    const q1 = SELECT f.id, f.semaine_debut, f.semaine_fin, f.montant_total, f.statut, f.details, f.paye_le, COALESCE(f.type_source,'employe') as source_type, u.nom, u.prenom, u.poste, NULL::integer as dossier_id, p.nom as paye_par_nom FROM ec_fiches_paye f JOIN ec_users u ON f.user_id = u.id LEFT JOIN ec_users p ON f.paye_par = p.id WHERE f.user_id IS NOT NULL+userClause+semaineClause;
-    const q2 = SELECT f.id, f.semaine_debut, f.semaine_fin, f.montant_total, f.statut, f.details, f.paye_le, COALESCE(d.role_dossier,'interimaire') as source_type, COALESCE(d.nom_libre, u2.nom, '') as nom, COALESCE(d.prenom_libre, u2.prenom, '') as prenom, COALESCE(d.poste_libre, u2.poste, '') as poste, d.id as dossier_id, p.nom as paye_par_nom FROM ec_fiches_paye f JOIN ec_dossiers_rh d ON f.dossier_id = d.id LEFT JOIN ec_users u2 ON d.user_id = u2.id LEFT JOIN ec_users p ON f.paye_par = p.id WHERE f.dossier_id IS NOT NULL+semaineClause;
-    const combined = (+q1+) UNION ALL (+q2+) ORDER BY semaine_debut DESC, nom ASC;
+    if (!isDir) {
+      params.push(req.session.user.id);
+      userClause = ` AND f.user_id = $${params.length}`;
+    }
+    const q1 = `SELECT f.id, f.semaine_debut, f.semaine_fin, f.montant_total, f.statut,
+      f.details, f.paye_le, COALESCE(f.type_source,'employe') as source_type,
+      u.nom, u.prenom, u.poste, NULL::integer as dossier_id, p.nom as paye_par_nom
+      FROM ec_fiches_paye f
+      JOIN ec_users u ON f.user_id = u.id
+      LEFT JOIN ec_users p ON f.paye_par = p.id
+      WHERE f.user_id IS NOT NULL${userClause}${semaineClause}`;
+    const q2 = `SELECT f.id, f.semaine_debut, f.semaine_fin, f.montant_total, f.statut,
+      f.details, f.paye_le, COALESCE(d.role_dossier,'interimaire') as source_type,
+      COALESCE(d.nom_libre, u2.nom, '') as nom,
+      COALESCE(d.prenom_libre, u2.prenom, '') as prenom,
+      COALESCE(d.poste_libre, u2.poste, '') as poste,
+      d.id as dossier_id, p.nom as paye_par_nom
+      FROM ec_fiches_paye f
+      JOIN ec_dossiers_rh d ON f.dossier_id = d.id
+      LEFT JOIN ec_users u2 ON d.user_id = u2.id
+      LEFT JOIN ec_users p ON f.paye_par = p.id
+      WHERE f.dossier_id IS NOT NULL${semaineClause}`;
+    const combined = `(${q1}) UNION ALL (${q2}) ORDER BY semaine_debut DESC, nom ASC`;
     res.json((await getPool().query(combined, params)).rows);
   } catch(e) { res.status(500).json({ error: e.message }); }
 });

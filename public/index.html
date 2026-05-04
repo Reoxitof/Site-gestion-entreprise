@@ -3631,15 +3631,15 @@ function genererContratPNG() {
 
     // TYPE DE CONTRAT — cocher selon le rôle du dossier
     const roleContrat = window._contratDossier?.role || 'interimaire';
-    if (roleContrat === 'employe' || roleContrat === 'consultant') {
-      // EMPLOYÉ TEMPS PLEIN — case droite (x≈320, y=318)
+    if (roleContrat === 'employe') {
+      // EMPLOYÉ TEMPS PLEIN — case droite (x=398, y=318)
       ctx.fillStyle = '#c9a84c';
-      ctx.fillRect(320, 318, 16, 16);
+      ctx.fillRect(398, 318, 16, 16);
       ctx.fillStyle = '#000';
       ctx.font = 'bold 13px Arial';
-      ctx.fillText('✓', 322, 331);
+      ctx.fillText('✓', 400, 331);
     } else {
-      // EMPLOYÉ INTÉRIMAIRE — case gauche (x=91, y=318)
+      // EMPLOYÉ INTÉRIMAIRE / CONSULTANT — case gauche (x=91, y=318)
       ctx.fillStyle = '#c9a84c';
       ctx.fillRect(91, 318, 16, 16);
       ctx.fillStyle = '#000';
@@ -3671,6 +3671,16 @@ function genererContratPNG() {
     // INFORMATIONS COMPLÉMENTAIRES haut-gauche : x=816, y=452 → texte à y=470
     if (description) {
       txtWrap(description, 816, 470, 310, 15, '#c9a84c');
+    }
+
+    // SI EMPLOYÉ TEMPS PLEIN — champs côté droit des CONDITIONS DE TRAVAIL
+    if (roleContrat === 'employe') {
+      // VOLUME HORAIRE : x=541, y=672 → texte à y=690
+      txt(heureDebut + ' - ' + heureFin, 541, 690, 15, '#c9a84c', true);
+      // JOURS DE TRAVAIL : x=541, y=732 → texte à y=750
+      txt(dateAffiche, 541, 750, 14, '#c9a84c', false);
+      // RÉMUNÉRATION MENSUELLE : x=541, y=790 → texte à y=808
+      txt(remuStr, 541, 808, 15, '#c9a84c', true);
     }
 
     // Télécharger
