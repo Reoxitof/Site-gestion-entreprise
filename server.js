@@ -1515,6 +1515,21 @@ app.put('/api/dossiers-rh/:id', admin, uploadRH.single('photo'), async (req, res
   } catch(e) { res.status(500).json({ error: e.message }); }
 });
 
+// PATCH /api/dossiers-rh/sync-statut — sync statut profil → dossier RH
+app.patch('/api/dossiers-rh/sync-statut', auth, async (req, res) => {
+  try {
+    const statut = String(req.body.statut || '').toLowerCase();
+    const valides = ['disponible', 'en_mission', 'absent', 'conge', 'indisponible'];
+    if (!valides.includes(statut)) return res.status(400).json({ error: 'Statut invalide' });
+    // Trouver le dossier RH lié à cet utilisateur
+    await getPool().query(
+      `UPDATE ec_dossiers_rh SET statut_dossier=$1, updated_at=NOW() WHERE user_id=$2`,
+      [statut, req.session.user.id]
+    );
+    res.json({ success: true });
+  } catch(e) { res.status(500).json({ error: e.message }); }
+});
+
 // PATCH /api/dossiers-rh/:id/statut — changer le statut
 app.patch('/api/dossiers-rh/:id/statut', admin, async (req, res) => {
   try {

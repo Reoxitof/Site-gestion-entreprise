@@ -1541,6 +1541,12 @@ async function changerStatut(statut) {
         btn.style.opacity = btn.dataset.statut === statut ? '1' : '0.5';
         btn.style.fontWeight = btn.dataset.statut === statut ? '900' : '700';
       });
+      // Sync avec le dossier RH si l'utilisateur en a un
+      fetch('/api/dossiers-rh/sync-statut', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ statut })
+      }).catch(() => {});
     } else {
       showToast('❌ ' + (d.error || 'Erreur'), false);
     }
