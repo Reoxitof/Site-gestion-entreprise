@@ -93,12 +93,23 @@ body{background:var(--bg);color:var(--white);font-family:Inter,Arial;min-height:
 
 <div class="main">
   <div class="page-title">FICHES DE PAYE</div>
-  <div class="page-sub" id="pageSub">Semaine en cours</div>
+  <div class="page-sub" id="pageSub">Toutes les fiches</div>
 
   <div class="toolbar">
-    <input type="week" id="semaineInput" class="input-field" onchange="loadFiches()">
+    <select id="filtreType" class="input-field" style="width:200px;" onchange="loadFiches()">
+      <option value="">Tous les types</option>
+      <option value="employe">🟢 Employés</option>
+      <option value="interimaire">🟣 Intérimaires</option>
+      <option value="consultant">🔵 Consultants</option>
+    </select>
+    <select id="filtreStatut" class="input-field" style="width:180px;" onchange="loadFiches()">
+      <option value="">Tous les statuts</option>
+      <option value="en_attente">⏳ En attente</option>
+      <option value="paye">✅ Payées</option>
+    </select>
     <div id="directionTools" style="display:none;display:flex;gap:8px;flex-wrap:wrap;">
-      <button class="btn btn-gold" onclick="genererFiches()"><i class="fa-solid fa-wand-magic-sparkles"></i> Générer les fiches</button>
+      <input type="week" id="semaineInput" class="input-field" title="Générer fiches employés pour cette semaine">
+      <button class="btn btn-gold" onclick="genererFiches()"><i class="fa-solid fa-wand-magic-sparkles"></i> Générer fiches employés</button>
     </div>
   </div>
 
@@ -186,23 +197,22 @@ function weekInputToMonday(val) {
 }
 
 async function loadFiches() {
-  const val = document.getElementById('semaineInput').value;
-  if (!val) return;
-  const mondayStr = weekInputToMonday(val);
   try {
-    const r = await fetch(`/api/fiches-paye?semaine=${mondayStr}`);
+    const type = document.getElementById('filtreType')?.value || '';
+    const statut = document.getElementById('filtreStatut')?.value || '';
+    let url = '/api/fiches-paye?';
+    if (type) url += `type=${type}&`;
+    if (statut) url += `statut=${statut}&`;
+    const r = await fetch(url);
     allFiches = await r.json();
-    renderFiches(allFiches, mondayStr);
+    renderFiches(allFiches);
   } catch(e) {
     document.getElementById('fichesList').innerHTML = '<div class="empty"><i class="fa-solid fa-triangle-exclamation"></i><p>Erreur de chargement</p></div>';
   }
 }
 
-function renderFiches(fiches, mondayStr) {
-  const sunday = new Date(mondayStr);
-  sunday.setDate(sunday.getDate() + 6);
-  const label = `Semaine du ${new Date(mondayStr).toLocaleDateString('fr-FR',{day:'numeric',month:'long'})} au ${sunday.toLocaleDateString('fr-FR',{day:'numeric',month:'long',year:'numeric'})}`;
-  document.getElementById('pageSub').textContent = label;
+function renderFiches(fiches) {
+  document.getElementById('pageSub').textContent = `${fiches.length} fiche(s) de paye`;
 
   if (isDir) {
     const total = fiches.reduce((s,f) => s + parseFloat(f.montant_total||0), 0);

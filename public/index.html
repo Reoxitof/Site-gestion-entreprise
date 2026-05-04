@@ -3508,11 +3508,26 @@ async function loadContratsRH(dossierId) {
           <div style="font-weight:800;color:var(--gold);font-size:12px;">${Number(c.remuneration).toLocaleString('fr-FR')} $</div>
           <div style="font-size:9px;color:${statutColor[c.statut]||'#9a9080'};font-weight:700;text-transform:uppercase;">${c.statut}${c.fiche_paye_id?' ✅':''}</div>
         </div>
+        ${isAdmin() && c.statut === 'actif' && !c.fiche_paye_id ? `
+          <button onclick="payerContrat(${c.id},${dossierId},'${c.intitule}',${c.remuneration})" style="background:rgba(76,175,125,0.15);border:1px solid rgba(76,175,125,0.4);color:#4caf7d;cursor:pointer;font-size:10px;padding:4px 8px;border-radius:6px;margin-left:6px;font-weight:700;" title="Payer ce contrat">💰 Payer</button>
+        ` : ''}
         ${isAdmin() ? `<button onclick="deleteContratRH(${c.id},${dossierId})" style="background:none;border:none;color:var(--red);cursor:pointer;font-size:11px;padding:2px 6px;margin-left:4px;" title="Supprimer"><i class="fa-solid fa-trash"></i></button>` : ''}
       </div>`).join('');
   } catch(e) {
     el.innerHTML = '<span style="color:var(--red);font-size:10px;">Erreur chargement</span>';
   }
+}
+
+async function payerContrat(contratId, dossierId, intitule, remuneration) {
+  if (!confirm(`Payer le contrat "${intitule}" — ${Number(remuneration).toLocaleString('fr-FR')} $ ?`)) return;
+  try {
+    const r = await fetch(`/api/contrats-rh/${contratId}/payer`, { method: 'POST' });
+    const d = await r.json();
+    if (d.success) {
+      showToast(`✅ Contrat payé — Fiche de paye créée`);
+      loadContratsRH(dossierId);
+    } else showToast('❌ ' + (d.error || 'Erreur'), false);
+  } catch(e) { showToast('❌ Erreur réseau', false); }
 }
 
 async function deleteContratRH(contratId, dossierId) {
