@@ -1479,19 +1479,37 @@ app.put('/api/dossiers-rh/:id', admin, uploadRH.single('photo'), async (req, res
     const compte = sanitizeStr(req.body.compte, 500);
     const id_employe = sanitizeStr(req.body.id_employe, 100);
     const division = sanitizeStr(req.body.division, 100);
-    const photo_data = req.file ? fileToDataUrl(req.file) : null;
-    // Accepte aussi photo_url depuis le bot Discord
-    const photo_url_bot = req.body.photo_url ? sanitizeStr(req.body.photo_url, 1000) : null;
     const VALID_DOSSIER_ROLES = ['interimaire', 'employe', 'consultant'];
     const role_dossier = VALID_DOSSIER_ROLES.includes(req.body.role_dossier) ? req.body.role_dossier : null;
+
+    // Photo depuis upload fichier
+    let photo_data = req.file ? fileToDataUrl(req.file) : null;
+
+    // Photo depuis URL Discord (bot) — télécharger et convertir en base64
+    if (!photo_data && req.body.photo_url) {
+      try {
+        const photoUrl = sanitizeStr(req.body.photo_url, 1000);
+        if (photoUrl.startsWith('https://')) {
+          const photoRes = await fetch(photoUrl, { signal: AbortSignal.timeout(10000) });
+          if (photoRes.ok) {
+            const contentType = photoRes.headers.get('content-type') || 'image/jpeg';
+            const buffer = await photoRes.arrayBuffer();
+            photo_data = `data:${contentType};base64,${Buffer.from(buffer).toString('base64')}`;
+          }
+        }
+      } catch(e) {
+        console.log('[PHOTO] Erreur téléchargement :', e.message);
+      }
+    }
+
     await getPool().query(
       `UPDATE ec_dossiers_rh SET
         perso=$1, compte=$2, id_employe=$3, division=$4,
-        photo_data=CASE WHEN $5::TEXT IS NULL AND $6::TEXT IS NULL THEN photo_data WHEN $5::TEXT IS NOT NULL THEN $5::TEXT ELSE $6::TEXT END,
-        role_dossier=COALESCE($7, role_dossier),
+        photo_data=CASE WHEN $5::TEXT IS NULL THEN photo_data ELSE $5::TEXT END,
+        role_dossier=COALESCE($6, role_dossier),
         updated_at=NOW()
-       WHERE id=$8`,
-      [perso, compte, id_employe, division, photo_data, photo_url_bot, role_dossier, req.params.id]
+       WHERE id=$7`,
+      [perso, compte, id_employe, division, photo_data, role_dossier, req.params.id]
     );
     res.json({ success: true });
   } catch(e) { res.status(500).json({ error: e.message }); }
@@ -1530,6 +1548,22 @@ app.post('/api/dossiers-rh/interimaire', admin, uploadRH.single('photo'), async 
     const VALID_DOSSIER_ROLES = ['interimaire', 'employe', 'consultant'];
     const role = VALID_DOSSIER_ROLES.includes(req.body.role) ? req.body.role : 'interimaire';
 
+    // Photo depuis URL Discord (bot) — télécharger et convertir en base64
+    let photo_data_final = photo_data;
+    if (!photo_data_final && req.body.photo_url) {
+      try {
+        const photoUrl = sanitizeStr(req.body.photo_url, 1000);
+        if (photoUrl.startsWith('https://')) {
+          const photoRes = await fetch(photoUrl, { signal: AbortSignal.timeout(10000) });
+          if (photoRes.ok) {
+            const ct = photoRes.headers.get('content-type') || 'image/jpeg';
+            const buf = await photoRes.arrayBuffer();
+            photo_data_final = `data:${ct};base64,${Buffer.from(buf).toString('base64')}`;
+          }
+        }
+      } catch(e) { console.log('[PHOTO] Erreur :', e.message); }
+    }
+
     if (!nom || !prenom || !id_employe || !division) {
       return res.status(400).json({ error: 'Champs manquants (nom, prénom, ID employé, division)' });
     }
@@ -1540,7 +1574,7 @@ app.post('/api/dossiers-rh/interimaire', admin, uploadRH.single('photo'), async 
     const dossierRes = await getPool().query(
       `INSERT INTO ec_dossiers_rh (user_id, perso, compte, id_employe, division, photo_data, nom_libre, prenom_libre, poste_libre, role_dossier)
        VALUES (NULL,$1,$2,$3,$4,$5,$6,$7,$8,$9) RETURNING *`,
-      [perso, compte, id_employe, division, photo_data, nom, prenom, poste || role, role]
+      [perso, compte, id_employe, division, photo_data_final, nom, prenom, poste || role, role]
     );
     res.json({ success: true, dossier: dossierRes.rows[0] });
   } catch(e) {
