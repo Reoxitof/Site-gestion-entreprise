@@ -2172,6 +2172,29 @@ function renderRHCard(d) {
     ? `<img src="${d.photo_url}" alt="Photo" style="width:100%;height:180px;object-fit:cover;"/>`
     : `<div class="rh-card-avatar"><i class="fa-solid fa-user" style="font-size:64px;color:rgba(201,168,76,0.3);"></i></div>`;
 
+  // Statut badge pour intérimaires, employés et consultants
+  const statutConfig = {
+    disponible:   { color: '#22c55e', label: 'Disponible' },
+    en_mission:   { color: '#f59e0b', label: 'En mission' },
+    absent:       { color: '#ef4444', label: 'Absent' },
+    conge:        { color: '#3b82f6', label: 'Congé' },
+    indisponible: { color: '#6b7280', label: 'Indisponible' }
+  };
+  const statut = d.statut_dossier || 'disponible';
+  const sc = statutConfig[statut] || statutConfig.disponible;
+  const statutBadge = `<span style="display:inline-flex;align-items:center;gap:5px;padding:4px 10px;border-radius:20px;background:${sc.color}22;border:1px solid ${sc.color}55;font-size:10px;font-weight:800;color:${sc.color};letter-spacing:1px;">
+    <span style="width:7px;height:7px;border-radius:50%;background:${sc.color};display:inline-block;"></span>${sc.label}
+  </span>`;
+
+  const statutSelect = isAdmin() ? `
+    <select onchange="updateStatutDossier(${d.id},this.value)" style="margin-top:6px;width:100%;padding:5px 8px;border-radius:8px;border:1px solid var(--border);background:var(--card-hover);color:var(--white);font-size:10px;font-weight:700;cursor:pointer;">
+      <option value="disponible"   ${statut==='disponible'   ?'selected':''}>🟢 Disponible</option>
+      <option value="en_mission"   ${statut==='en_mission'   ?'selected':''}>🟡 En mission</option>
+      <option value="absent"       ${statut==='absent'       ?'selected':''}>🔴 Absent</option>
+      <option value="conge"        ${statut==='conge'        ?'selected':''}>🔵 Congé</option>
+      <option value="indisponible" ${statut==='indisponible' ?'selected':''}>⚫ Indisponible</option>
+    </select>` : statutBadge;
+
   const adminBtns = isAdmin() ? `
     <button class="btn btn-outline" style="font-size:10px;padding:6px 10px;" onclick="openEditDossier(${d.id})"><i class="fa-solid fa-pen"></i></button>
     <button class="btn btn-danger" style="font-size:10px;padding:6px 10px;" onclick="deleteDossier(${d.id},'${d.role}')"><i class="fa-solid fa-trash"></i></button>
@@ -2187,7 +2210,8 @@ function renderRHCard(d) {
       <div class="rh-card-info"><i class="fa-solid fa-user-secret" style="width:14px;color:var(--gold);"></i> Perso : <span>${d.perso || '—'}</span></div>
       <div class="rh-card-info"><i class="fa-solid fa-wallet" style="width:14px;color:var(--gold);"></i> Compte : <span>${d.compte || '—'}</span></div>
       <div class="rh-card-info"><i class="fa-solid fa-id-badge" style="width:14px;color:var(--gold);"></i> ID : <span>${d.id_employe || '—'}</span></div>
-      <div style="margin-top:8px;">${roleBadge}</div>
+      <div style="margin-top:8px;display:flex;align-items:center;gap:8px;flex-wrap:wrap;">${roleBadge}</div>
+      <div style="margin-top:8px;">${statutSelect}</div>
       <div class="rh-card-actions">${adminBtns}</div>
       ${(d.role === 'interimaire' || d.role === 'consultant') ? `
       <div id="contrats-list-${d.id}" style="margin-top:10px;border-top:1px solid rgba(201,168,76,0.15);padding-top:10px;">
@@ -2206,6 +2230,21 @@ function sortDossiers(critere) {
   document.getElementById('rhSortNom').classList.toggle('active', critere === 'nom');
   document.getElementById('rhSortPrenom').classList.toggle('active', critere === 'prenom');
   renderDossiersRH(rhData);
+}
+
+async function updateStatutDossier(id, statut) {
+  try {
+    const r = await fetch(`/api/dossiers-rh/${id}/statut`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ statut })
+    });
+    const d = await r.json();
+    if (d.success) showToast('✅ Statut mis à jour');
+    else showToast('❌ Erreur : ' + (d.error || 'inconnue'));
+  } catch(e) {
+    showToast('❌ Erreur réseau');
+  }
 }
 
 async function openCreateDossier() {

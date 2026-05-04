@@ -279,7 +279,7 @@ async function initDB() {
     await getPool().query(`ALTER TABLE ec_dossiers_rh ADD COLUMN IF NOT EXISTS role_dossier TEXT DEFAULT 'interimaire'`);
     await getPool().query(`ALTER TABLE ec_dossiers_rh ALTER COLUMN user_id DROP NOT NULL`).catch(() => {});
     await getPool().query(`ALTER TABLE ec_dossiers_rh DROP CONSTRAINT IF EXISTS ec_dossiers_rh_user_id_key`).catch(() => {});
-    // Insérer les tarifs par défaut si la table est vide
+    await getPool().query(`ALTER TABLE ec_dossiers_rh ADD COLUMN IF NOT EXISTS statut_dossier TEXT DEFAULT 'disponible'`).catch(() => {});    // Insérer les tarifs par défaut si la table est vide
     const tc = await getPool().query('SELECT COUNT(*) FROM ec_tarifs');
     if (parseInt(tc.rows[0].count) === 0) {
       const tarifs = [
@@ -1512,6 +1512,20 @@ app.put('/api/dossiers-rh/:id', admin, uploadRH.single('photo'), async (req, res
       [perso, compte, id_employe, division, photo_data, role_dossier, req.params.id]
     );
     res.json({ success: true });
+  } catch(e) { res.status(500).json({ error: e.message }); }
+});
+
+// PATCH /api/dossiers-rh/:id/statut — changer le statut
+app.patch('/api/dossiers-rh/:id/statut', admin, async (req, res) => {
+  try {
+    const statut = String(req.body.statut || '').toLowerCase();
+    const valides = ['disponible', 'en_mission', 'absent', 'conge', 'indisponible'];
+    if (!valides.includes(statut)) return res.status(400).json({ error: 'Statut invalide' });
+    await getPool().query(
+      `UPDATE ec_dossiers_rh SET statut_dossier=$1, updated_at=NOW() WHERE id=$2`,
+      [statut, req.params.id]
+    );
+    res.json({ success: true, statut });
   } catch(e) { res.status(500).json({ error: e.message }); }
 });
 
