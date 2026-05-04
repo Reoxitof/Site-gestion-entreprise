@@ -80,8 +80,8 @@ app.use(session({
   cookie: {
     maxAge: 604800000,
     httpOnly: true,
-    sameSite: 'none',
-    secure: true  // Requis avec sameSite:'none' — le site tourne en HTTPS sur Sliplane
+    sameSite: 'lax',
+    secure: false
   }
 }));
 
