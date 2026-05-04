@@ -221,37 +221,64 @@ function renderFiches(fiches, mondayStr) {
     return;
   }
 
+  // Badges par type
+  const typeBadge = {
+    employe:     '<span class="badge" style="background:rgba(76,175,125,0.15);border:1px solid rgba(76,175,125,0.3);color:#4caf7d;">🟢 Employé</span>',
+    interimaire: '<span class="badge" style="background:rgba(167,139,250,0.15);border:1px solid rgba(167,139,250,0.3);color:#a78bfa;">🟣 Intérimaire</span>',
+    consultant:  '<span class="badge" style="background:rgba(63,167,214,0.15);border:1px solid rgba(63,167,214,0.3);color:#3fa7d6;">🔵 Consultant</span>'
+  };
+
   el.innerHTML = '<div class="fiches-grid">' + fiches.map(f => {
-    let evts = [];
-    try { evts = JSON.parse(f.details || '[]'); } catch(e) {}
-    const evtsHtml = evts.length ? `
-      <div class="evts-list">
-        <div style="font-size:9px;font-weight:800;letter-spacing:2px;text-transform:uppercase;color:var(--white-dim);margin-bottom:6px;"><i class="fa-solid fa-calendar-check"></i> Événements participés</div>
-        ${evts.map(e => `
-          <div class="evt-row">
-            <div class="evt-info">
-              <div class="evt-client">${e.client_nom}</div>
-              <div class="evt-meta">${e.type_prestation}${e.lieu?' — '+e.lieu:''}${e.date_evenement?' · '+new Date(e.date_evenement).toLocaleDateString('fr-FR',{day:'numeric',month:'short',year:'numeric'}):''}</div>
-            </div>
-            <div class="evt-montant">+${Number(e.montant).toLocaleString('fr-FR')} $</div>
-          </div>`).join('')}
-      </div>` : '<div style="font-size:11px;color:var(--white-dim);margin-top:10px;padding-top:10px;border-top:1px solid var(--border);">Aucun événement cette semaine.</div>';
+    let details = [];
+    try { details = JSON.parse(f.details || '[]'); } catch(e) {}
+    const type = f.source_type || 'employe';
+
+    // Affichage adapté selon le type
+    let detailsHtml = '';
+    if (type === 'employe') {
+      // Événements / commandes
+      detailsHtml = details.length ? `
+        <div class="evts-list">
+          <div style="font-size:9px;font-weight:800;letter-spacing:2px;text-transform:uppercase;color:var(--white-dim);margin-bottom:6px;"><i class="fa-solid fa-calendar-check"></i> Événements participés</div>
+          ${details.map(e => `
+            <div class="evt-row">
+              <div class="evt-info">
+                <div class="evt-client">${e.client_nom||'—'}</div>
+                <div class="evt-meta">${e.type_prestation||''}${e.lieu?' — '+e.lieu:''}${e.date_evenement?' · '+new Date(e.date_evenement).toLocaleDateString('fr-FR',{day:'numeric',month:'short',year:'numeric'}):''}</div>
+              </div>
+              <div class="evt-montant">+${Number(e.montant||0).toLocaleString('fr-FR')} $</div>
+            </div>`).join('')}
+        </div>` : '<div style="font-size:11px;color:var(--white-dim);margin-top:10px;padding-top:10px;border-top:1px solid var(--border);">Aucun événement cette semaine.</div>';
+    } else {
+      // Contrats (intérimaire / consultant)
+      detailsHtml = details.length ? `
+        <div class="evts-list">
+          <div style="font-size:9px;font-weight:800;letter-spacing:2px;text-transform:uppercase;color:var(--white-dim);margin-bottom:6px;"><i class="fa-solid fa-file-contract"></i> Contrats de mission</div>
+          ${details.map(c => `
+            <div class="evt-row">
+              <div class="evt-info">
+                <div class="evt-client">${c.intitule||'—'}</div>
+                <div class="evt-meta">${c.date_debut?new Date(c.date_debut).toLocaleDateString('fr-FR',{day:'numeric',month:'short',year:'numeric'}):''}${c.heures?' · '+c.heures+'h':''}${c.date_fin?' → '+new Date(c.date_fin).toLocaleDateString('fr-FR',{day:'numeric',month:'short'}):''}</div>
+              </div>
+              <div class="evt-montant">+${Number(c.remuneration||0).toLocaleString('fr-FR')} $</div>
+            </div>`).join('')}
+        </div>` : '<div style="font-size:11px;color:var(--white-dim);margin-top:10px;padding-top:10px;border-top:1px solid var(--border);">Aucun contrat cette semaine.</div>';
+    }
 
     const payBtn = (isDir && f.statut === 'en_attente') ?
-      `<button class="btn btn-green" style="font-size:11px;padding:7px 14px;" onclick="ouvrirPaiement(${f.id},'${f.prenom} ${f.nom}',${f.montant_total})"><i class="fa-solid fa-money-bill-wave"></i> Payer</button>` : '';
-
+      `<button class="btn btn-green" style="font-size:11px;padding:7px 14px;" onclick="ouvrirPaiement(${f.id},'${(f.prenom||'')} ${(f.nom||'')}',${f.montant_total})"><i class="fa-solid fa-money-bill-wave"></i> Payer</button>` : '';
     const exportBtn = `<button class="btn btn-outline" style="font-size:11px;padding:7px 14px;" onclick="exportFiche(${f.id})"><i class="fa-solid fa-file-pdf"></i> PDF</button>`;
-
     const payeInfo = f.statut === 'paye' ?
       `<div style="font-size:10px;color:var(--green);margin-top:4px;"><i class="fa-solid fa-check-circle"></i> Payé${f.paye_le?' le '+new Date(f.paye_le).toLocaleDateString('fr-FR',{day:'numeric',month:'short',year:'numeric'}):''}</div>` : '';
 
     return `<div class="fiche-card">
       <div class="fiche-header">
         <div class="fiche-user">
-          <div class="fiche-avatar">${(f.prenom[0]||'?').toUpperCase()}</div>
+          <div class="fiche-avatar">${((f.prenom||'?')[0]).toUpperCase()}</div>
           <div>
-            <div class="fiche-nom">${f.prenom} ${f.nom}</div>
-            <div class="fiche-poste">${f.poste}</div>
+            <div class="fiche-nom">${f.prenom||''} ${f.nom||''}</div>
+            <div class="fiche-poste">${f.poste||''}</div>
+            <div style="margin-top:4px;">${typeBadge[type]||typeBadge.employe}</div>
             ${payeInfo}
           </div>
         </div>
@@ -261,7 +288,7 @@ function renderFiches(fiches, mondayStr) {
           <div style="margin-top:8px;display:flex;gap:6px;">${payBtn}${exportBtn}</div>
         </div>
       </div>
-      ${evtsHtml}
+      ${detailsHtml}
     </div>`;
   }).join('') + '</div>';
 }

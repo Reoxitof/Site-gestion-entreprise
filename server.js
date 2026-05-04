@@ -1,4 +1,4 @@
-﻿require('dotenv').config();
+require('dotenv').config();
 const express = require('express');
 const path = require('path');
 const session = require('express-session');
@@ -178,15 +178,36 @@ async function initDB() {
     await getPool().query(`CREATE TABLE IF NOT EXISTS ec_fiches_paye (
       id SERIAL PRIMARY KEY,
       user_id INTEGER REFERENCES ec_users(id) ON DELETE CASCADE,
+      dossier_id INTEGER REFERENCES ec_dossiers_rh(id) ON DELETE CASCADE,
       semaine_debut DATE NOT NULL,
       semaine_fin DATE NOT NULL,
       montant_total NUMERIC DEFAULT 0,
       statut TEXT DEFAULT 'en_attente',
+      type_source TEXT DEFAULT 'employe',
       paye_par INTEGER REFERENCES ec_users(id),
       paye_le TIMESTAMP,
       details TEXT DEFAULT '[]',
-      created_at TIMESTAMP DEFAULT NOW(),
-      UNIQUE(user_id, semaine_debut)
+      created_at TIMESTAMP DEFAULT NOW()
+    )`);
+    // Migrations fiches_paye
+    await getPool().query(`ALTER TABLE ec_fiches_paye ADD COLUMN IF NOT EXISTS dossier_id INTEGER REFERENCES ec_dossiers_rh(id) ON DELETE CASCADE`).catch(()=>{});
+    await getPool().query(`ALTER TABLE ec_fiches_paye ADD COLUMN IF NOT EXISTS type_source TEXT DEFAULT 'employe'`).catch(()=>{});
+    // Contrainte unique : soit (user_id, semaine_debut) soit (dossier_id, semaine_debut)
+    await getPool().query(`CREATE UNIQUE INDEX IF NOT EXISTS idx_fiches_user_semaine ON ec_fiches_paye (user_id, semaine_debut) WHERE user_id IS NOT NULL`).catch(()=>{});
+    await getPool().query(`CREATE UNIQUE INDEX IF NOT EXISTS idx_fiches_dossier_semaine ON ec_fiches_paye (dossier_id, semaine_debut) WHERE dossier_id IS NOT NULL`).catch(()=>{});
+
+    // Table contrats RH (intérimaires & consultants)
+    await getPool().query(`CREATE TABLE IF NOT EXISTS ec_contrats_rh (
+      id SERIAL PRIMARY KEY,
+      dossier_id INTEGER NOT NULL REFERENCES ec_dossiers_rh(id) ON DELETE CASCADE,
+      intitule TEXT NOT NULL,
+      date_debut DATE NOT NULL,
+      date_fin DATE,
+      heures NUMERIC,
+      remuneration NUMERIC NOT NULL DEFAULT 0,
+      statut TEXT DEFAULT 'actif',
+      fiche_paye_id INTEGER REFERENCES ec_fiches_paye(id) ON DELETE SET NULL,
+      created_at TIMESTAMP DEFAULT NOW()
     )`);
 
     // Table livre de comptes
@@ -986,15 +1007,78 @@ function getSemaineBornes(dateStr) {
   return { lundi, dimanche };
 }
 
+/* ═══ CONTRATS RH (intérimaires & consultants) ═══ */
+
+// Lister les contrats d'un dossier RH
+app.get('/api/dossiers-rh/:id/contrats', auth, async (req, res) => {
+  try {
+    const rows = (await getPool().query(
+      `SELECT * FROM ec_contrats_rh WHERE dossier_id=$1 ORDER BY date_debut DESC`,
+      [req.params.id]
+    )).rows;
+    res.json(rows);
+  } catch(e) { res.status(500).json({ error: e.message }); }
+});
+
+// Créer un contrat RH
+app.post('/api/dossiers-rh/:id/contrats', admin, async (req, res) => {
+  try {
+    const dossier_id = parseInt(req.params.id);
+    const intitule = sanitizeStr(req.body.intitule, 200);
+    const date_debut = req.body.date_debut;
+    const date_fin = req.body.date_fin || null;
+    const heures = req.body.heures ? parseFloat(req.body.heures) : null;
+    const remuneration = parseFloat(req.body.remuneration);
+    if (!intitule || !date_debut) return res.status(400).json({ error: 'Intitulé et date de début requis' });
+    if (!remuneration || remuneration <= 0) return res.status(400).json({ error: 'Rémunération invalide' });
+    const r = await getPool().query(
+      `INSERT INTO ec_contrats_rh (dossier_id, intitule, date_debut, date_fin, heures, remuneration, statut)
+       VALUES ($1,$2,$3,$4,$5,$6,'actif') RETURNING *`,
+      [dossier_id, intitule, date_debut, date_fin, heures, remuneration]
+    );
+    res.json({ success: true, contrat: r.rows[0] });
+  } catch(e) { res.status(500).json({ error: e.message }); }
+});
+
+// Modifier un contrat RH
+app.put('/api/contrats-rh/:id', admin, async (req, res) => {
+  try {
+    const intitule = sanitizeStr(req.body.intitule, 200);
+    const date_debut = req.body.date_debut;
+    const date_fin = req.body.date_fin || null;
+    const heures = req.body.heures ? parseFloat(req.body.heures) : null;
+    const remuneration = parseFloat(req.body.remuneration);
+    const statut = ['actif','termine','annule'].includes(req.body.statut) ? req.body.statut : 'actif';
+    await getPool().query(
+      `UPDATE ec_contrats_rh SET intitule=$1, date_debut=$2, date_fin=$3, heures=$4, remuneration=$5, statut=$6 WHERE id=$7`,
+      [intitule, date_debut, date_fin, heures, remuneration, statut, req.params.id]
+    );
+    res.json({ success: true });
+  } catch(e) { res.status(500).json({ error: e.message }); }
+});
+
+// Supprimer un contrat RH
+app.delete('/api/contrats-rh/:id', admin, async (req, res) => {
+  try {
+    const c = await getPool().query('SELECT fiche_paye_id FROM ec_contrats_rh WHERE id=$1', [req.params.id]);
+    if (!c.rows[0]) return res.status(404).json({ error: 'Contrat introuvable' });
+    if (c.rows[0].fiche_paye_id) return res.status(409).json({ error: 'Ce contrat est déjà lié à une fiche de paye' });
+    await getPool().query('DELETE FROM ec_contrats_rh WHERE id=$1', [req.params.id]);
+    res.json({ success: true });
+  } catch(e) { res.status(500).json({ error: e.message }); }
+});
+
 // Générer les fiches de paye pour une semaine (direction)
 app.post('/api/fiches-paye/generer', admin, async (req, res) => {
   try {
-    const { semaine } = req.body; // date ISO dans la semaine voulue
+    const { semaine } = req.body;
     const { lundi, dimanche } = getSemaineBornes(semaine);
     const lundiStr = lundi.toISOString().split('T')[0];
     const dimancheStr = dimanche.toISOString().split('T')[0];
 
-    // Récupérer toutes les commandes terminées cette semaine avec leur partage
+    const fiches = [];
+
+    // ── 1. EMPLOYÉS : basé sur les commandes terminées (ancien système) ──
     const cmdsRes = await getPool().query(
       `SELECT id, client_nom, type_prestation, division, lieu, date_evenement, prix_final, paiement_partage
        FROM ec_commandes
@@ -1002,17 +1086,16 @@ app.post('/api/fiches-paye/generer', admin, async (req, res) => {
        AND date_evenement >= $1 AND date_evenement <= $2`,
       [lundi.toISOString(), dimanche.toISOString()]
     );
-
-    // Construire un map user_id → gains
     const gainsParUser = {};
     for (const cmd of cmdsRes.rows) {
       let partage = [];
       try { partage = JSON.parse(cmd.paiement_partage || '[]'); } catch(e) {}
       for (const p of partage) {
-        if (!p.user_id) continue; // skip part entreprise
-        if (!gainsParUser[p.user_id]) gainsParUser[p.user_id] = { total: 0, evenements: [] };
+        if (!p.user_id) continue;
+        if (!gainsParUser[p.user_id]) gainsParUser[p.user_id] = { total: 0, details: [], type: 'employe' };
         gainsParUser[p.user_id].total += Number(p.montant);
-        gainsParUser[p.user_id].evenements.push({
+        gainsParUser[p.user_id].details.push({
+          source: 'commande',
           commande_id: cmd.id,
           client_nom: cmd.client_nom,
           type_prestation: cmd.type_prestation,
@@ -1023,18 +1106,72 @@ app.post('/api/fiches-paye/generer', admin, async (req, res) => {
         });
       }
     }
-
-    // Créer ou mettre à jour les fiches
-    const fiches = [];
     for (const [userId, data] of Object.entries(gainsParUser)) {
       const r = await getPool().query(
         `INSERT INTO ec_fiches_paye (user_id, semaine_debut, semaine_fin, montant_total, statut, details)
-         VALUES ($1, $2, $3, $4, 'en_attente', $5)
+         VALUES ($1,$2,$3,$4,'en_attente',$5)
          ON CONFLICT (user_id, semaine_debut) DO UPDATE
-         SET montant_total = EXCLUDED.montant_total, details = EXCLUDED.details, statut = 'en_attente'
+         SET montant_total=EXCLUDED.montant_total, details=EXCLUDED.details, statut='en_attente'
          RETURNING *`,
-        [userId, lundiStr, dimancheStr, data.total, JSON.stringify(data.evenements)]
+        [userId, lundiStr, dimancheStr, data.total, JSON.stringify(data.details)]
       );
+      fiches.push(r.rows[0]);
+    }
+
+    // ── 2. INTÉRIMAIRES & CONSULTANTS : basé sur les contrats RH ──
+    const contratsRes = await getPool().query(
+      `SELECT c.*, d.nom_libre as nom, d.prenom_libre as prenom, d.role_dossier, d.id as dossier_id
+       FROM ec_contrats_rh c
+       JOIN ec_dossiers_rh d ON c.dossier_id = d.id
+       WHERE c.statut = 'actif'
+       AND c.date_debut >= $1 AND c.date_debut <= $2
+       AND c.fiche_paye_id IS NULL`,
+      [lundiStr, dimancheStr]
+    );
+
+    // Grouper par dossier_id
+    const gainsParDossier = {};
+    for (const c of contratsRes.rows) {
+      const key = c.dossier_id;
+      if (!gainsParDossier[key]) gainsParDossier[key] = {
+        total: 0, details: [], nom: c.nom, prenom: c.prenom,
+        role: c.role_dossier, dossier_id: key, contrat_ids: []
+      };
+      gainsParDossier[key].total += Number(c.remuneration);
+      gainsParDossier[key].contrat_ids.push(c.id);
+      gainsParDossier[key].details.push({
+        source: 'contrat',
+        contrat_id: c.id,
+        intitule: c.intitule,
+        date_debut: c.date_debut,
+        date_fin: c.date_fin,
+        heures: c.heures,
+        remuneration: Number(c.remuneration),
+        role: c.role_dossier
+      });
+    }
+
+    for (const [dossierId, data] of Object.entries(gainsParDossier)) {
+      if (data.total <= 0) continue;
+      // Insérer dans fiches_paye avec dossier_id (pas user_id)
+      const r = await getPool().query(
+        `INSERT INTO ec_fiches_paye (dossier_id, semaine_debut, semaine_fin, montant_total, statut, details, type_source)
+         VALUES ($1,$2,$3,$4,'en_attente',$5,$6)
+         ON CONFLICT (dossier_id, semaine_debut) DO UPDATE
+         SET montant_total=ec_fiches_paye.montant_total + EXCLUDED.montant_total,
+             details=ec_fiches_paye.details || EXCLUDED.details::jsonb,
+             statut='en_attente'
+         RETURNING id`,
+        [dossierId, lundiStr, dimancheStr, data.total, JSON.stringify(data.details), data.role]
+      );
+      const ficheId = r.rows[0].id;
+      // Marquer les contrats comme liés à cette fiche
+      if (data.contrat_ids.length) {
+        await getPool().query(
+          `UPDATE ec_contrats_rh SET fiche_paye_id=$1 WHERE id = ANY($2)`,
+          [ficheId, data.contrat_ids]
+        );
+      }
       fiches.push(r.rows[0]);
     }
 
@@ -1042,28 +1179,24 @@ app.post('/api/fiches-paye/generer', admin, async (req, res) => {
   } catch(e) { res.status(500).json({ error: e.message }); }
 });
 
-// Lister les fiches (direction = toutes, employé = les siennes)
+// Lister les fiches — employés (user_id) + dossiers RH (dossier_id)
 app.get('/api/fiches-paye', auth, async (req, res) => {
   try {
     const { semaine } = req.query;
     const isDir = isAdminOrDirection(req.session.user);
-    let q = `SELECT f.*, u.nom, u.prenom, u.poste,
-             p.nom as paye_par_nom FROM ec_fiches_paye f
-             JOIN ec_users u ON f.user_id = u.id
-             LEFT JOIN ec_users p ON f.paye_par = p.id
-             WHERE 1=1`;
     const params = [];
-    if (!isDir) {
-      params.push(req.session.user.id);
-      q += ` AND f.user_id = $${params.length}`;
-    }
+    let semaineClause = '';
     if (semaine) {
       const { lundi } = getSemaineBornes(semaine);
       params.push(lundi.toISOString().split('T')[0]);
-      q += ` AND f.semaine_debut = $${params.length}`;
+      semaineClause =  AND f.semaine_debut = +$+${params.length};
     }
-    q += ' ORDER BY f.semaine_debut DESC, u.nom ASC';
-    res.json((await getPool().query(q, params)).rows);
+    let userClause = '';
+    if (!isDir) { params.push(req.session.user.id); userClause =  AND f.user_id = +$+${params.length}; }
+    const q1 = SELECT f.id, f.semaine_debut, f.semaine_fin, f.montant_total, f.statut, f.details, f.paye_le, COALESCE(f.type_source,'employe') as source_type, u.nom, u.prenom, u.poste, NULL::integer as dossier_id, p.nom as paye_par_nom FROM ec_fiches_paye f JOIN ec_users u ON f.user_id = u.id LEFT JOIN ec_users p ON f.paye_par = p.id WHERE f.user_id IS NOT NULL+userClause+semaineClause;
+    const q2 = SELECT f.id, f.semaine_debut, f.semaine_fin, f.montant_total, f.statut, f.details, f.paye_le, COALESCE(d.role_dossier,'interimaire') as source_type, COALESCE(d.nom_libre, u2.nom, '') as nom, COALESCE(d.prenom_libre, u2.prenom, '') as prenom, COALESCE(d.poste_libre, u2.poste, '') as poste, d.id as dossier_id, p.nom as paye_par_nom FROM ec_fiches_paye f JOIN ec_dossiers_rh d ON f.dossier_id = d.id LEFT JOIN ec_users u2 ON d.user_id = u2.id LEFT JOIN ec_users p ON f.paye_par = p.id WHERE f.dossier_id IS NOT NULL+semaineClause;
+    const combined = (+q1+) UNION ALL (+q2+) ORDER BY semaine_debut DESC, nom ASC;
+    res.json((await getPool().query(combined, params)).rows);
   } catch(e) { res.status(500).json({ error: e.message }); }
 });
 

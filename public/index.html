@@ -756,6 +756,43 @@
   </div>
 </div>
 
+<!-- Modal Ajout Contrat RH -->
+<div class="modal-overlay" id="modalAjoutContrat">
+  <div class="modal" style="max-width:480px;">
+    <button class="modal-close" onclick="closeModal('modalAjoutContrat')"><i class="fa-solid fa-xmark"></i></button>
+    <div class="modal-title">📋 NOUVEAU CONTRAT</div>
+    <input type="hidden" id="ajoutContratDossierId"/>
+    <div class="form-group">
+      <label>Intitulé de la mission *</label>
+      <input class="input-field" id="ajoutContratIntitule" placeholder="Ex: Sécurité soirée Galaxy"/>
+    </div>
+    <div class="grid-2">
+      <div class="form-group">
+        <label>Date de début *</label>
+        <input class="input-field" id="ajoutContratDateDebut" type="date"/>
+      </div>
+      <div class="form-group">
+        <label>Date de fin</label>
+        <input class="input-field" id="ajoutContratDateFin" type="date"/>
+      </div>
+    </div>
+    <div class="grid-2">
+      <div class="form-group">
+        <label>Heures</label>
+        <input class="input-field" id="ajoutContratHeures" type="number" min="0" step="0.5" placeholder="Ex: 8"/>
+      </div>
+      <div class="form-group">
+        <label>💰 Rémunération ($) *</label>
+        <input class="input-field" id="ajoutContratRemuneration" type="number" min="0" step="500" placeholder="Ex: 5000"/>
+      </div>
+    </div>
+    <div class="btn-row">
+      <button class="btn btn-gold" onclick="saveContratRH()"><i class="fa-solid fa-floppy-disk"></i> Enregistrer</button>
+      <button class="btn btn-outline" onclick="closeModal('modalAjoutContrat')">Annuler</button>
+    </div>
+  </div>
+</div>
+
 <!-- Modal Contrat Intérimaire -->
 <div class="modal-overlay" id="modalContratInterimaire">
   <div class="modal" style="max-width:520px;">
@@ -2177,6 +2214,7 @@ function renderRHCard(d) {
     <button class="btn btn-danger" style="font-size:10px;padding:6px 10px;" onclick="deleteDossier(${d.id},'${d.role}')"><i class="fa-solid fa-trash"></i></button>
     <button class="btn btn-outline" style="font-size:10px;padding:6px 10px;border-color:rgba(201,168,76,0.4);color:var(--gold);" onclick="exportDossierPNG(${d.id})"><i class="fa-solid fa-file-image"></i> PNG</button>
     <button class="btn btn-outline" style="font-size:10px;padding:6px 10px;border-color:rgba(167,139,250,0.4);color:#a78bfa;" onclick="ouvrirContratInterimaire(${d.id})"><i class="fa-solid fa-file-contract"></i> Contrat</button>
+    ${(d.role === 'interimaire' || d.role === 'consultant') ? `<button class="btn btn-outline" style="font-size:10px;padding:6px 10px;border-color:rgba(76,175,125,0.4);color:#4caf7d;" onclick="ouvrirAjoutContrat(${d.id})"><i class="fa-solid fa-plus"></i> Mission</button>` : ''}
   ` : '';
 
   return `<div class="rh-card">
@@ -3476,6 +3514,41 @@ function exportDevisPNG(id) {
     document.body.removeChild(card);
     showToast('❌ Erreur export', false);
   });
+}
+
+// ── CONTRATS RH (missions intérimaires/consultants) ──
+function ouvrirAjoutContrat(dossierId) {
+  document.getElementById('ajoutContratDossierId').value = dossierId;
+  document.getElementById('ajoutContratIntitule').value = '';
+  document.getElementById('ajoutContratDateDebut').value = new Date().toISOString().slice(0,10);
+  document.getElementById('ajoutContratDateFin').value = '';
+  document.getElementById('ajoutContratHeures').value = '';
+  document.getElementById('ajoutContratRemuneration').value = '';
+  openModal('modalAjoutContrat');
+}
+
+async function saveContratRH() {
+  const dossierId = document.getElementById('ajoutContratDossierId').value;
+  const intitule = document.getElementById('ajoutContratIntitule').value.trim();
+  const date_debut = document.getElementById('ajoutContratDateDebut').value;
+  const date_fin = document.getElementById('ajoutContratDateFin').value || null;
+  const heures = document.getElementById('ajoutContratHeures').value || null;
+  const remuneration = parseFloat(document.getElementById('ajoutContratRemuneration').value);
+  if (!intitule || !date_debut || !remuneration || remuneration <= 0) {
+    showToast('❌ Intitulé, date et rémunération requis', false); return;
+  }
+  try {
+    const r = await fetch(`/api/dossiers-rh/${dossierId}/contrats`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ intitule, date_debut, date_fin, heures, remuneration })
+    });
+    const d = await r.json();
+    if (d.success) {
+      showToast('✅ Contrat de mission enregistré');
+      closeModal('modalAjoutContrat');
+    } else showToast('❌ ' + (d.error || 'Erreur'), false);
+  } catch(e) { showToast('❌ Erreur réseau', false); }
 }
 
 // ── CONTRAT INTÉRIMAIRE ──
