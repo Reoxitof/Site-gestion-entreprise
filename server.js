@@ -1480,16 +1480,18 @@ app.put('/api/dossiers-rh/:id', admin, uploadRH.single('photo'), async (req, res
     const id_employe = sanitizeStr(req.body.id_employe, 100);
     const division = sanitizeStr(req.body.division, 100);
     const photo_data = req.file ? fileToDataUrl(req.file) : null;
+    // Accepte aussi photo_url depuis le bot Discord
+    const photo_url_bot = req.body.photo_url ? sanitizeStr(req.body.photo_url, 1000) : null;
     const VALID_DOSSIER_ROLES = ['interimaire', 'employe', 'consultant'];
     const role_dossier = VALID_DOSSIER_ROLES.includes(req.body.role_dossier) ? req.body.role_dossier : null;
     await getPool().query(
       `UPDATE ec_dossiers_rh SET
         perso=$1, compte=$2, id_employe=$3, division=$4,
-        photo_data=CASE WHEN $5::TEXT IS NULL THEN photo_data ELSE $5::TEXT END,
-        role_dossier=COALESCE($6, role_dossier),
+        photo_data=CASE WHEN $5::TEXT IS NULL AND $6::TEXT IS NULL THEN photo_data WHEN $5::TEXT IS NOT NULL THEN $5::TEXT ELSE $6::TEXT END,
+        role_dossier=COALESCE($7, role_dossier),
         updated_at=NOW()
-       WHERE id=$7`,
-      [perso, compte, id_employe, division, photo_data, role_dossier, req.params.id]
+       WHERE id=$8`,
+      [perso, compte, id_employe, division, photo_data, photo_url_bot, role_dossier, req.params.id]
     );
     res.json({ success: true });
   } catch(e) { res.status(500).json({ error: e.message }); }
