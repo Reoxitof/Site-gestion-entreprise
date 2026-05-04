@@ -4211,14 +4211,20 @@ function closeMobileMenu() {
   document.getElementById('mobileMenuOverlay').classList.remove('open');
   document.getElementById('mobileMenuPanel').classList.remove('open');
 }
-// Sync mobile nav active state
-const _origShowTab = showTab;
-function showTab(name) {
-  _origShowTab(name);
-  const map = { dashboard:'mobileNavDash', planning:'mobileNavPlanning', 'dossiers-rh':'mobileNavRH', annonces:'mobileNavAnnonces' };
-  document.querySelectorAll('.mobile-nav-btn').forEach(b => b.classList.remove('active'));
-  if (map[name]) document.getElementById(map[name])?.classList.add('active');
-}
+// Sync mobile nav active state via MutationObserver sur les tab-content
+document.addEventListener('DOMContentLoaded', function() {
+  const map = { 'tab-dashboard':'mobileNavDash', 'tab-planning':'mobileNavPlanning', 'tab-dossiers-rh':'mobileNavRH', 'tab-annonces':'mobileNavAnnonces' };
+  const observer = new MutationObserver(function() {
+    document.querySelectorAll('.mobile-nav-btn').forEach(b => b.classList.remove('active'));
+    document.querySelectorAll('.tab-content.active').forEach(tab => {
+      const btnId = map[tab.id];
+      if (btnId) document.getElementById(btnId)?.classList.add('active');
+    });
+  });
+  document.querySelectorAll('.tab-content').forEach(tab => {
+    observer.observe(tab, { attributes: true, attributeFilter: ['class'] });
+  });
+});
 </script>
 
 </body>
