@@ -3659,28 +3659,28 @@ function genererContratPNG() {
     // DATE D'EMBAUCHE : x=235, y=555 → texte à y=573
     txt(dateAffiche, 235, 573, 18, '#c9a84c', false);
 
-    // CONDITIONS DE TRAVAIL — INTÉRIMAIRE
-    // HORAIRES field : x=219, y=672 → texte à y=690
-    txt(horaires,    219, 690, 15, '#c9a84c', true);
-    // DURÉE / MISSION : x=216, y=731 → texte à y=749
-    txt(dateAffiche, 216, 749, 14, '#c9a84c', false);
-    // RÉMUNÉRATION : x=218, y=788 → texte à y=806
-    txt(remuStr,     218, 806, 15, '#c9a84c', true);
-
-    // ══ COLONNE DROITE ══
-    // INFORMATIONS COMPLÉMENTAIRES haut-gauche : x=816, y=452 → texte à y=470
-    if (description) {
-      txtWrap(description, 816, 470, 310, 15, '#c9a84c');
-    }
-
-    // SI EMPLOYÉ TEMPS PLEIN — champs côté droit des CONDITIONS DE TRAVAIL
+    // CONDITIONS DE TRAVAIL — selon le type
     if (roleContrat === 'employe') {
+      // EMPLOYÉ TEMPS PLEIN : remplir uniquement la colonne droite
       // VOLUME HORAIRE : x=541, y=672 → texte à y=690
       txt(heureDebut + ' - ' + heureFin, 541, 690, 15, '#c9a84c', true);
       // JOURS DE TRAVAIL : x=541, y=732 → texte à y=750
       txt(dateAffiche, 541, 750, 14, '#c9a84c', false);
       // RÉMUNÉRATION MENSUELLE : x=541, y=790 → texte à y=808
       txt(remuStr, 541, 808, 15, '#c9a84c', true);
+    } else {
+      // INTÉRIMAIRE / CONSULTANT : remplir uniquement la colonne gauche
+      // HORAIRES : x=219, y=672 → texte à y=690
+      txt(horaires,    219, 690, 15, '#c9a84c', true);
+      // DURÉE / MISSION : x=216, y=731 → texte à y=749
+      txt(dateAffiche, 216, 749, 14, '#c9a84c', false);
+      // RÉMUNÉRATION : x=218, y=788 → texte à y=806
+      txt(remuStr,     218, 806, 15, '#c9a84c', true);
+    }
+
+    // INFORMATIONS COMPLÉMENTAIRES (colonne droite) : x=816, y=452 → texte à y=470
+    if (description) {
+      txtWrap(description, 816, 470, 310, 15, '#c9a84c');
     }
 
     // Télécharger
