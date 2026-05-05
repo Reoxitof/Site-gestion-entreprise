@@ -1375,33 +1375,34 @@
 <script>
 /* ── TOKEN CEF FIVEM — patch fetch AVANT tout appel API ── */
 (function() {
-  // Lire le token depuis ?token= dans l'URL et le stocker
+  // Lire token depuis hash # ou ?token=
   try {
-    var urlToken = new URLSearchParams(window.location.search).get('token');
-    if (urlToken) {
-      try { localStorage.setItem('ec_token', urlToken); } catch(e) {}
-      try { sessionStorage.setItem('ec_token', urlToken); } catch(e) {}
+    var hashToken = window.location.hash ? window.location.hash.replace('#','') : null;
+    var urlToken = null;
+    try { urlToken = new URLSearchParams(window.location.search).get('token'); } catch(e) {}
+    var t = (hashToken && hashToken.length > 10) ? hashToken : urlToken;
+    if (t) {
+      try { localStorage.setItem('ec_token', t); } catch(e) {}
+      try { sessionStorage.setItem('ec_token', t); } catch(e) {}
+      if (hashToken && window.history && window.history.replaceState) {
+        try { window.history.replaceState(null,'',window.location.pathname+window.location.search); } catch(e) {}
+      }
     }
   } catch(e) {}
 
-  // Patcher window.fetch pour injecter x-ec-token sur toutes les requêtes API
   var _origFetch = window.fetch;
   window.fetch = function(url, opts) {
     opts = opts || {};
     try {
-      var token = (function(){
-        try { return localStorage.getItem('ec_token'); } catch(e) { return null; }
-      })() || (function(){
-        try { return sessionStorage.getItem('ec_token'); } catch(e) { return null; }
-      })() || new URLSearchParams(window.location.search).get('token');
-
-      if (token && typeof url === 'string' && (url.startsWith('/api') || url.startsWith('/mes-tickets') || url.startsWith('/fiches') || url.startsWith('/livre'))) {
+      var token = null;
+      try { token = localStorage.getItem('ec_token'); } catch(e) {}
+      if (!token) { try { token = sessionStorage.getItem('ec_token'); } catch(e) {} }
+      if (!token && window.location.hash && window.location.hash.length > 1) { token = window.location.hash.replace('#',''); }
+      if (!token) { try { token = new URLSearchParams(window.location.search).get('token'); } catch(e) {} }
+      if (token && token.length > 10 && typeof url === 'string' && (url.startsWith('/api') || url.startsWith('/mes-tickets') || url.startsWith('/fiches') || url.startsWith('/livre'))) {
         opts.headers = opts.headers || {};
-        if (opts.headers instanceof Headers) {
-          opts.headers.set('x-ec-token', token);
-        } else {
-          opts.headers['x-ec-token'] = token;
-        }
+        if (opts.headers instanceof Headers) { opts.headers.set('x-ec-token', token); }
+        else { opts.headers['x-ec-token'] = token; }
         opts.credentials = opts.credentials || 'include';
       }
     } catch(e) {}
@@ -1410,10 +1411,14 @@
 })();
 
 
-/* Navigation vers pages secondaires avec token dans l URL */
+/* Navigation vers pages secondaires avec token dans le hash */
 function navTo(path) {
   var token = null;
   try { token = localStorage.getItem('ec_token'); } catch(e) {}
+  if (!token) { try { token = sessionStorage.getItem('ec_token'); } catch(e) {} }
+  if (!token && window.location.hash && window.location.hash.length > 1) { token = window.location.hash.replace('#',''); }
+  window.location.href = token ? path + '#' + token : path;
+} catch(e) {}
   if (!token) { try { token = sessionStorage.getItem('ec_token'); } catch(e) {} }
   if (!token) { try { token = new URLSearchParams(window.location.search).get('token'); } catch(e) {} }
   window.location.href = token ? path + '?token=' + encodeURIComponent(token) : path;

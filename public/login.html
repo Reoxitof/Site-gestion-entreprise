@@ -64,13 +64,13 @@
       if (data.success) {
         // Stocker le token pour FiveM/CEF (pas de cookies)
         if (data.token) {
-          localStorage.setItem('ec_token', data.token);
-          sessionStorage.setItem('ec_token', data.token);
+          try { localStorage.setItem('ec_token', data.token); } catch(e) {}
+          try { sessionStorage.setItem('ec_token', data.token); } catch(e) {}
         }
         if (data.must_reset_password) {
-          window.location.href = '/reset-password?token=' + (data.token || '');
+          window.location.href = '/reset-password#' + (data.token || '');
         } else {
-          window.location.href = '/dashboard?token=' + (data.token || '');
+          window.location.href = '/dashboard#' + (data.token || '');
         }
       } else {
         err.textContent = data.error || 'Identifiants invalides.';
