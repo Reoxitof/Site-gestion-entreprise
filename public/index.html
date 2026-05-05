@@ -1418,10 +1418,6 @@ function navTo(path) {
   if (!token) { try { token = sessionStorage.getItem('ec_token'); } catch(e) {} }
   if (!token && window.location.hash && window.location.hash.length > 1) { token = window.location.hash.replace('#',''); }
   window.location.href = token ? path + '#' + token : path;
-} catch(e) {}
-  if (!token) { try { token = sessionStorage.getItem('ec_token'); } catch(e) {} }
-  if (!token) { try { token = new URLSearchParams(window.location.search).get('token'); } catch(e) {} }
-  window.location.href = token ? path + '?token=' + encodeURIComponent(token) : path;
 }
 /* ── STATE ── */
 let currentUser = null;
@@ -4263,30 +4259,6 @@ function closeMobileMenu() {
 }
 // Sync mobile nav active state via MutationObserver sur les tab-content
 document.addEventListener('DOMContentLoaded', function() {
-  // Intercepteur fetch pour FiveM/CEF — ajoute le token dans toutes les requêtes
-  const _origFetch = window.fetch;
-  // Lire le token depuis l'URL ?token= et le stocker (CEF FiveM perd localStorage entre pages)
-  (function() {
-    var urlToken = new URLSearchParams(window.location.search).get('token');
-    if (urlToken) {
-      try { localStorage.setItem('ec_token', urlToken); } catch(e) {}
-      try { sessionStorage.setItem('ec_token', urlToken); } catch(e) {}
-    }
-  })();
-  window.fetch = function(url, opts = {}) {
-    const token = (function(){ try { return localStorage.getItem('ec_token') || sessionStorage.getItem('ec_token'); } catch(e){ return null; } })()
-      || new URLSearchParams(window.location.search).get('token');
-    if (token && typeof url === 'string' && (url.startsWith('/api') || url.startsWith('/dashboard'))) {
-      opts.headers = opts.headers || {};
-      if (opts.headers instanceof Headers) {
-        opts.headers.set('x-ec-token', token);
-      } else {
-        opts.headers['x-ec-token'] = token;
-      }
-      opts.credentials = opts.credentials || 'include';
-    }
-    return _origFetch.call(this, url, opts);
-  };
   const map = { 'tab-dashboard':'mobileNavDash', 'tab-planning':'mobileNavPlanning', 'tab-dossiers-rh':'mobileNavRH', 'tab-annonces':'mobileNavAnnonces' };
   const observer = new MutationObserver(function() {
     document.querySelectorAll('.mobile-nav-btn').forEach(b => b.classList.remove('active'));
