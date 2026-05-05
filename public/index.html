@@ -4215,8 +4215,17 @@ function closeMobileMenu() {
 document.addEventListener('DOMContentLoaded', function() {
   // Intercepteur fetch pour FiveM/CEF — ajoute le token dans toutes les requêtes
   const _origFetch = window.fetch;
+  // Lire le token depuis l'URL ?token= et le stocker (CEF FiveM perd localStorage entre pages)
+  (function() {
+    var urlToken = new URLSearchParams(window.location.search).get('token');
+    if (urlToken) {
+      try { localStorage.setItem('ec_token', urlToken); } catch(e) {}
+      try { sessionStorage.setItem('ec_token', urlToken); } catch(e) {}
+    }
+  })();
   window.fetch = function(url, opts = {}) {
-    const token = localStorage.getItem('ec_token') || sessionStorage.getItem('ec_token');
+    const token = (function(){ try { return localStorage.getItem('ec_token') || sessionStorage.getItem('ec_token'); } catch(e){ return null; } })()
+      || new URLSearchParams(window.location.search).get('token');
     if (token && typeof url === 'string' && (url.startsWith('/api') || url.startsWith('/dashboard'))) {
       opts.headers = opts.headers || {};
       if (opts.headers instanceof Headers) {

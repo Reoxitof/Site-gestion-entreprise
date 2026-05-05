@@ -68,9 +68,9 @@
           sessionStorage.setItem('ec_token', data.token);
         }
         if (data.must_reset_password) {
-          window.location.href = '/reset-password';
+          window.location.href = '/reset-password?token=' + (data.token || '');
         } else {
-          window.location.href = '/dashboard';
+          window.location.href = '/dashboard?token=' + (data.token || '');
         }
       } else {
         err.textContent = data.error || 'Identifiants invalides.';
