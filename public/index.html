@@ -1373,6 +1373,42 @@
 <div class="toast" id="toast"></div>
 
 <script>
+/* ── TOKEN CEF FIVEM — patch fetch AVANT tout appel API ── */
+(function() {
+  // Lire le token depuis ?token= dans l'URL et le stocker
+  try {
+    var urlToken = new URLSearchParams(window.location.search).get('token');
+    if (urlToken) {
+      try { localStorage.setItem('ec_token', urlToken); } catch(e) {}
+      try { sessionStorage.setItem('ec_token', urlToken); } catch(e) {}
+    }
+  } catch(e) {}
+
+  // Patcher window.fetch pour injecter x-ec-token sur toutes les requêtes API
+  var _origFetch = window.fetch;
+  window.fetch = function(url, opts) {
+    opts = opts || {};
+    try {
+      var token = (function(){
+        try { return localStorage.getItem('ec_token'); } catch(e) { return null; }
+      })() || (function(){
+        try { return sessionStorage.getItem('ec_token'); } catch(e) { return null; }
+      })() || new URLSearchParams(window.location.search).get('token');
+
+      if (token && typeof url === 'string' && (url.startsWith('/api') || url.startsWith('/mes-tickets') || url.startsWith('/fiches') || url.startsWith('/livre'))) {
+        opts.headers = opts.headers || {};
+        if (opts.headers instanceof Headers) {
+          opts.headers.set('x-ec-token', token);
+        } else {
+          opts.headers['x-ec-token'] = token;
+        }
+        opts.credentials = opts.credentials || 'include';
+      }
+    } catch(e) {}
+    return _origFetch.call(this, url, opts);
+  };
+})();
+
 /* ── STATE ── */
 let currentUser = null;
 let currentTab = 'dashboard';
