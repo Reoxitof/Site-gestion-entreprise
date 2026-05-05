@@ -1,4 +1,4 @@
-
+﻿
 <!DOCTYPE html>
 <html lang="fr">
 <head>
@@ -208,8 +208,8 @@
     <button class="nav-btn recrutement-access" onclick="showTab('recrutement')"><i class="fa-solid fa-user-tie"></i> Recrutement</button>
     <button class="nav-btn admin-only" onclick="showTab('commandes')"><i class="fa-solid fa-clipboard-list"></i> Commandes</button>
     <button class="nav-btn admin-only" onclick="showTab('dossiers-rh')"><i class="fa-solid fa-id-card"></i> Dossiers RH</button>
-    <a href="/fiches-paye" class="nav-btn" style="text-decoration:none;display:flex;align-items:center;gap:8px;"><i class="fa-solid fa-file-invoice-dollar"></i> Fiches de paye</a>
-    <a href="/livre-comptes" class="nav-btn admin-only" style="text-decoration:none;display:flex;align-items:center;gap:8px;"><i class="fa-solid fa-book"></i> Livre de comptes</a>
+    <a href="#" onclick="navTo(`/fiches-paye`);return false;" class="nav-btn" style="text-decoration:none;display:flex;align-items:center;gap:8px;"><i class="fa-solid fa-file-invoice-dollar"></i> Fiches de paye</a>
+    <a href="#" onclick="navTo(`/livre-comptes`);return false;" class="nav-btn admin-only" style="text-decoration:none;display:flex;align-items:center;gap:8px;"><i class="fa-solid fa-book"></i> Livre de comptes</a>
   </nav>
   <div class="sidebar-bottom">
     <button class="btn-logout" onclick="doLogout()"><i class="fa-solid fa-right-from-bracket"></i> Déconnexion</button>
@@ -1409,6 +1409,15 @@
   };
 })();
 
+
+/* Navigation vers pages secondaires avec token dans l URL */
+function navTo(path) {
+  var token = null;
+  try { token = localStorage.getItem('ec_token'); } catch(e) {}
+  if (!token) { try { token = sessionStorage.getItem('ec_token'); } catch(e) {} }
+  if (!token) { try { token = new URLSearchParams(window.location.search).get('token'); } catch(e) {} }
+  window.location.href = token ? path + '?token=' + encodeURIComponent(token) : path;
+}
 /* ── STATE ── */
 let currentUser = null;
 let currentTab = 'dashboard';
@@ -4203,8 +4212,8 @@ window.showTab = function(name, btn) {
     <button class="nav-btn recrutement-access" onclick="showTab('recrutement');closeMobileMenu()"><i class="fa-solid fa-user-tie"></i> Recrutement</button>
     <button class="nav-btn admin-only" onclick="showTab('commandes');closeMobileMenu()"><i class="fa-solid fa-clipboard-list"></i> Commandes</button>
     <button class="nav-btn admin-only" onclick="showTab('dossiers-rh');closeMobileMenu()"><i class="fa-solid fa-id-card"></i> Dossiers RH</button>
-    <a href="/fiches-paye" class="nav-btn" style="text-decoration:none;"><i class="fa-solid fa-file-invoice-dollar"></i> Fiches de paye</a>
-    <a href="/livre-comptes" class="nav-btn admin-only" style="text-decoration:none;"><i class="fa-solid fa-book"></i> Livre de comptes</a>
+    <a href="#" onclick="navTo(`/fiches-paye`);return false;" class="nav-btn" style="text-decoration:none;"><i class="fa-solid fa-file-invoice-dollar"></i> Fiches de paye</a>
+    <a href="#" onclick="navTo(`/livre-comptes`);return false;" class="nav-btn admin-only" style="text-decoration:none;"><i class="fa-solid fa-book"></i> Livre de comptes</a>
   </div>
   <div style="padding:16px;border-top:1px solid var(--border);margin-top:auto;">
     <button class="btn-logout" onclick="doLogout()"><i class="fa-solid fa-right-from-bracket"></i> Déconnexion</button>
