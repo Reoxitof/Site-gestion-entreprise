@@ -80,8 +80,8 @@ app.use(session({
   cookie: {
     maxAge: 604800000,
     httpOnly: true,
-    sameSite: 'lax',
-    secure: false
+    sameSite: 'none',
+    secure: true
   }
 }));
 
@@ -331,8 +331,9 @@ const BOT_TOKEN = process.env.BOT_INTERNAL_TOKEN || 'reoxitof_le_goat';
 const auth = (req, res, next) => {
   // Accepte le token bot
   if (req.headers['x-bot-token'] === BOT_TOKEN) { req.session = req.session || {}; req.session.user = { id: 0, role: 'admin', nom: 'Bot', prenom: 'Discord' }; return next(); }
-  // Accepte le token FiveM/CEF via header ou query
-  const fivemToken = req.headers['x-ec-token'] || req.query.token;
+  // Accepte le token FiveM/CEF via header, query, ou cookie ec_token
+  const fivemToken = req.headers['x-ec-token'] || req.query.token
+    || (req.headers.cookie || '').split(';').map(c => c.trim()).find(c => c.startsWith('ec_token='))?.split('=').slice(1).join('=');
   if (fivemToken) {
     const u = getUserFromToken(fivemToken);
     if (u) { req.session = req.session || {}; req.session.user = u; return next(); }
@@ -343,8 +344,9 @@ const isAdminOrDirection = (user) => user?.role === 'admin' || user?.role === 'd
 const admin = (req, res, next) => {
   // Accepte le token bot
   if (req.headers['x-bot-token'] === BOT_TOKEN) { req.session = req.session || {}; req.session.user = { id: 0, role: 'admin', nom: 'Bot', prenom: 'Discord' }; return next(); }
-  // Accepte le token FiveM/CEF
-  const fivemToken = req.headers['x-ec-token'] || req.query.token;
+  // Accepte le token FiveM/CEF via header, query, ou cookie ec_token
+  const fivemToken = req.headers['x-ec-token'] || req.query.token
+    || (req.headers.cookie || '').split(';').map(c => c.trim()).find(c => c.startsWith('ec_token='))?.split('=').slice(1).join('=');
   if (fivemToken) {
     const u = getUserFromToken(fivemToken);
     if (u && isAdminOrDirection(u)) { req.session = req.session || {}; req.session.user = u; return next(); }
@@ -384,6 +386,8 @@ app.post('/api/login', loginLimiter, async (req, res) => {
     req.session.user = userData;
     // Générer un token pour FiveM/CEF
     const token = generateToken(userData);
+    // Cookie ec_token pour CEF FiveM (SameSite=None pour cross-context)
+    res.setHeader('Set-Cookie', `ec_token=${token}; Path=/; Max-Age=604800; HttpOnly; SameSite=None; Secure`);
     res.json({ success: true, user: userData, token, must_reset_password: !!u.must_reset_password });
   } catch(e) { res.status(500).json({ error: e.message }); }
 });
