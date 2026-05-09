@@ -91,27 +91,27 @@ body{background:var(--bg);color:var(--white);font-family:Inter,Arial;min-height:
   </div>
 </div>
 
-<script src="/token-patch.js"></script>
+<script src="api.js"></script>
 <script>
 let currentUser = null;
 
 async function init() {
   try {
-    const r = await fetch('/api/me');
-    const d = await r.json();
-    if (!d.user) { window.location.href = '/login'; return; }
+    const d = apiMe();
+    // const d = await r.json(); // patched
+    if (!d.user) { window.location.href = 'login.html'; return; }
     currentUser = d.user;
     document.getElementById('userName').textContent = d.user.prenom + ' ' + d.user.nom;
     document.getElementById('userPoste').textContent = d.user.poste;
     document.getElementById('avatarEl').textContent = (d.user.prenom[0] || '?').toUpperCase();
     loadTickets();
-  } catch(e) { window.location.href = '/login'; }
+  } catch(e) { window.location.href = 'login.html'; }
 }
 
 async function loadTickets() {
   try {
-    const r = await fetch('/api/commandes/mes-tickets');
-    if (!r.ok) { document.getElementById('ticketList').innerHTML = '<div class="empty"><i class="fa-solid fa-lock"></i><p>Accès refusé</p></div>'; return; }
+    const data = apiGetMesTickets();
+    // const data = await r.json(); // patched
     const data = await r.json();
     renderTickets(data);
   } catch(e) {
@@ -186,9 +186,9 @@ function closeDetail() {
 }
 
 async function logout() {
-  await fetch('/api/logout', { method: 'POST' });
-  window.location.href = '/login';
-}
+  apiLogout();
+  // await fetch('/api/logout'... // patched
+  window.location.href = 'login.html';
 
 document.getElementById('modalDetail').addEventListener('click', function(e) {
   if (e.target === this) closeDetail();

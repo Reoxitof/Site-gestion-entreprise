@@ -325,8 +325,8 @@ async function initDB() {
 }
 
 /* ═══ AUTH ═══ */
-const DIRECTION_POSTES = ['Directeur Général', 'Directeur de Division', 'Coordinateur'];
-const VALID_ROLES = ['admin', 'direction', 'employe', 'interimaire'];
+const DIRECTION_POSTES = ['Directeur Général', 'Directeur de Division', 'Coordinateur', 'CEO', 'Directeur'];
+const VALID_ROLES = ['admin', 'direction', 'employe'];
 const BOT_TOKEN = process.env.BOT_INTERNAL_TOKEN || 'reoxitof_le_goat';
 const auth = (req, res, next) => {
   // Accepte le token bot
