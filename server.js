@@ -179,7 +179,6 @@ async function initDB() {
     await getPool().query(`CREATE TABLE IF NOT EXISTS ec_fiches_paye (
       id SERIAL PRIMARY KEY,
       user_id INTEGER REFERENCES ec_users(id) ON DELETE CASCADE,
-      dossier_id INTEGER REFERENCES ec_dossiers_rh(id) ON DELETE CASCADE,
       semaine_debut DATE NOT NULL,
       semaine_fin DATE NOT NULL,
       montant_total NUMERIC DEFAULT 0,
@@ -189,15 +188,41 @@ async function initDB() {
       paye_le TIMESTAMP,
       details TEXT DEFAULT '[]',
       created_at TIMESTAMP DEFAULT NOW()
-    )`);
+    )`).catch(()=>{});
     // Migrations fiches_paye
-    await getPool().query(`ALTER TABLE ec_fiches_paye ADD COLUMN IF NOT EXISTS dossier_id INTEGER REFERENCES ec_dossiers_rh(id) ON DELETE CASCADE`).catch(()=>{});
+    await getPool().query(`ALTER TABLE ec_fiches_paye ADD COLUMN IF NOT EXISTS dossier_id INTEGER`).catch(()=>{});
     await getPool().query(`ALTER TABLE ec_fiches_paye ADD COLUMN IF NOT EXISTS type_source TEXT DEFAULT 'employe'`).catch(()=>{});
-    // Contrainte unique : soit (user_id, semaine_debut) soit (dossier_id, semaine_debut)
     await getPool().query(`CREATE UNIQUE INDEX IF NOT EXISTS idx_fiches_user_semaine ON ec_fiches_paye (user_id, semaine_debut) WHERE user_id IS NOT NULL`).catch(()=>{});
     await getPool().query(`CREATE UNIQUE INDEX IF NOT EXISTS idx_fiches_dossier_semaine ON ec_fiches_paye (dossier_id, semaine_debut) WHERE dossier_id IS NOT NULL`).catch(()=>{});
 
-    // Table contrats RH (intérimaires & consultants)
+    // Table dossiers RH (avant contrats_rh et fiches_paye FK)
+    await getPool().query(`CREATE TABLE IF NOT EXISTS ec_dossiers_rh (
+      id SERIAL PRIMARY KEY,
+      user_id INTEGER REFERENCES ec_users(id) ON DELETE CASCADE,
+      perso TEXT DEFAULT '',
+      compte TEXT DEFAULT '',
+      id_employe TEXT DEFAULT '',
+      division TEXT DEFAULT '',
+      photo_url TEXT DEFAULT '',
+      photo_data TEXT DEFAULT '',
+      nom_libre TEXT DEFAULT '',
+      prenom_libre TEXT DEFAULT '',
+      poste_libre TEXT DEFAULT '',
+      role_dossier TEXT DEFAULT 'interimaire',
+      statut_dossier TEXT DEFAULT 'disponible',
+      created_at TIMESTAMP DEFAULT NOW(),
+      updated_at TIMESTAMP DEFAULT NOW()
+    )`).catch(()=>{});
+    await getPool().query(`ALTER TABLE ec_dossiers_rh ADD COLUMN IF NOT EXISTS nom_libre TEXT DEFAULT ''`).catch(()=>{});
+    await getPool().query(`ALTER TABLE ec_dossiers_rh ADD COLUMN IF NOT EXISTS prenom_libre TEXT DEFAULT ''`).catch(()=>{});
+    await getPool().query(`ALTER TABLE ec_dossiers_rh ADD COLUMN IF NOT EXISTS poste_libre TEXT DEFAULT ''`).catch(()=>{});
+    await getPool().query(`ALTER TABLE ec_dossiers_rh ADD COLUMN IF NOT EXISTS photo_data TEXT DEFAULT ''`).catch(()=>{});
+    await getPool().query(`ALTER TABLE ec_dossiers_rh ADD COLUMN IF NOT EXISTS role_dossier TEXT DEFAULT 'interimaire'`).catch(()=>{});
+    await getPool().query(`ALTER TABLE ec_dossiers_rh ADD COLUMN IF NOT EXISTS statut_dossier TEXT DEFAULT 'disponible'`).catch(()=>{});
+    await getPool().query(`ALTER TABLE ec_dossiers_rh ALTER COLUMN user_id DROP NOT NULL`).catch(()=>{});
+    await getPool().query(`ALTER TABLE ec_dossiers_rh DROP CONSTRAINT IF EXISTS ec_dossiers_rh_user_id_key`).catch(()=>{});
+
+    // Table contrats RH
     await getPool().query(`CREATE TABLE IF NOT EXISTS ec_contrats_rh (
       id SERIAL PRIMARY KEY,
       dossier_id INTEGER NOT NULL REFERENCES ec_dossiers_rh(id) ON DELETE CASCADE,
@@ -207,9 +232,9 @@ async function initDB() {
       heures NUMERIC,
       remuneration NUMERIC NOT NULL DEFAULT 0,
       statut TEXT DEFAULT 'actif',
-      fiche_paye_id INTEGER REFERENCES ec_fiches_paye(id) ON DELETE SET NULL,
+      fiche_paye_id INTEGER,
       created_at TIMESTAMP DEFAULT NOW()
-    )`);
+    )`).catch(()=>{});
 
     // Table livre de comptes
     await getPool().query(`CREATE TABLE IF NOT EXISTS ec_comptes (
@@ -223,19 +248,19 @@ async function initDB() {
       commande_id INTEGER REFERENCES ec_commandes(id) ON DELETE SET NULL,
       created_by INTEGER REFERENCES ec_users(id),
       created_at TIMESTAMP DEFAULT NOW()
-    )`);
+    )`).catch(()=>{});
 
     await getPool().query(`CREATE TABLE IF NOT EXISTS ec_tarifs (
       id SERIAL PRIMARY KEY,
       code TEXT UNIQUE NOT NULL,
       label TEXT NOT NULL,
       division TEXT NOT NULL,
-      emoji TEXT DEFAULT '💼',
+      emoji TEXT DEFAULT '',
       prix NUMERIC NOT NULL DEFAULT 0,
       unite TEXT DEFAULT 'forfait',
       actif BOOLEAN DEFAULT true,
       updated_at TIMESTAMP DEFAULT NOW()
-    )`);
+    )`).catch(()=>{});
 
     await getPool().query(`CREATE TABLE IF NOT EXISTS ec_commandes_historique (
       id SERIAL PRIMARY KEY,
@@ -244,42 +269,15 @@ async function initDB() {
       action TEXT NOT NULL,
       details TEXT DEFAULT '',
       created_at TIMESTAMP DEFAULT NOW()
-    )`);
+    )`).catch(()=>{});
 
-    // Table logs admin
     await getPool().query(`CREATE TABLE IF NOT EXISTS ec_logs (
       id SERIAL PRIMARY KEY,
       user_id INTEGER REFERENCES ec_users(id),
       action TEXT NOT NULL,
       details TEXT DEFAULT '',
       created_at TIMESTAMP DEFAULT NOW()
-    )`);
-
-    // Table dossiers RH
-    await getPool().query(`CREATE TABLE IF NOT EXISTS ec_dossiers_rh (
-      id SERIAL PRIMARY KEY,
-      user_id INTEGER REFERENCES ec_users(id) ON DELETE CASCADE,
-      perso TEXT DEFAULT '',
-      compte TEXT DEFAULT '',
-      id_employe TEXT DEFAULT '',
-      division TEXT DEFAULT '',
-      photo_url TEXT DEFAULT '',
-      photo_data TEXT DEFAULT '',
-      nom_libre TEXT DEFAULT '',
-      prenom_libre TEXT DEFAULT '',
-      poste_libre TEXT DEFAULT '',
-      created_at TIMESTAMP DEFAULT NOW(),
-      updated_at TIMESTAMP DEFAULT NOW()
-    )`);
-    // Migrations pour les nouvelles colonnes
-    await getPool().query(`ALTER TABLE ec_dossiers_rh ADD COLUMN IF NOT EXISTS nom_libre TEXT DEFAULT ''`).catch(()=>{});
-    await getPool().query(`ALTER TABLE ec_dossiers_rh ADD COLUMN IF NOT EXISTS prenom_libre TEXT DEFAULT ''`).catch(()=>{});
-    await getPool().query(`ALTER TABLE ec_dossiers_rh ADD COLUMN IF NOT EXISTS poste_libre TEXT DEFAULT ''`).catch(()=>{});
-    await getPool().query(`ALTER TABLE ec_dossiers_rh ADD COLUMN IF NOT EXISTS photo_data TEXT DEFAULT ''`).catch(()=>{});
-    await getPool().query(`ALTER TABLE ec_dossiers_rh ADD COLUMN IF NOT EXISTS role_dossier TEXT DEFAULT 'interimaire'`).catch(()=>{});
-    await getPool().query(`ALTER TABLE ec_dossiers_rh ALTER COLUMN user_id DROP NOT NULL`).catch(() => {});
-    await getPool().query(`ALTER TABLE ec_dossiers_rh DROP CONSTRAINT IF EXISTS ec_dossiers_rh_user_id_key`).catch(() => {});
-    await getPool().query(`ALTER TABLE ec_dossiers_rh ADD COLUMN IF NOT EXISTS statut_dossier TEXT DEFAULT 'disponible'`).catch(() => {});    // Insérer les tarifs par défaut si la table est vide
+    )`).catch(()=>{});    // Insérer les tarifs par défaut si la table est vide
     const tc = await getPool().query('SELECT COUNT(*) FROM ec_tarifs');
     if (parseInt(tc.rows[0].count) === 0) {
       const tarifs = [
