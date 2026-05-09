@@ -623,7 +623,6 @@
       <select class="input-field" id="interimairePoste">
         <option value="">— Sélectionner un poste —</option>
         <optgroup label="🏢 Direction">
-          <option>CEO</option>
           <option>Directeur Général</option>
           <option>Directeur de Division</option>
           <option>Coordinateur</option>
@@ -633,7 +632,6 @@
           <option>Chef de la Sécurité</option>
           <option>Responsable Sécurité</option>
           <option>Agent de Sécurité</option>
-          <option>Garde du Corps</option>
           <option>Agent VIP / Escorte</option>
           <option>Convoyeur</option>
           <option>Agent de Protection Rapprochée</option>
@@ -650,7 +648,6 @@
         <optgroup label="✈️ Elite Tourisme">
           <option>Guide Touristique</option>
           <option>Chauffeur VIP</option>
-          <option>Chauffeur</option>
           <option>Concierge</option>
           <option>Agent de Voyage</option>
           <option>Coordinateur Tourisme</option>
@@ -665,9 +662,8 @@
         <optgroup label="💃 Lilly's Girls">
           <option>Responsable Artistique</option>
           <option>Animatrice</option>
-          <option>Danseuse</option>
-          <option>Danseuse / Performeuse</option>
           <option>Coordinatrice Spectacle</option>
+          <option>Danseuse / Performeuse</option>
           <option>Chorégraphe</option>
         </optgroup>
         <optgroup label="⚙️ Support">
@@ -726,7 +722,6 @@
     <div class="form-group"><label>Poste</label>
       <select class="input-field" id="empPoste">
         <optgroup label="🏢 Direction">
-          <option>CEO</option>
           <option>Directeur Général</option>
           <option>Directeur de Division</option>
           <option>Coordinateur</option>
@@ -736,7 +731,6 @@
           <option>Chef de la Sécurité</option>
           <option>Responsable Sécurité</option>
           <option>Agent de Sécurité</option>
-          <option>Garde du Corps</option>
           <option>Agent VIP / Escorte</option>
           <option>Convoyeur</option>
           <option>Agent de Protection Rapprochée</option>
@@ -753,7 +747,6 @@
         <optgroup label="✈️ Elite Tourisme">
           <option>Guide Touristique</option>
           <option>Chauffeur VIP</option>
-          <option>Chauffeur</option>
           <option>Concierge</option>
           <option>Agent de Voyage</option>
           <option>Coordinateur Tourisme</option>
@@ -769,7 +762,6 @@
           <option>Responsable Artistique</option>
           <option>Animatrice</option>
           <option>Coordinatrice Spectacle</option>
-          <option>Danseuse</option>
           <option>Danseuse / Performeuse</option>
           <option>Chorégraphe</option>
         </optgroup>
@@ -785,7 +777,7 @@
     </div>
     <div class="form-group"><label>Rôle système</label>
       <select class="input-field" id="empRole">
-        <option value="employe">Employé</option>
+        <option value="employe">Employ&#233;</option>
         <option value="direction">Direction</option>
       </select>
     </div>
@@ -1378,7 +1370,7 @@
 <!-- Toast -->
 <div class="toast" id="toast"></div>
 
-<script src="api.js"></script><script>
+<script>
 /* ── TOKEN CEF FIVEM — patch fetch AVANT tout appel API ── */
 (function() {
   // Lire token depuis hash # ou ?token=
@@ -1454,8 +1446,9 @@ function fmtDateTime(isoStr, opts) {
 /* ── INIT ── */
 async function init() {
   try {
-    const data = apiMe();
-    if (!data.user) { window.location.href = 'login.html'; return; }
+    const r = await fetch('/api/me');
+    const data = await r.json();
+    if (!data.user) { window.location.href = '/login'; return; }
     currentUser = data.user;
     document.getElementById('sidebarName').textContent = data.user.prenom + ' ' + data.user.nom;
     document.getElementById('sidebarRole').textContent = isAdmin() ? 'Direction / Admin' : data.user.poste;
@@ -1481,9 +1474,9 @@ async function init() {
     loadCalendar();
     // Charger la liste des employés pour le dropdown d'assignation
     if (isAdmin()) {
-      Promise.resolve(apiGetEmployes()).then(emp => { window._allEmployes = emp; });
+      fetch('/api/employes').then(r => r.json()).then(emp => { window._allEmployes = emp; }).catch(() => {});
     }
-  } catch(e) { window.location.href = 'login.html'; }
+  } catch(e) { window.location.href = '/login'; }
 }
 
 /* ── CLOCK ── */
@@ -1513,7 +1506,7 @@ function showTab(name) {
   if (name === 'planning') loadCalendar();
   if (name === 'employes') loadEmployes();
   if (name === 'annonces') loadAnnonces();
-  if (name === 'commandes') { loadCommandes(); if (isAdmin() && !window._allEmployes) Promise.resolve(apiGetEmployes()).then(emp=>{window._allEmployes=emp;}); }
+  if (name === 'commandes') { loadCommandes(); if (isAdmin() && !window._allEmployes) fetch('/api/employes').then(r=>r.json()).then(emp=>{window._allEmployes=emp;}).catch(()=>{}); }
   if (name === 'dossiers-rh') loadDossiersRH();
 }
 
@@ -1532,8 +1525,8 @@ document.addEventListener('click', e => { if (e.target.classList.contains('modal
 
 /* ── LOGOUT ── */
 async function doLogout() {
-  apiLogout();
-  window.location.href = 'login.html';
+  await fetch('/api/logout', { method: 'POST' });
+  window.location.href = '/login';
 }
 
 /* ── PROFIL ── */
@@ -1564,8 +1557,9 @@ function openModal(id) {
     selectedPrestations = [];
     const container = document.getElementById('prestationsSelector');
     if (container) container.innerHTML = '<div style="color:var(--white-dim);font-size:12px;grid-column:1/-1;padding:8px 0;">Chargement des prestations...</div>';
-    Promise.resolve(dbGet('tarifs', TARIFS_DEFAULT))
+    fetch('/api/tarifs', { credentials: 'include' })
       .then(r => {
+        if (!r.ok) throw new Error('HTTP ' + r.status);
         return r.json();
       })
       .then(data => {
@@ -1590,12 +1584,12 @@ async function saveProfilNom() {
   const nom = document.getElementById('profilNomInput')?.value?.trim();
   if (!prenom || !nom) { showToast('❌ Prénom et nom requis', false); return; }
   try {
-    const d = apiMeUpdateProfil(nom, prenom);
+    const r = await fetch('/api/me/profil', {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ prenom, nom })
-    }); // patched
-    // const d = await r.json(); // patched
+    });
+    const d = await r.json();
     if (d.success) {
       currentUser.prenom = prenom;
       currentUser.nom = nom;
@@ -1611,12 +1605,12 @@ async function saveProfilNom() {
 
 async function changerStatut(statut) {
   try {
-    const d = apiMeUpdateStatut(statut);
-      method: 'PUT', // patched
-      headers: { 'Content-Type': 'application/json' }, // patched
-      body: JSON.stringify({ statut_employe: statut }) // patched
-    }); // patched
-    // const d = await r.json(); // patched
+    const r = await fetch('/api/me/statut', {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ statut_employe: statut })
+    });
+    const d = await r.json();
     if (d.success) {
       currentUser.statut_employe = statut;
       const labels = { disponible:'🟢 Disponible', en_mission:'🟡 En mission', absent:'🔴 Absent', conge:'🟣 En congé', indisponible:'⚫ Indisponible' };
@@ -1626,10 +1620,10 @@ async function changerStatut(statut) {
         btn.style.fontWeight = btn.dataset.statut === statut ? '900' : '700';
       });
       // Sync avec le dossier RH si l'utilisateur en a un
-      // sync statut local // patched
-      // fetch('/api/dossiers-rh/sync-statut' // patched
-      // method: 'PATCH', // patched
-      // headers: { 'Content-Type': 'application/json' }, // patched
+      fetch('/api/dossiers-rh/sync-statut', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ statut })
       }).catch(() => {});
     } else {
       showToast('❌ ' + (d.error || 'Erreur'), false);
@@ -1649,12 +1643,12 @@ async function saveProfil() {
   if (newMdp !== confirm) { errEl.textContent = 'Les mots de passe ne correspondent pas.'; errEl.style.display = 'block'; return; }
 
   try {
-    const data = apiMeUpdatePassword(actuel, newMdp);
-      method: 'PUT', // patched
-      headers: {'Content-Type':'application/json'}, // patched
-      body: JSON.stringify({ current_password: actuel, new_password: newMdp }) // patched
-    }); // patched
-    // const data = await r.json(); // patched
+    const r = await fetch('/api/me/password', {
+      method: 'PUT',
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({ current_password: actuel, new_password: newMdp })
+    });
+    const data = await r.json();
     if (data.success) {
       showToast('✅ Mot de passe modifié');
       closeModal('modalProfil');
@@ -1671,9 +1665,9 @@ async function saveProfil() {
 async function loadDashboard() {
   try {
     const [stats, annonces, planning] = await Promise.all([
-      Promise.resolve(apiGetStats()),
-      Promise.resolve(apiGetAnnonces()),
-      Promise.resolve(apiGetPlanning())
+      fetch('/api/stats').then(r => r.json()),
+      fetch('/api/annonces').then(r => r.json()),
+      fetch('/api/planning').then(r => r.json())
     ]);
     document.getElementById('statEmployes').textContent = stats.employes || 0;
     document.getElementById('statPresents').textContent = stats.presents_aujourd_hui || 0;
@@ -1728,7 +1722,8 @@ function renderCalDayNames() {
 
 async function loadCalendar() {
   try {
-    planningData = apiGetPlanning(calMonth+1, calYear);
+    const r = await fetch('/api/planning?mois=' + (calMonth + 1) + '&annee=' + calYear);
+    planningData = await r.json();
     document.getElementById('calMonthLabel').textContent = MOIS_FR[calMonth] + ' ' + calYear;
     renderCalendar();
     renderPlanningList();
@@ -1803,12 +1798,12 @@ function renderPlanningList() {
 async function loadDispo(planId) {
   try {
     // Ma dispo
-    const dispos = dbGet('disponibilites', {}); const me = dispos[planId + '_' + (getSession()?.id||0)] || null;
+    const me = await fetch('/api/disponibilites/moi/' + planId).then(r => r.json());
     updateDispoUI(planId, me?.statut || null);
 
     // Liste complète (admin)
     if (isAdmin()) {
-      const allDispos = dbGet('disponibilites_all', {}); const all = allDispos[planId] || [];
+      const all = await fetch('/api/disponibilites/' + planId).then(r => r.json());
       const el = document.getElementById('dispo-list-' + planId);
       if (!el || !all.length) return;
       const colors = { oui: '#4caf7d', non: '#ff7b7b', 'peut-etre': '#f09030', retard: '#3fa7d6' };
@@ -1834,7 +1829,7 @@ function updateDispoUI(planId, statut) {
 
 async function setDispo(planId, statut) {
   try {
-    const dispos2 = dbGet('disponibilites', {}); dispos2[planId + '_' + (getSession()?.id||0)] = { statut }; dbSet('disponibilites', dispos2);
+    await fetch('/api/disponibilites', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({ planning_id: planId, statut }) });
     updateDispoUI(planId, statut);
     showToast('✅ Disponibilité enregistrée');
     if (isAdmin()) loadDispo(planId);
@@ -1931,8 +1926,8 @@ async function savePlanning() {
   const type = document.getElementById('planType').value;
   if (!titre || !debut || !fin) { showToast('❌ Remplis tous les champs obligatoires', false); return; }
   try {
-    const data = apiAddPlanning({ titre, description: desc, date_debut: debut, date_fin: fin, type });
-    // const data = await r.json(); // patched
+    const r = await fetch('/api/planning', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({ titre, description: desc, date_debut: debut, date_fin: fin, type }) });
+    const data = await r.json();
     if (data.success) { showToast('✅ Événement créé'); closeModal('modalPlanning'); loadCalendar(); document.getElementById('planTitre').value = ''; document.getElementById('planDesc').value = ''; }
     else showToast('❌ ' + (data.error || 'Erreur'), false);
   } catch(e) { showToast('❌ Erreur réseau', false); }
@@ -1940,7 +1935,7 @@ async function savePlanning() {
 
 async function deletePlanning(id) {
   if (!confirm('Supprimer cet événement ?')) return;
-  apiDeletePlanning(id);
+  await fetch('/api/planning/' + id, { method: 'DELETE' });
   showToast('✅ Événement supprimé');
   loadCalendar();
 }
@@ -1951,7 +1946,7 @@ async function deletePlanning(id) {
 async function loadEmployes() {
   try {
     const filtre = document.getElementById('filtreStatutEmploye')?.value || '';
-    const data = apiGetEmployes();
+    const data = await fetch('/api/employes').then(r => r.json());
     const filtered = filtre ? data.filter(e => (e.statut_employe || 'disponible') === filtre) : data;
     const tbody = document.getElementById('employesTable');
     if (!filtered.length) { tbody.innerHTML = `<tr><td colspan="7" style="text-align:center;color:var(--white-dim);">${filtre ? 'Aucun employé avec ce statut.' : 'Aucun employé.'}</td></tr>`; return; }
@@ -2034,7 +2029,12 @@ async function confirmEditPoste(id) {
   const newPoste = sel.value;
   document.getElementById('editPosteModal')?.remove();
   try {
-    const d = apiUpdateEmploye(id, { poste: newPoste });
+    const r = await fetch('/api/employes/' + id, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ poste: newPoste })
+    });
+    const d = await r.json();
     if (d.success) {
       showToast('✅ Poste mis à jour');
       // Forcer rechargement sans cache
@@ -2050,7 +2050,12 @@ async function resetPassword(id, nom) {
   if (!newPass) return;
   if (newPass.length < 6) { showToast('❌ Mot de passe trop court (6 min)', false); return; }
   try {
-    const d = apiResetPassword(id, newPass);
+    const r = await fetch('/api/employes/' + id + '/reset-password', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ new_password: newPass })
+    });
+    const d = await r.json();
     if (d.success) showToast('✅ Mot de passe réinitialisé');
     else showToast('❌ ' + (d.error || 'Erreur'), false);
   } catch(e) { showToast('❌ Erreur réseau', false); }
@@ -2065,8 +2070,8 @@ async function saveEmploye() {
   const role = document.getElementById('empRole').value;
   if (!prenom || !nom || !username || !password) { showToast('❌ Remplis tous les champs', false); return; }
   try {
-    const data = apiAddEmploye({ prenom, nom, username, password, poste, role });
-    // const data = await r.json(); // patched
+    const r = await fetch('/api/employes', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({ prenom, nom, username, password, poste, role }) });
+    const data = await r.json();
     if (data.id) { showToast('✅ Employé créé'); closeModal('modalEmploye'); loadEmployes(); }
     else showToast('❌ ' + (data.error || 'Erreur'), false);
   } catch(e) { showToast('❌ Erreur réseau', false); }
@@ -2075,7 +2080,8 @@ async function saveEmploye() {
 async function supprimerEmploye(id, nom) {
   if (!confirm(`⚠️ Supprimer définitivement le compte de ${nom} ?\n\nCette action est irréversible.`)) return;
   try {
-    const data = apiDeleteEmploye(id);
+    const r = await fetch('/api/employes/' + id, { method: 'DELETE' });
+    const data = await r.json();
     if (data.success) { showToast('✅ Compte supprimé définitivement'); loadEmployes(); }
     else showToast('❌ ' + (data.error || 'Erreur'), false);
   } catch(e) { showToast('❌ Erreur réseau', false); }
@@ -2122,7 +2128,12 @@ function ouvrirStatutEmploye(id, nom, statutActuel) {
 async function setStatutEmploye(statut) {
   if (!_statutEmpId) return;
   try {
-    const data = apiUpdateEmploye(_statutEmpId, { statut_employe: statut });
+    const r = await fetch('/api/employes/' + _statutEmpId, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ statut_employe: statut })
+    });
+    const data = await r.json();
     if (data.success) {
       showToast('✅ Statut mis à jour', true);
       closeModal('modalStatutEmploye');
@@ -2136,7 +2147,12 @@ async function toggleStatutEmploye(id, actifActuel) {
   const label = newStatut ? 'activer' : 'désactiver';
   if (!confirm(`${newStatut ? '✅' : '❌'} Voulez-vous ${label} cet employé ?`)) return;
   try {
-    const data = apiUpdateEmploye(id, { actif: newStatut });
+    const r = await fetch('/api/employes/' + id, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ actif: newStatut })
+    });
+    const data = await r.json();
     if (data.success) {
       showToast(newStatut ? '✅ Employé activé' : '✅ Employé désactivé', true);
       loadEmployes();
@@ -2147,7 +2163,7 @@ async function toggleStatutEmploye(id, actifActuel) {
 /* ── ANNONCES ── */
 async function loadAnnonces() {
   try {
-    const data = apiGetAnnonces();
+    const data = await fetch('/api/annonces').then(r => r.json());
     const el = document.getElementById('annoncesList');
     if (!data.length) { el.innerHTML = '<div style="color:var(--white-dim);font-size:12px;padding:8px 0;">Aucune annonce.</div>'; return; }
     el.innerHTML = data.map(a => `
@@ -2176,8 +2192,8 @@ async function saveAnnonce() {
   const priorite = document.getElementById('annPriorite').value;
   if (!titre || !contenu) { showToast('❌ Remplis tous les champs', false); return; }
   try {
-    const data = apiAddAnnonce({ titre, contenu, priorite });
-    // const data = await r.json(); // patched
+    const r = await fetch('/api/annonces', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({ titre, contenu, priorite }) });
+    const data = await r.json();
     if (data.success) { showToast('✅ Annonce publiée'); closeModal('modalAnnonce'); loadAnnonces(); document.getElementById('annTitre').value = ''; document.getElementById('annContenu').value = ''; }
     else showToast('❌ ' + (data.error || 'Erreur'), false);
   } catch(e) { showToast('❌ Erreur réseau', false); }
@@ -2185,7 +2201,7 @@ async function saveAnnonce() {
 
 async function deleteAnnonce(id) {
   if (!confirm('Supprimer cette annonce ?')) return;
-  apiDeleteAnnonce(id);
+  await fetch('/api/annonces/' + id, { method: 'DELETE' });
   showToast('✅ Annonce supprimée');
   loadAnnonces();
 }
@@ -2201,7 +2217,9 @@ let rhSortActif = 'nom';
 
 async function loadDossiersRH() {
   try {
-    rhData = apiGetDossiersRH();
+    const r = await fetch('/api/dossiers-rh');
+    if (!r.ok) throw new Error('HTTP ' + r.status);
+    rhData = await r.json();
     renderDossiersRH(rhData);
   } catch(e) {
     document.getElementById('rhGrid').innerHTML = `<div style="color:var(--red);font-size:12px;grid-column:1/-1;text-align:center;padding:40px 0;">❌ Erreur : ${e.message}</div>`;
@@ -2316,7 +2334,10 @@ async function updateStatutDossier(id, statut) {
 async function openCreateDossier() {
   // Charger les employés sans dossier
   try {
-    const [employes, dossiers] = [apiGetEmployes(), apiGetDossiersRH()];
+    const [employes, dossiers] = await Promise.all([
+      fetch('/api/employes').then(r => r.json()),
+      fetch('/api/dossiers-rh').then(r => r.json())
+    ]);
     const dossierUserIds = new Set(dossiers.map(d => d.user_id));
     const sans = employes.filter(e => e.actif && !dossierUserIds.has(e.id));
     const sel = document.getElementById('dossierCreateUser');
@@ -2345,7 +2366,8 @@ async function submitCreateDossier() {
   const photo = document.getElementById('dossierCreatePhoto').files[0];
   if (photo) fd.append('photo', photo);
   try {
-    const d = apiAddDossierRH({ user_id: parseInt(document.getElementById('dossierCreateUser').value), perso: document.getElementById('dossierCreatePerso').value, compte: document.getElementById('dossierCreateCompte').value, id_employe: document.getElementById('dossierCreateIdEmploye').value, division: document.getElementById('dossierCreateDivision').value });
+    const r = await fetch('/api/dossiers-rh', { method: 'POST', body: fd });
+    const d = await r.json();
     if (d.success) { showToast('✅ Dossier créé'); closeModal('modalDossierCreate'); loadDossiersRH(); }
     else showToast('❌ ' + (d.error || 'Erreur'), false);
   } catch(e) { showToast('❌ Erreur réseau', false); }
@@ -2381,7 +2403,8 @@ async function submitEditDossier() {
   const photo = document.getElementById('dossierEditPhoto').files[0];
   if (photo) fd.append('photo', photo);
   try {
-    const d = apiUpdateDossierRH(id, { perso: document.getElementById('dossierEditPerso').value, compte: document.getElementById('dossierEditCompte').value, id_employe: document.getElementById('dossierEditIdEmploye').value, division: document.getElementById('dossierEditDivision').value });
+    const r = await fetch('/api/dossiers-rh/' + id, { method: 'PUT', body: fd });
+    const d = await r.json();
     if (d.success) { showToast('✅ Dossier mis à jour'); closeModal('modalDossierEdit'); loadDossiersRH(); }
     else showToast('❌ ' + (d.error || 'Erreur'), false);
   } catch(e) { showToast('❌ Erreur réseau', false); }
@@ -2393,7 +2416,8 @@ async function deleteDossier(id, role) {
     : 'Supprimer ce dossier RH ?';
   if (!confirm(msg)) return;
   try {
-    const d = apiDeleteDossierRH(id);
+    const r = await fetch('/api/dossiers-rh/' + id, { method: 'DELETE' });
+    const d = await r.json();
     if (d.success) { showToast('✅ Dossier supprimé'); loadDossiersRH(); }
     else showToast('❌ ' + (d.error || 'Erreur'), false);
   } catch(e) { showToast('❌ Erreur réseau', false); }
@@ -2434,8 +2458,9 @@ async function submitCreateInterimaire() {
   const photo = document.getElementById('interimairePhoto').files[0];
   if (photo) fd.append('photo', photo);
   try {
+    const r = await fetch('/api/dossiers-rh/interimaire', { method: 'POST', body: fd });
+    const d = await r.json();
     const labels = { interimaire: 'Intérimaire', employe: 'Employé', consultant: 'Consultant' };
-    const d = apiAddDossierRH({ nom_libre: nom, prenom_libre: prenom, poste_libre: document.getElementById('interimairePoste').value, perso: document.getElementById('interimairePerso').value, compte: document.getElementById('interimaireCompte').value, id_employe: id_employe, division: division, role_dossier: type });
     if (d.success) { showToast('✅ ' + (labels[type]||'Dossier') + ' créé'); closeModal('modalInterimaire'); loadDossiersRH(); }
     else showToast('❌ ' + (d.error || 'Erreur'), false);
   } catch(e) { showToast('❌ Erreur réseau', false); }
@@ -2594,7 +2619,8 @@ function cmdPickerClear() {
 }
 
 async function loadTarifs() {
-  allTarifs = dbGet('tarifs', TARIFS_DEFAULT);
+  try { allTarifs = await fetch('/api/tarifs', { credentials: 'include' }).then(r => r.json()); }
+  catch(e) { allTarifs = []; }
 }
 
 function renderPrestationsSelector() {
@@ -2676,12 +2702,12 @@ async function saveCommande() {
   const selectedTarifs = allTarifs.filter(t => selectedPrestations.includes(t.code));
   const type_prestation = selectedTarifs.map(t => t.label).join(', ');
   try {
-    const data = apiAddCommande({ client_nom, client_contact, division: division||'multi', type_prestation, description, date_evenement: date_evenement||null, lieu, budget, budget_estime, priorite, note_interne });
-      method: 'POST', // patched
-      headers: {'Content-Type':'application/json'}, // patched
-      body: JSON.stringify({}) // patched
-    }); // patched
-    // const data = await r.json(); // patched
+    const r = await fetch('/api/commandes', {
+      method: 'POST', headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({ client_nom, client_contact, division: division||'multi', type_prestation, prestations_ids: selectedPrestations, postes_requis: window._postesRequis || [], description, date_evenement: date_evenement||null, lieu, budget, budget_estime, priorite, note_interne })
+    });
+    const data = await r.json();
+    if (data.success) {
       showToast('✅ Commande créée');
       closeModal('modalCommande');
       ['cmdClientNom','cmdClientContact','cmdDescription','cmdLieu','cmdBudget','cmdNoteInterne'].forEach(id => { const el = document.getElementById(id); if(el) el.value=''; });
@@ -2721,10 +2747,10 @@ async function saveTarifs() {
   const inputs = document.querySelectorAll('.tarif-prix-input');
   try {
     await Promise.all([...inputs].map(inp =>
-    const tarifs = dbGet('tarifs', TARIFS_DEFAULT); inputs.forEach(inp => { const t = tarifs.find(x => x.id == inp.dataset.id); if(t) t.prix = parseFloat(inp.value)||0; }); dbSet('tarifs', tarifs); allTarifs = tarifs;
-    // fetch tarifs patched
-    // ));
-    // await loadTarifs(); // patched
+      fetch('/api/tarifs/' + inp.dataset.id, { method: 'PUT', headers: {'Content-Type':'application/json'}, body: JSON.stringify({ prix: parseFloat(inp.value)||0 }) })
+    ));
+    await loadTarifs();
+    showToast('✅ Tarifs mis à jour');
     closeModal('modalTarifs');
   } catch(e) { showToast('❌ Erreur lors de la sauvegarde', false); }
 }
@@ -2803,8 +2829,8 @@ async function loadCommandes() {
 async function deleteCommande(id) {
   if (!confirm('Supprimer cette commande ? Cette action est irréversible.')) return;
   try {
-    const r = apiDeleteCommande(id);
-    if (r.success) {
+    const r = await fetch('/api/commandes/' + id, { method: 'DELETE' });
+    if (r.ok) {
       showToast('Commande supprimée', true);
       loadCommandes();
     } else {
@@ -2821,9 +2847,13 @@ async function openCmdDetail(id) {
   try {
     // Charger employés si admin et pas encore chargés
     if (isAdmin() && !window._allEmployes) {
-      window._allEmployes = apiGetEmployes();
+      try {
+        const er = await fetch('/api/employes');
+        window._allEmployes = await er.json();
+      } catch(e) { window._allEmployes = []; }
     }
-    const data = apiGetCommandes();
+    const r = await fetch('/api/commandes');
+    const data = await r.json();
     _cmdDetailData = data;
     const c = data.find(x => x.id === id);
     if (!c) return;
@@ -2942,8 +2972,12 @@ async function assignCommande(cmdId) {
   if (!sel) return;
   const assigned_to = sel.value ? parseInt(sel.value) : null;
   try {
-    const r = apiUpdateCommande(cmdId, { assigned_to: assigned_to || null });
-    if (r.success) {
+    const r = await fetch('/api/commandes/' + cmdId, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ assigned_to: assigned_to || '' })
+    });
+    if (r.ok) {
       showToast(assigned_to ? '✅ Employé assigné' : '✅ Assignation retirée', true);
       closeModal('modalCommandeDetail');
       loadCommandes();
@@ -3037,8 +3071,12 @@ async function saveInfosCommande(cmdId) {
   // Combiner date + heure en datetime ISO
   const dateTime = date ? `${date}T${heure}:00` : null;
   try {
-    const r = apiUpdateCommande(cmdId, { client_contact: contact, date_evenement: dateTime, lieu });
-    if (r.success) {
+    const r = await fetch('/api/commandes/' + cmdId, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ client_contact: contact, date_evenement: dateTime, lieu })
+    });
+    if (r.ok) {
       showToast('✅ Infos mises à jour', true);
       closeModal('modalCommandeDetail');
       loadCommandes();
@@ -3060,7 +3098,7 @@ async function confirmerDevis() {
   const id = document.getElementById('devisCmdId').value;
   const prix = parseFloat(document.getElementById('devisPrix').value);
   if (!prix || prix <= 0) { showToast('❌ Saisis un prix valide', false); return; }
-  apiUpdateCommande(id, { statut:'confirme', budget_estime: prix });
+  await fetch('/api/commandes/'+id, { method:'PUT', headers:{'Content-Type':'application/json'}, body:JSON.stringify({ statut:'confirme', budget_estime: prix }) });
   showToast('✅ Devis confirmé — ajouté au planning');
   closeModal('modalDevis');
   loadCommandes();
@@ -3079,9 +3117,15 @@ async function confirmerPaiement() {
   const montant = parseFloat(document.getElementById('paiementMontant').value);
   if (!montant || montant <= 0) { showToast('❌ Saisis un montant valide', false); return; }
   try {
-    apiUpdateCommande(id, { statut: 'confirme', prix_final: montant });
+    const r = await fetch('/api/commandes/'+id+'/payer', {
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({ prix_final: montant })
+    });
+    const data = await r.json();
+    if (!data.success) { showToast('❌ '+(data.error||'Erreur'), false); return; }
     closeModal('modalPaiement');
-    const partage = [];
+    // Afficher le résultat du partage
+    const partage = data.partage || [];
     let html = `<div style="text-align:center;margin-bottom:16px;">
       <div style="font-family:'Anton',sans-serif;font-size:36px;color:#a78bfa;">${montant.toLocaleString('fr-FR')} $</div>
       <div style="font-size:11px;color:var(--white-dim);margin-top:4px;">reçus — partagés entre ${partage.length} employé${partage.length>1?'s':''}</div>
@@ -3107,14 +3151,15 @@ async function confirmerPaiement() {
 }
 
 async function updateCmdStatut(id, statut) {
-  apiUpdateCommande(id, {statut});
+  await fetch('/api/commandes/'+id, { method:'PUT', headers:{'Content-Type':'application/json'}, body:JSON.stringify({statut}) });
   showToast('✅ Statut mis à jour');
   closeModal('modalCommandeDetail');
 
   // Afficher le partage des gains uniquement quand l'événement est terminé
   if (statut === 'termine') {
     try {
-      const data = apiGetCommandes();
+      const r = await fetch('/api/commandes');
+      const data = await r.json();
       const c = data.find(x => x.id == id);
       if (c) {
         const partage = JSON.parse(c.paiement_partage || '[]');
@@ -3207,7 +3252,12 @@ window.openModal = function(id) {
 };
 
 // ── SSE TEMPS RÉEL ──
-function initSSE() { /* SSE non disponible en mode statique */ } = JSON.parse(e.data);
+function initSSE() {
+  try {
+    const es = new EventSource('/api/events');
+    es.onmessage = (e) => {
+      try {
+        const { type, data } = JSON.parse(e.data);
         if (type === 'commande_update') {
           showToast(`📋 Commande #${data.id} → ${data.statut}`);
           if (document.getElementById('tab-commandes')?.classList.contains('active')) loadCommandes();
@@ -3230,8 +3280,8 @@ let _lastActivity = Date.now();
 );
 setInterval(() => {
   if (Date.now() - _lastActivity > 30 * 60 * 1000) {
-    apiLogout(); Promise.resolve().then(() => {
-      window.location.href = 'login.html';
+    fetch('/api/logout', { method: 'POST' }).finally(() => {
+      window.location.href = '/login';
     });
   }
 }, 60 * 1000);
@@ -3564,8 +3614,8 @@ async function loadContratsRH(dossierId) {
   const el = document.getElementById(`contrats-items-${dossierId}`);
   if (!el) return;
   try {
-    const contrats = (dbGet('contrats_rh', [])).filter(c => c.dossier_id == dossierId);
-    // const contrats = await r.json(); // patched
+    const r = await fetch(`/api/dossiers-rh/${dossierId}/contrats`);
+    const contrats = await r.json();
     if (!contrats.length) {
       el.innerHTML = '<span style="font-style:italic;opacity:0.6;">Aucun contrat enregistré.</span>';
       return;
@@ -4196,7 +4246,7 @@ window.showTab = function(name, btn) {
   }
 </style>
 
-<script src="api.js"></script><script>
+<script>
 function openMobileMenu() {
   document.getElementById('mobileMenuOverlay').classList.add('open');
   document.getElementById('mobileMenuPanel').classList.add('open');
@@ -4223,53 +4273,3 @@ document.addEventListener('DOMContentLoaded', function() {
 
 </body>
 </html>
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-

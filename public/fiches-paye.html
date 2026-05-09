@@ -148,7 +148,7 @@ body{background:var(--bg);color:var(--white);font-family:Inter,Arial;min-height:
   </div>
 </div>
 
-<script src="api.js"></script>
+<script src="/token-patch.js"></script>
 <script>
 let currentUser = null;
 let isDir = false;
@@ -157,9 +157,9 @@ let allFiches = [];
 
 async function init() {
   try {
-    const r = Promise.resolve(apiMe());
+    const r = await fetch('/api/me');
     const d = await r.json();
-    if (!d.user) { window.location.href = 'login.html'; return; }
+    if (!d.user) { window.location.href = '/login'; return; }
     currentUser = d.user;
     isDir = ['admin','direction'].includes(d.user.role) || ['Directeur Général','Directeur de Division','Coordinateur'].includes(d.user.poste);
     document.getElementById('avatarEl').textContent = (d.user.prenom[0]||'?').toUpperCase();
@@ -175,7 +175,7 @@ async function init() {
     const w = getWeekNumber(now);
     document.getElementById('semaineInput').value = `${y}-W${String(w).padStart(2,'0')}`;
     loadFiches();
-  } catch(e) { window.location.href = 'login.html'; }
+  } catch(e) { window.location.href = '/login'; }
 }
 
 function getWeekNumber(d) {
@@ -309,12 +309,12 @@ async function genererFiches() {
   if (!val) { alert('Sélectionne une semaine'); return; }
   const mondayStr = weekInputToMonday(val);
   try {
-    const d = apiGenererFiches(mondayStr);
-      method: 'POST', // patched
-      headers: { 'Content-Type': 'application/json' }, // patched
-      body: JSON.stringify({ semaine: mondayStr }) // patched
-    }); // patched
-    // const d = await r.json(); // patched
+    const r = await fetch('/api/fiches-paye/generer', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ semaine: mondayStr })
+    });
+    const d = await r.json();
     if (d.success) {
       showToast(`✅ ${d.fiches_generees} fiche(s) générée(s)`);
       loadFiches();
@@ -369,8 +369,8 @@ function showToast(msg, ok = true) {
 }
 
 async function logout() {
-  Promise.resolve(apiLogout());
-  window.location.href = 'login.html';
+  await fetch('/api/logout', { method: 'POST' });
+  window.location.href = '/login';
 }
 
 function exportFiche(id) {
@@ -438,7 +438,3 @@ init();
 </div>
 </body>
 </html>
-
-
-
-

@@ -210,7 +210,7 @@ tbody td{padding:12px 16px;font-size:13px;}
 
 <div id="toast"></div>
 
-<script src="api.js"></script>
+<script src="/token-patch.js"></script>
 <script>
 const CATS = {
   evenement: { label: 'Événement', badge: 'badge-evt' },
@@ -224,24 +224,24 @@ const CATS = {
 
 async function init() {
   try {
-    const d = apiMe();
-    // const d = await r.json(); // patched
-    if (!d.user) { window.location.href = 'login.html'; return; }
+    const r = await fetch('/api/me');
+    const d = await r.json();
+    if (!d.user) { window.location.href = '/login'; return; }
     // Vérifier direction
     const isDir = ['admin','direction'].includes(d.user.role) || ['Directeur Général','Directeur de Division','Coordinateur'].includes(d.user.poste);
-    if (!isDir) { window.location.href = 'index.html'; return; }
+    if (!isDir) { window.location.href = '/dashboard'; return; }
     // Date par défaut = aujourd'hui
     document.getElementById('fDate').value = new Date().toISOString().split('T')[0];
     loadEntrees();
     loadResume();
-  } catch(e) { window.location.href = 'login.html'; }
+  } catch(e) { window.location.href = '/login'; }
 }
 
 async function loadResume() {
   const params = buildParams();
   try {
-    const d = apiGetComptesResume(buildFiltersObj());
-    // const d = await r.json(); // patched
+    const r = await fetch('/api/comptes/resume' + (params ? '?' + params : ''));
+    const d = await r.json();
     document.getElementById('statSolde').textContent = Number(d.solde||0).toLocaleString('fr-FR') + ' $';
     document.getElementById('statSolde').style.color = Number(d.solde) >= 0 ? 'var(--green)' : 'var(--red)';
     document.getElementById('statRecettes').textContent = Number(d.total_recettes||0).toLocaleString('fr-FR') + ' $';
@@ -252,25 +252,24 @@ async function loadResume() {
   } catch(e) {}
 }
 
-
-function buildFiltersObj() {
-  var type = document.getElementById('filterType') ? document.getElementById('filterType').value : '';
-  var cat = document.getElementById('filterCat') ? document.getElementById('filterCat').value : '';
-  var debut = document.getElementById('filterDebut') ? document.getElementById('filterDebut').value : '';
-  var fin = document.getElementById('filterFin') ? document.getElementById('filterFin').value : '';
-  var f = {};
-  if (type) f.type = type;
-  if (cat) f.categorie = cat;
-  if (debut) f.date_debut = debut;
-  if (fin) f.date_fin = fin;
-  return f;
+function buildParams() {
+  const type = document.getElementById('filterType').value;
+  const cat = document.getElementById('filterCat').value;
+  const debut = document.getElementById('filterDebut').value;
+  const fin = document.getElementById('filterFin').value;
+  const p = [];
+  if (type) p.push('type=' + type);
+  if (cat) p.push('categorie=' + cat);
+  if (debut) p.push('date_debut=' + debut);
+  if (fin) p.push('date_fin=' + fin);
+  return p.join('&');
 }
 
 async function loadEntrees() {
   const params = buildParams();
   try {
-    const data = apiGetComptes(buildFiltersObj());
-    // const data = await r.json(); // patched
+    const r = await fetch('/api/comptes' + (params ? '?' + params : ''));
+    const data = await r.json();
     renderTable(data);
     loadResume();
   } catch(e) {
@@ -336,12 +335,12 @@ async function sauvegarderEntree() {
     showToast('❌ Remplis tous les champs obligatoires', false); return;
   }
   try {
-    const d = apiAddCompte({ type, categorie, description, montant, date, reference });
-      method: 'POST', // patched
-      headers: { 'Content-Type': 'application/json' }, // patched
-      body: JSON.stringify({}) // patched
-    }); // patched
-    // const d = await r.json(); // patched
+    const r = await fetch('/api/comptes', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ type, categorie, description, montant, date, reference })
+    });
+    const d = await r.json();
     if (d.success) {
       showToast('✅ Entrée ajoutée');
       closeModal();
@@ -355,10 +354,10 @@ async function sauvegarderEntree() {
 async function supprimerEntree(id) {
   if (!confirm('Supprimer cette entrée ? Action irréversible.')) return;
   try {
-    const r2 = apiDeleteCompte(id);
-    // const r = await fetch... // patched
-    if (r2.success) { showToast('✅ Entrée supprimée'); loadEntrees(); }
+    const r = await fetch('/api/comptes/' + id, { method: 'DELETE' });
+    if (r.ok) { showToast('✅ Entrée supprimée'); loadEntrees(); }
     else showToast('❌ Erreur', false);
+  } catch(e) { showToast('❌ Erreur réseau', false); }
 }
 
 function showToast(msg, ok = true) {
@@ -370,9 +369,9 @@ function showToast(msg, ok = true) {
 }
 
 async function logout() {
-  apiLogout();
-  // await fetch('/api/logout'... // patched
-  window.location.href = 'login.html';
+  await fetch('/api/logout', { method: 'POST' });
+  window.location.href = '/login';
+}
 
 function exportCSV() {
   const debut = document.getElementById('filterDebut').value;
@@ -380,7 +379,7 @@ function exportCSV() {
   const params = new URLSearchParams();
   if (debut) params.set('date_debut', debut);
   if (fin) params.set('date_fin', fin);
-  exportComptesCSV(buildFiltersObj());
+  window.location.href = '/api/comptes/export-csv' + (params.toString() ? '?' + params.toString() : '');
 }
 
 document.getElementById('modalEntree').addEventListener('click', function(e) {
@@ -397,7 +396,3 @@ init();
 </div>
 </body>
 </html>
-
-
-
-

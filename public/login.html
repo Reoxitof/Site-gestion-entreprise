@@ -46,7 +46,7 @@
     <button class="btn-gold" onclick="doLogin()"><i class="fa-solid fa-right-to-bracket"></i> &nbsp;SE CONNECTER</button>
   </div>
 </div>
-<script src="/api.js"></script><script src="api.js"></script><script>
+<script>
   async function doLogin() {
     const username = document.getElementById('username').value.trim();
     const password = document.getElementById('password').value;
@@ -54,13 +54,13 @@
     err.style.display = 'none';
     if (!username || !password) { err.textContent = 'Remplis tous les champs.'; err.style.display = 'block'; return; }
     try {
-    const data = apiLogin(username, password);
-        method: 'POST', // patched
-        headers: {'Content-Type':'application/json'}, // patched
-        body: JSON.stringify({ username, password }), // patched
-        credentials: 'include' // patched
-      }); // patched
-      // const data = await r.json(); // patched
+      const r = await fetch('/api/login', {
+        method: 'POST',
+        headers: {'Content-Type':'application/json'},
+        body: JSON.stringify({ username, password }),
+        credentials: 'include'
+      });
+      const data = await r.json();
       if (data.success) {
         // Stocker le token pour FiveM/CEF (pas de cookies)
         if (data.token) {
@@ -68,9 +68,9 @@
           try { sessionStorage.setItem('ec_token', data.token); } catch(e) {}
         }
         if (data.must_reset_password) {
-          window.location.href = 'reset-password.html' + (data.token || '');
+          window.location.href = '/reset-password#' + (data.token || '');
         } else {
-          window.location.href = 'index.html' + (data.token || '');
+          window.location.href = '/dashboard#' + (data.token || '');
         }
       } else {
         err.textContent = data.error || 'Identifiants invalides.';
@@ -85,6 +85,3 @@
 </script>
 </body>
 </html>
-
-
-
