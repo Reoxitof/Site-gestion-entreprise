@@ -1459,6 +1459,13 @@ async function logAdminAction(userId, action, details) {
 // Lister tous les dossiers RH avec infos utilisateur
 app.get('/api/dossiers-rh', auth, async (req, res) => {
   try {
+    // Migration auto si colonnes manquantes
+    await getPool().query(`ALTER TABLE ec_dossiers_rh ADD COLUMN IF NOT EXISTS photo_data TEXT DEFAULT ''`).catch(()=>{});
+    await getPool().query(`ALTER TABLE ec_dossiers_rh ADD COLUMN IF NOT EXISTS role_dossier TEXT DEFAULT 'interimaire'`).catch(()=>{});
+    await getPool().query(`ALTER TABLE ec_dossiers_rh ADD COLUMN IF NOT EXISTS nom_libre TEXT DEFAULT ''`).catch(()=>{});
+    await getPool().query(`ALTER TABLE ec_dossiers_rh ADD COLUMN IF NOT EXISTS prenom_libre TEXT DEFAULT ''`).catch(()=>{});
+    await getPool().query(`ALTER TABLE ec_dossiers_rh ADD COLUMN IF NOT EXISTS poste_libre TEXT DEFAULT ''`).catch(()=>{});
+    await getPool().query(`ALTER TABLE ec_dossiers_rh ADD COLUMN IF NOT EXISTS statut_dossier TEXT DEFAULT 'disponible'`).catch(()=>{});
     const rows = (await getPool().query(
       `SELECT d.*,
         COALESCE(u.nom, d.nom_libre) as nom, COALESCE(d.photo_data, d.photo_url, '') as photo_url,
