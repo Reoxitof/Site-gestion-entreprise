@@ -272,11 +272,11 @@ async function initDB() {
       updated_at TIMESTAMP DEFAULT NOW()
     )`);
     // Migrations pour les nouvelles colonnes
-    await getPool().query(`ALTER TABLE ec_dossiers_rh ADD COLUMN IF NOT EXISTS nom_libre TEXT DEFAULT ''`);
-    await getPool().query(`ALTER TABLE ec_dossiers_rh ADD COLUMN IF NOT EXISTS prenom_libre TEXT DEFAULT ''`);
-    await getPool().query(`ALTER TABLE ec_dossiers_rh ADD COLUMN IF NOT EXISTS poste_libre TEXT DEFAULT ''`);
-    await getPool().query(`ALTER TABLE ec_dossiers_rh ADD COLUMN IF NOT EXISTS photo_data TEXT DEFAULT ''`);
-    await getPool().query(`ALTER TABLE ec_dossiers_rh ADD COLUMN IF NOT EXISTS role_dossier TEXT DEFAULT 'interimaire'`);
+    await getPool().query(`ALTER TABLE ec_dossiers_rh ADD COLUMN IF NOT EXISTS nom_libre TEXT DEFAULT ''`).catch(()=>{});
+    await getPool().query(`ALTER TABLE ec_dossiers_rh ADD COLUMN IF NOT EXISTS prenom_libre TEXT DEFAULT ''`).catch(()=>{});
+    await getPool().query(`ALTER TABLE ec_dossiers_rh ADD COLUMN IF NOT EXISTS poste_libre TEXT DEFAULT ''`).catch(()=>{});
+    await getPool().query(`ALTER TABLE ec_dossiers_rh ADD COLUMN IF NOT EXISTS photo_data TEXT DEFAULT ''`).catch(()=>{});
+    await getPool().query(`ALTER TABLE ec_dossiers_rh ADD COLUMN IF NOT EXISTS role_dossier TEXT DEFAULT 'interimaire'`).catch(()=>{});
     await getPool().query(`ALTER TABLE ec_dossiers_rh ALTER COLUMN user_id DROP NOT NULL`).catch(() => {});
     await getPool().query(`ALTER TABLE ec_dossiers_rh DROP CONSTRAINT IF EXISTS ec_dossiers_rh_user_id_key`).catch(() => {});
     await getPool().query(`ALTER TABLE ec_dossiers_rh ADD COLUMN IF NOT EXISTS statut_dossier TEXT DEFAULT 'disponible'`).catch(() => {});    // Insérer les tarifs par défaut si la table est vide
@@ -323,6 +323,15 @@ async function initDB() {
     setTimeout(initDB, 5000);
   }
 }
+
+/* ═══ DEBUG ═══ */
+app.get('/api/debug-init', async (req, res) => {
+  try {
+    await getPool().query('SELECT 1');
+    const tables = await getPool().query(`SELECT table_name FROM information_schema.tables WHERE table_schema='public' ORDER BY table_name`);
+    res.json({ dbReady, tables: tables.rows.map(r => r.table_name) });
+  } catch(e) { res.json({ error: e.message, dbReady }); }
+});
 
 /* ═══ AUTH ═══ */
 const DIRECTION_POSTES = ['Directeur Général', 'Directeur de Division', 'Coordinateur', 'CEO', 'Directeur'];
