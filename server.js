@@ -1684,6 +1684,18 @@ app.post('/api/dossiers-rh/interimaire', admin, uploadRH.single('photo'), async 
   }
 });
 
+
+/* Migration divisions existantes */
+app.get('/api/migrate-divisions', admin, async (req, res) => {
+  try {
+    await getPool().query("UPDATE ec_dossiers_rh SET division='Elite Security' WHERE division ILIKE '%penny%' OR division ILIKE '%elite s%curity%'");
+    await getPool().query("UPDATE ec_dossiers_rh SET division='Elite Security' WHERE division ILIKE '%elite security%'");
+    await getPool().query("UPDATE ec_dossiers_rh SET division='Lilly''s Girls' WHERE division ILIKE '%lilly%'");
+    await getPool().query("UPDATE ec_dossiers_rh SET division='Elite Tourisme' WHERE division ILIKE '%tourisme%'");
+    await getPool().query("UPDATE ec_dossiers_rh SET division='Elite Aventure' WHERE division ILIKE '%aventure%'");
+    res.json({ success: true, message: 'Divisions mises a jour' });
+  } catch(e) { res.status(500).json({ error: e.message }); }
+});
 /* ═══ PAGES ═══ */
 app.get('/login', (req, res) => { res.setHeader('Content-Type', 'text/html; charset=utf-8'); res.sendFile(path.join(__dirname, 'public', 'login.html')); });
 app.get('/dashboard', (req, res) => { res.setHeader('Content-Type', 'text/html; charset=utf-8'); res.sendFile(path.join(__dirname, 'public', 'index.html')); });
