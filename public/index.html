@@ -3015,11 +3015,11 @@ function renderStatutButtons(c) {
         </div>
         <div>
           <div style="font-size:9px;color:var(--white-dim);margin-bottom:4px;">Date événement</div>
-          <input id="editDate_${c.id}" type="date" value="${c.date_evenement ? new Date(c.date_evenement).toISOString().slice(0,10) : ''}" style="width:100%;padding:7px 10px;border-radius:7px;border:1px solid var(--border);background:#08040d;color:white;font-size:12px;">
+          <input id="editDate_${c.id}" type="date" value="${c.date_evenement ? (c.date_evenement.includes("T") ? c.date_evenement.split("T")[0] : c.date_evenement.slice(0,10)) : ''}" style="width:100%;padding:7px 10px;border-radius:7px;border:1px solid var(--border);background:#08040d;color:white;font-size:12px;">
         </div>
         <div>
           <div style="font-size:9px;color:var(--white-dim);margin-bottom:4px;">Heure événement</div>
-          <input id="editHeure_${c.id}" type="time" value="${c.date_evenement ? new Date(c.date_evenement).toISOString().slice(11,16) : ''}" style="width:100%;padding:7px 10px;border-radius:7px;border:1px solid var(--border);background:#08040d;color:white;font-size:12px;">
+          <input id="editHeure_${c.id}" type="time" value="${c.date_evenement ? (c.date_evenement.includes("T") ? c.date_evenement.split("T")[1].slice(0,5) : "00:00") : ''}" style="width:100%;padding:7px 10px;border-radius:7px;border:1px solid var(--border);background:#08040d;color:white;font-size:12px;">
         </div>
         <div>
           <div style="font-size:9px;color:var(--white-dim);margin-bottom:4px;">Lieu</div>
