@@ -1274,7 +1274,7 @@ app.get('/api/fiches-paye', auth, async (req, res) => {
 app.post('/api/fiches-paye/:id/payer', admin, async (req, res) => {
   try {
     const ficheRes = await getPool().query(
-      `SELECT f.*, u.nom, u.prenom FROM ec_fiches_paye f JOIN ec_users u ON f.user_id = u.id WHERE f.id=$1`,
+      `SELECT f.*, COALESCE(u.nom, d.nom_libre) as nom, COALESCE(u.prenom, d.prenom_libre) as prenom FROM ec_fiches_paye f LEFT JOIN ec_users u ON f.user_id = u.id LEFT JOIN ec_dossiers_rh d ON f.dossier_id = d.id WHERE f.id=$1`,
       [req.params.id]
     );
     const fiche = ficheRes.rows[0];
