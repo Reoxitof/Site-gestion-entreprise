@@ -442,7 +442,7 @@ app.put('/api/me/statut', auth, async (req, res) => {
   } catch(e) { res.status(500).json({ error: e.message }); }
 });
 app.get('/mes-tickets', auth, (req, res) => res.sendFile(path.join(__dirname, 'public', 'mes-tickets.html')));
-app.get('/fiches-paye', auth, (req, res) => res.sendFile(path.join(__dirname, 'public', 'fiches-paye.html')));
+app.get('/fiches-paye', auth, (req, res) => res.status(403).send('<h1>Fiches de paye désactivées</h1><p><a href=/dashboard>Retour</a></p>'));
 app.get('/livre-comptes', admin, (req, res) => res.sendFile(path.join(__dirname, 'public', 'livre-comptes.html')));
 app.get('/reset-password', auth, (req, res) => res.sendFile(path.join(__dirname, 'public', 'reset-password.html')));
 
@@ -1166,7 +1166,7 @@ app.post('/api/contrats-rh/:id/payer', admin, async (req, res) => {
 });
 
 // Générer les fiches de paye pour les EMPLOYÉS (par commandes terminées)
-app.post('/api/fiches-paye/generer', admin, async (req, res) => {
+app.post('/api/fiches-paye/generer', admin, async (req, res) => { return res.status(403).json({ error: 'Fiches de paye désactivées' });
   try {
     const { semaine } = req.body;
     const { lundi, dimanche } = getSemaineBornes(semaine);
@@ -1220,7 +1220,7 @@ app.post('/api/fiches-paye/generer', admin, async (req, res) => {
 });
 
 // Lister les fiches — employés (user_id) + dossiers RH (dossier_id)
-app.get('/api/fiches-paye', auth, async (req, res) => {
+app.get('/api/fiches-paye', auth, async (req, res) => { return res.json([]);
   try {
     const { semaine, type, statut } = req.query;
     const isDir = isAdminOrDirection(req.session.user);
@@ -1271,7 +1271,7 @@ app.get('/api/fiches-paye', auth, async (req, res) => {
 });
 
 // Marquer une fiche comme payée (direction)
-app.post('/api/fiches-paye/:id/payer', admin, async (req, res) => {
+app.post('/api/fiches-paye/:id/payer', admin, async (req, res) => { return res.status(403).json({ error: 'Fiches de paye désactivées' });
   try {
     const ficheRes = await getPool().query(
       `SELECT f.*, u.nom, u.prenom FROM ec_fiches_paye f JOIN ec_users u ON f.user_id = u.id WHERE f.id=$1`,

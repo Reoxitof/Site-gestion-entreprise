@@ -363,7 +363,7 @@
         <div style="display:flex;gap:10px;flex-wrap:wrap;">
           <select class="input-field" id="recrPosteFilter" style="width:220px;" onchange="recrFilterPoste()">
             <option value="">Toutes les questions</option>
-            <option value="securite">🛡️ Penny's Elite Security</option>
+            <option value="securite">🛡️ Elite Security</option><option value="radioraf">📻 Radio RAF</option><option value="elitecorp">🏢 Elite Corp.</option><option value="coding">💻 Elite Coding</option><option value="hco">🏗️ H &amp; Co</option>
             <option value="evenementiel">🎉 Événementiel</option>
             <option value="tourisme">✈️ Elite Tourisme</option>
             <option value="aventure">🏔️ Elite Aventure</option>
@@ -423,7 +423,7 @@
         <div style="display:flex;gap:10px;flex-wrap:wrap;">
           <select class="input-field" id="cmdFilterDiv" style="width:180px;" onchange="loadCommandes()">
             <option value="">Toutes les divisions</option>
-            <option value="securite">🛡️ Penny's Elite Security</option>
+            <option value="securite">🛡️ Elite Security</option><option value="radioraf">📻 Radio RAF</option><option value="elitecorp">🏢 Elite Corp.</option><option value="coding">💻 Elite Coding</option><option value="hco">🏗️ H &amp; Co</option>
             <option value="soiree">🎉 Événementiel</option>
             <option value="tourisme">✈️ Elite Tourisme</option>
             <option value="aventure">🏔️ Elite Aventure</option>
@@ -525,7 +525,7 @@
       <select class="input-field" id="dossierCreateUser"></select>
     </div>
     <div class="grid-2">
-      <div class="form-group"><label>Perso (personnage RP)</label><input class="input-field" id="dossierCreatePerso" placeholder="Ex: John Smith"/></div>
+      <div class="form-group"><label>Tel</label><input class="input-field" id="dossierCreatePerso" placeholder="Ex: 480-5934"/></div>
       <div class="form-group"><label>Compte (numéro)</label><input class="input-field" id="dossierCreateCompte" placeholder="Ex: 1234567"/></div>
     </div>
     <div class="grid-2">
@@ -533,7 +533,7 @@
       <div class="form-group"><label>Division</label>
         <select class="input-field" id="dossierCreateDivision">
           <option value="">— Sélectionner —</option>
-          <option value="Penny's Elite Security">🛡️ Penny's Elite Security</option>
+          <option value="Elite Security">🛡️ Elite Security</option>
           <option value="Événementiel">🎉 Événementiel</option>
           <option value="Elite Tourisme">✈️ Elite Tourisme</option>
           <option value="Elite Aventure">🏔️ Elite Aventure</option>
@@ -565,13 +565,13 @@
     <div class="form-group">
       <label>Type de contrat</label>
       <select class="input-field" id="dossierEditRole">
-        <option value="interimaire">🟣 Intérimaire</option>
+        <option value="interimaire">🟣 Intérimaire</option><option value="stagiaire">📋 Stagiaire</option><option value="blackliste">🚫 Black Listé</option>
         <option value="employe">🟢 Employé</option>
         <option value="consultant">🔵 Consultant</option>
       </select>
     </div>
     <div class="grid-2">
-      <div class="form-group"><label>Perso (personnage RP)</label><input class="input-field" id="dossierEditPerso" placeholder="Ex: John Smith"/></div>
+      <div class="form-group"><label>Tel</label><input class="input-field" id="dossierEditPerso" placeholder="Ex: 480-5934"/></div>
       <div class="form-group"><label>Compte (numéro)</label><input class="input-field" id="dossierEditCompte" placeholder="Ex: 1234567"/></div>
     </div>
     <div class="grid-2">
@@ -579,7 +579,7 @@
       <div class="form-group"><label>Division</label>
         <select class="input-field" id="dossierEditDivision">
           <option value="">— Sélectionner —</option>
-          <option value="Penny's Elite Security">🛡️ Penny's Elite Security</option>
+          <option value="Elite Security">🛡️ Elite Security</option>
           <option value="Événementiel">🎉 Événementiel</option>
           <option value="Elite Tourisme">✈️ Elite Tourisme</option>
           <option value="Elite Aventure">🏔️ Elite Aventure</option>
@@ -610,7 +610,7 @@
     <div class="form-group">
       <label>Type de contrat *</label>
       <select class="input-field" id="interimaireType">
-        <option value="interimaire">🟣 Intérimaire</option>
+        <option value="interimaire">🟣 Intérimaire</option><option value="stagiaire">📋 Stagiaire</option><option value="blackliste">🚫 Black Listé</option>
         <option value="employe">🟢 Employé</option>
         <option value="consultant">🔵 Consultant</option>
       </select>
@@ -628,7 +628,7 @@
           <option>Coordinateur</option>
           <option>Directeur</option>
         </optgroup>
-        <optgroup label="🛡️ Penny's Elite Security">
+        <optgroup label="🛡️ Elite Security">
           <option>Chef de la Sécurité</option>
           <option>Responsable Sécurité</option>
           <option>Agent de Sécurité</option>
@@ -677,7 +677,7 @@
       </select>
     </div>
     <div class="grid-2">
-      <div class="form-group"><label>Perso (téléphone RP)</label><input class="input-field" id="interimairePerso" placeholder="Ex: 480-5934"/></div>
+      <div class="form-group"><label>Tel</label><input class="input-field" id="interimairePerso" placeholder="Ex: 480-5934"/></div>
       <div class="form-group"><label>Compte (bancaire RP)</label><input class="input-field" id="interimaireCompte" placeholder="Ex: #5631"/></div>
     </div>
     <div class="grid-2">
@@ -685,7 +685,7 @@
       <div class="form-group"><label>Division *</label>
         <select class="input-field" id="interimaireDivision">
           <option value="">— Sélectionner —</option>
-          <option value="Penny's Elite Security">🛡️ Penny's Elite Security</option>
+          <option value="Elite Security">🛡️ Elite Security</option>
           <option value="Événementiel">🎉 Événementiel</option>
           <option value="Elite Tourisme">✈️ Elite Tourisme</option>
           <option value="Elite Aventure">🏔️ Elite Aventure</option>
@@ -727,7 +727,7 @@
           <option>Coordinateur</option>
           <option>Directeur</option>
         </optgroup>
-        <optgroup label="🛡️ Penny's Elite Security">
+        <optgroup label="🛡️ Elite Security">
           <option>Chef de la Sécurité</option>
           <option>Responsable Sécurité</option>
           <option>Agent de Sécurité</option>
@@ -908,7 +908,7 @@
 
     <div class="form-group"><label>Type</label>
       <select class="input-field" id="planType">
-        <optgroup label="🛡️ Penny's Elite Security">
+        <optgroup label="🛡️ Elite Security">
           <option value="service">Service de Sécurité</option>
           <option value="escorte">Escorte VIP</option>
           <option value="convoi">Convoi Sécurisé</option>
@@ -959,7 +959,7 @@
     <div class="form-group"><label>Division concernée *</label>
       <select class="input-field" id="cmdDivision" onchange="renderPrestationsSelector()">
         <option value="">— Toutes les divisions —</option>
-        <option value="securite">🛡️ Penny's Elite Security</option>
+        <option value="securite">🛡️ Elite Security</option><option value="radioraf">📻 Radio RAF</option><option value="elitecorp">🏢 Elite Corp.</option><option value="coding">💻 Elite Coding</option><option value="hco">🏗️ H &amp; Co</option>
         <option value="soiree">🎉 Événementiel</option>
         <option value="tourisme">✈️ Elite Tourisme</option>
         <option value="aventure">🏔️ Elite Aventure</option>
@@ -1049,7 +1049,7 @@
             <option>Directeur de Division</option>
             <option>Coordinateur</option>
           </optgroup>
-          <optgroup label="🛡️ Penny's Elite Security">
+          <optgroup label="🛡️ Elite Security">
             <option>Chef de la Sécurité</option>
             <option>Responsable Sécurité</option>
             <option>Agent de Sécurité</option>
@@ -1158,7 +1158,7 @@
       <div class="form-group">
         <label>Division</label>
         <select class="input-field" id="devisDivision">
-          <option value="securite">🛡️ Penny's Elite Security</option>
+          <option value="securite">🛡️ Elite Security</option><option value="radioraf">📻 Radio RAF</option><option value="elitecorp">🏢 Elite Corp.</option><option value="coding">💻 Elite Coding</option><option value="hco">🏗️ H &amp; Co</option>
           <option value="soiree">🎉 Événementiel</option>
           <option value="tourisme">✈️ Elite Tourisme</option>
           <option value="aventure">🏔️ Elite Aventure</option>
@@ -1209,7 +1209,7 @@
       <div style="display:flex;gap:8px;align-items:center;">
         <select id="devisPosteSelect" class="input-field" style="flex:1;">
           <option value="">— Ajouter un poste —</option>
-          <optgroup label="🛡️ Penny's Elite Security">
+          <optgroup label="🛡️ Elite Security">
             <option>Agent de Sécurité</option>
             <option>Agent VIP / Escorte</option>
             <option>Convoyeur</option>
@@ -2642,7 +2642,7 @@ function renderPrestationsSelector() {
     container.innerHTML = '<div style="color:var(--white-dim);font-size:12px;grid-column:1/-1;padding:8px 0;">Aucune prestation disponible.</div>';
     return;
   }
-  const divLabels = { securite:"🛡️ Penny's Elite Security", soiree:"🎉 Événementiel", tourisme:"✈️ Elite Tourisme", aventure:"🏔️ Elite Aventure", lillys:"💃 Lilly's Girls", multi:"🏢 Multi-divisions" };
+  const divLabels = { securite:"🛡️ Elite Security", soiree:"🎉 Événementiel", tourisme:"✈️ Elite Tourisme", aventure:"🏔️ Elite Aventure", lillys:"💃 Lilly's Girls", multi:"🏢 Multi-divisions" };
   const groups = {};
   filtered.forEach(t => { if (!groups[t.division]) groups[t.division] = []; groups[t.division].push(t); });
   let html = '';
@@ -2729,7 +2729,7 @@ async function saveCommande() {
 /* ── TARIFS ADMIN ── */
 async function openTarifs() {
   await loadTarifs();
-  const divLabels = { securite:"🛡️ Penny's Elite Security", soiree:"🎉 Événementiel", tourisme:"✈️ Elite Tourisme", aventure:"🏔️ Elite Aventure", lillys:"💃 Lilly's Girls", multi:"🏢 Multi-divisions" };
+  const divLabels = { securite:"🛡️ Elite Security", soiree:"🎉 Événementiel", tourisme:"✈️ Elite Tourisme", aventure:"🏔️ Elite Aventure", lillys:"💃 Lilly's Girls", multi:"🏢 Multi-divisions" };
   const groups = {};
   allTarifs.forEach(t => { if (!groups[t.division]) groups[t.division] = []; groups[t.division].push(t); });
   let html = '';
@@ -3931,7 +3931,7 @@ function ouvrirContrat(cmdId) {
 const RECR_QUESTIONS = [
   // ── GÉNÉRALES (poids 3 chacune = 15 pts) ──
   { id:1, cat:'general', catLabel:'🏢 Général', poids:3, q:'Qu\'est-ce qu\'Elite Corp. et quelles sont ses divisions ?', rep:`<strong>Elite Corp.</strong> est une entreprise d'Event Planning & Services basée à Blaine County / Orange County. Elle regroupe 4 filiales :<br><br>
-    • <strong>Penny's Elite Security</strong> — Sécurité des événements, escorte VIP, convois<br>
+    • <strong>Elite Security</strong> — Sécurité des événements, escorte VIP, convois<br>
     • <strong>Elite Aventure</strong> — Road trips, safaris, expéditions, aventures<br>
     • <strong>Elite Tourisme</strong> — Conciergerie, transferts VIP, guide touristique<br>
     • <strong>Lilly's Girls</strong> — Animations, shows, prestations artistiques`, keywords:['elite corp','divisions','filiales'] },
@@ -3979,12 +3979,12 @@ const RECR_QUESTIONS = [
   // ── AVENTURE (poids 2 chacune = 4 pts) ──
   { id:14, cat:'aventure', catLabel:'🏔️ Elite Aventure', poids:2, q:'Quelles prestations propose Elite Aventure ?', rep:`Elite Aventure propose :<br>• <strong>Balades & Road Trips</strong> — 4x4, SUV, motos, buggys<br>• <strong>Gestion d\'événements</strong> sur tout type de terrain<br>• <strong>Safari</strong> (sans animaux) — exploration tout-terrain<br>• <strong>Aventures sous-marines</strong> — sous-marins privatisés<br>• <strong>Convois extrêmes</strong> — montagnes, canyons, déserts`, keywords:['aventure','prestations','road trip'] },
 
-  { id:15, cat:'aventure', catLabel:'🏔️ Elite Aventure', poids:2, q:'La sécurité est-elle une priorité dans les aventures ? Comment l\'assures-tu ?', rep:`<strong>Oui, absolument</strong>. Chaque aventure est planifiée dans les moindres détails pour la sécurité. Éléments attendus :<br>• Reconnaissance du terrain<br>• Matériel adapté et vérifié<br>• Coordination avec Penny's Elite Security si nécessaire<br>• Assistance 24/7 disponible<br>• Briefing sécurité obligatoire avant chaque sortie`, keywords:['sécurité','aventure','terrain'] },
+  { id:15, cat:'aventure', catLabel:'🏔️ Elite Aventure', poids:2, q:'La sécurité est-elle une priorité dans les aventures ? Comment l\'assures-tu ?', rep:`<strong>Oui, absolument</strong>. Chaque aventure est planifiée dans les moindres détails pour la sécurité. Éléments attendus :<br>• Reconnaissance du terrain<br>• Matériel adapté et vérifié<br>• Coordination avec Elite Security si nécessaire<br>• Assistance 24/7 disponible<br>• Briefing sécurité obligatoire avant chaque sortie`, keywords:['sécurité','aventure','terrain'] },
 
   // ── LILLY'S GIRLS (poids 1 chacune = 2 pts) ──
   { id:16, cat:'lillys', catLabel:'💃 Lilly\'s Girls', poids:1, q:'Quel est le rôle de Lilly\'s Girls au sein d\'Elite Corp. ?', rep:`Lilly's Girls est la division <strong>animation et spectacle</strong> d\'Elite Corp. Elle renforce l\'attractivité des événements avec :<br>• Des <strong>shows et chorégraphies</strong> professionnelles<br>• Des <strong>prestations artistiques</strong> pour soirées privées et événements extérieurs<br>• Une équipe de sécurité dédiée pour la protection des animatrices<br>• <strong>Discrétion et professionnalisme</strong> garantis`, keywords:['lilly','animation','show'] },
 
-  { id:17, cat:'lillys', catLabel:'💃 Lilly\'s Girls', poids:1, q:'Comment garantis-tu la sécurité et la discrétion lors d\'une prestation Lilly\'s Girls ?', rep:`<strong>Éléments attendus</strong> :<br>• Coordination avec Penny's Elite Security pour l\'escorte<br>• Confidentialité sur les clients et les lieux<br>• Aucune information partagée en dehors de l\'équipe<br>• Présence sécurité avant, pendant et après la prestation<br>• Respect de l\'image Elite Corp. en toutes circonstances`, keywords:['sécurité','discrétion','lilly'] },
+  { id:17, cat:'lillys', catLabel:'💃 Lilly\'s Girls', poids:1, q:'Comment garantis-tu la sécurité et la discrétion lors d\'une prestation Lilly\'s Girls ?', rep:`<strong>Éléments attendus</strong> :<br>• Coordination avec Elite Security pour l\'escorte<br>• Confidentialité sur les clients et les lieux<br>• Aucune information partagée en dehors de l\'équipe<br>• Présence sécurité avant, pendant et après la prestation<br>• Respect de l\'image Elite Corp. en toutes circonstances`, keywords:['sécurité','discrétion','lilly'] },
 ];
 
 // Barème : Excellent = poids×2, Bien = poids×1.5 (arrondi), Moyen = poids×0.5 (arrondi), Insuffisant = 0
