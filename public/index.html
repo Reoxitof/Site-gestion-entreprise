@@ -1433,7 +1433,7 @@ let calMonth = new Date().getMonth();
 let planningData = [];
 
 /* ── HELPER RÔLES ── */
-const DIRECTION_POSTES = ['Directeur Général', 'Directeur de Division', 'Coordinateur'];
+const DIRECTION_POSTES = ['Directeur Général', 'Directeur de Division', 'Coordinateur', 'CEO', 'Directeur'];
 function isAdmin() {
   return currentUser?.role === 'admin' || currentUser?.role === 'direction' || DIRECTION_POSTES.includes(currentUser?.poste);
 }
