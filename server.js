@@ -1220,7 +1220,7 @@ app.post('/api/fiches-paye/generer', admin, async (req, res) => { return res.sta
 });
 
 // Lister les fiches — employés (user_id) + dossiers RH (dossier_id)
-app.get('/api/fiches-paye', auth, async (req, res) => { return res.json([]);
+app.get('/api/fiches-paye', auth, async (req, res) => {
   try {
     const { semaine, type, statut } = req.query;
     const isDir = isAdminOrDirection(req.session.user);
@@ -1306,6 +1306,21 @@ app.post('/api/fiches-paye/:id/payer', admin, async (req, res) => { return res.s
   } catch(e) { res.status(500).json({ error: e.message }); }
 });
 
+
+// Créer une fiche de paye manuellement (direction)
+app.post('/api/fiches-paye/manual', admin, async (req, res) => {
+  try {
+    const { dossier_id, montant, description } = req.body;
+    if (!dossier_id || !montant) return res.status(400).json({ error: 'Dossier et montant requis' });
+    const today = new Date().toISOString().split('T')[0];
+    const r = await getPool().query(
+      `INSERT INTO ec_fiches_paye (dossier_id, semaine_debut, semaine_fin, montant_total, statut, type_source, details, created_at)
+       VALUES ($1, $2, $2, $3, 'en_attente', 'employe', $4, NOW()) RETURNING *`,
+      [parseInt(dossier_id), today, parseFloat(montant), JSON.stringify([{description: description || 'Paiement manuel', montant: parseFloat(montant)}])]
+    );
+    res.json({ success: true, fiche: r.rows[0] });
+  } catch(e) { res.status(500).json({ error: e.message }); }
+});
 // Semaines disponibles
 app.get('/api/fiches-paye/semaines', auth, async (req, res) => {
   try {

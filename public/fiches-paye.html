@@ -4,156 +4,83 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Elite Corp — Fiches de Paye</title>
+<link href="https://fonts.googleapis.com/css2?family=Anton&family=Inter:wght@300;400;600;700;800;900&display=swap" rel="stylesheet"/>
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
 <style>
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&family=Anton&display=swap');
 *{box-sizing:border-box;margin:0;padding:0}
-:root{
-  --bg:#0a0a0f;--bg2:#111118;--border:rgba(255,255,255,0.08);
-  --gold:#c9a84c;--white:#f0eaff;--white-dim:rgba(240,234,255,0.55);
-  --green:#4caf7d;--blue:#4c8af0;--purple:#a78bfa;--red:#e24040;
-}
-body{background:var(--bg);color:var(--white);font-family:Inter,Arial;min-height:100vh;}
+:root{--bg:#0a0a0f;--bg2:#111118;--border:rgba(201,168,76,0.25);--gold:#c9a84c;--gold-dim:#8a6f2e;--white:#f0ead8;--white-dim:#9a9080;--green:#4caf7d;--red:#e24040;}
+body{background:var(--bg);color:var(--white);font-family:'Inter',sans-serif;min-height:100vh;}
 .topbar{display:flex;align-items:center;justify-content:space-between;padding:14px 24px;background:var(--bg2);border-bottom:1px solid var(--border);position:sticky;top:0;z-index:100;}
-.topbar-logo{font-family:Anton,Arial;font-size:20px;letter-spacing:3px;color:var(--gold);}
-.topbar-right{display:flex;align-items:center;gap:12px;}
-.avatar{width:34px;height:34px;border-radius:50%;background:linear-gradient(135deg,var(--gold),#8b6914);display:flex;align-items:center;justify-content:center;font-family:Anton,Arial;font-size:14px;color:#000;}
-.btn{padding:8px 16px;border-radius:10px;border:1px solid var(--border);background:transparent;color:var(--white);font-size:12px;font-weight:700;cursor:pointer;letter-spacing:1px;transition:all .2s;}
+.topbar-logo{font-family:'Anton',sans-serif;font-size:20px;letter-spacing:3px;color:var(--gold);}
+.btn{padding:8px 16px;border-radius:10px;border:1px solid var(--border);background:transparent;color:var(--white);font-size:12px;font-weight:700;cursor:pointer;letter-spacing:1px;transition:all .2s;font-family:'Inter',sans-serif;}
 .btn:hover{border-color:var(--gold);color:var(--gold);}
-.btn-gold{background:linear-gradient(135deg,var(--gold),#8b6914);border:none;color:#000;}
+.btn-gold{background:linear-gradient(135deg,var(--gold-dim),var(--gold));border:none;color:#000;}
 .btn-gold:hover{opacity:0.85;color:#000;}
 .btn-green{background:rgba(76,175,125,0.15);border:1px solid rgba(76,175,125,0.4);color:var(--green);}
-.btn-green:hover{background:rgba(76,175,125,0.25);}
-.btn-outline{border:1px solid var(--border);color:var(--white-dim);}
-.main{max-width:1100px;margin:0 auto;padding:32px 20px;}
-.page-title{font-family:Anton,Arial;font-size:28px;letter-spacing:3px;color:var(--gold);margin-bottom:4px;}
+.btn-danger{background:rgba(226,64,64,0.12);border:1px solid rgba(226,64,64,0.3);color:var(--red);}
+.main{max-width:900px;margin:0 auto;padding:32px 20px;}
+.page-title{font-family:'Anton',sans-serif;font-size:28px;letter-spacing:3px;color:var(--gold);margin-bottom:4px;}
 .page-sub{font-size:12px;color:var(--white-dim);margin-bottom:28px;}
-
-/* TOOLBAR */
-.toolbar{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:24px;}
-.input-field{padding:9px 14px;border-radius:10px;border:1px solid var(--border);background:var(--bg2);color:var(--white);font-size:13px;font-weight:600;}
-.input-field:focus{outline:none;border-color:var(--gold);}
-
-/* STATS */
-.stats-row{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:12px;margin-bottom:24px;}
-.stat-card{background:var(--bg2);border:1px solid var(--border);border-radius:12px;padding:16px;}
-.stat-label{font-size:9px;font-weight:800;letter-spacing:2px;text-transform:uppercase;color:var(--white-dim);margin-bottom:6px;}
-.stat-val{font-family:Anton,Arial;font-size:24px;color:var(--gold);}
-
-/* FICHES */
-.fiches-grid{display:flex;flex-direction:column;gap:12px;}
-.fiche-card{background:var(--bg2);border:1px solid var(--border);border-radius:14px;padding:20px;transition:border-color .2s;}
-.fiche-card:hover{border-color:rgba(201,168,76,0.3);}
-.fiche-header{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:14px;}
-.fiche-user{display:flex;align-items:center;gap:12px;}
-.fiche-avatar{width:40px;height:40px;border-radius:50%;background:linear-gradient(135deg,var(--gold),#8b6914);display:flex;align-items:center;justify-content:center;font-family:Anton,Arial;font-size:16px;color:#000;flex-shrink:0;}
-.fiche-nom{font-family:Anton,Arial;font-size:16px;letter-spacing:1px;}
-.fiche-poste{font-size:11px;color:var(--white-dim);}
-.fiche-montant{font-family:Anton,Arial;font-size:28px;color:var(--gold);}
+.card{background:var(--bg2);border:1px solid var(--border);border-radius:14px;padding:20px;margin-bottom:16px;}
+.card-title{font-family:'Anton',sans-serif;font-size:15px;letter-spacing:2px;color:var(--gold);margin-bottom:16px;}
+.form-group{margin-bottom:14px;}
+.form-group label{display:block;font-size:10px;font-weight:800;letter-spacing:2px;text-transform:uppercase;color:var(--white-dim);margin-bottom:6px;}
+.input-field{width:100%;padding:10px 14px;background:var(--bg);border:1px solid var(--border);border-radius:8px;color:var(--white);font-family:'Inter',sans-serif;font-size:13px;outline:none;}
+.input-field:focus{border-color:var(--gold);}
+select.input-field{cursor:pointer;}
+.fiche-card{background:var(--bg2);border:1px solid var(--border);border-radius:14px;padding:20px;margin-bottom:12px;display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap;}
+.fiche-info{flex:1;min-width:200px;}
+.fiche-nom{font-family:'Anton',sans-serif;font-size:16px;letter-spacing:1px;color:var(--white);}
+.fiche-meta{font-size:11px;color:var(--white-dim);margin-top:4px;}
+.fiche-montant{font-family:'Anton',sans-serif;font-size:24px;color:var(--gold);}
 .badge{display:inline-flex;align-items:center;padding:3px 10px;border-radius:999px;font-size:10px;font-weight:800;letter-spacing:1px;text-transform:uppercase;}
 .badge-wait{background:rgba(240,144,48,0.12);border:1px solid rgba(240,144,48,0.3);color:#f09030;}
 .badge-paid{background:rgba(76,175,125,0.12);border:1px solid rgba(76,175,125,0.3);color:var(--green);}
-
-/* EVENEMENTS */
-.evts-list{display:flex;flex-direction:column;gap:6px;margin-top:12px;border-top:1px solid var(--border);padding-top:12px;}
-.evt-row{display:flex;align-items:center;justify-content:space-between;padding:8px 12px;background:rgba(255,255,255,0.03);border-radius:8px;font-size:12px;}
-.evt-info{display:flex;flex-direction:column;gap:2px;}
-.evt-client{font-weight:700;color:var(--white);}
-.evt-meta{color:var(--white-dim);font-size:10px;}
-.evt-montant{font-family:Anton,Arial;font-size:16px;color:var(--purple);}
-
-/* EMPTY */
-.empty{text-align:center;padding:60px 20px;color:var(--white-dim);}
-.empty i{font-size:40px;margin-bottom:16px;opacity:0.3;display:block;}
-
-/* MODAL */
-.modal-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,0.75);z-index:200;align-items:center;justify-content:center;padding:20px;}
-.modal-overlay.open{display:flex;}
-.modal{background:var(--bg2);border:1px solid var(--border);border-radius:18px;width:min(500px,100%);max-height:90vh;overflow-y:auto;padding:24px;}
-.modal-title{font-family:Anton,Arial;font-size:20px;letter-spacing:2px;color:var(--white);margin-bottom:16px;}
-.modal-close{float:right;background:none;border:none;color:var(--white-dim);font-size:20px;cursor:pointer;margin-top:-4px;}
+.empty{text-align:center;padding:40px;color:var(--white-dim);font-size:13px;}
+.empty i{font-size:32px;margin-bottom:12px;opacity:0.3;display:block;}
 </style>
 </head>
 <body>
-
 <div class="topbar">
-  <div class="topbar-logo">ELITE CORP</div>
-  <div class="topbar-right">
-    <div style="display:flex;align-items:center;gap:8px;">
-      <div class="avatar" id="avatarEl">?</div>
-      <div>
-        <div id="userName" style="font-weight:700;font-size:13px;">—</div>
-        <div id="userPoste" style="font-size:10px;color:var(--white-dim);">—</div>
-      </div>
-    </div>
-    <a href="/dashboard" class="btn btn-outline"><i class="fa-solid fa-arrow-left"></i> Dashboard</a>
-    <button class="btn btn-outline" onclick="logout()"><i class="fa-solid fa-right-from-bracket"></i></button>
+  <div class="topbar-logo">FICHES DE PAYE</div>
+  <div style="display:flex;gap:8px;">
+    <a href="/dashboard" class="btn"><i class="fa-solid fa-arrow-left"></i> Dashboard</a>
+    <button class="btn" onclick="logout()"><i class="fa-solid fa-right-from-bracket"></i></button>
   </div>
 </div>
 
 <div class="main">
   <div class="page-title">FICHES DE PAYE</div>
-  <div class="page-sub" id="pageSub">Toutes les fiches</div>
+  <div class="page-sub">Créer et gérer les fiches de paye — sélection depuis les Dossiers RH</div>
 
-  <div class="toolbar">
-    <select id="filtreType" class="input-field" style="width:200px;" onchange="loadFiches()">
-      <option value="">Tous les types</option>
-      <option value="employe">🟢 Employés</option>
-      <option value="interimaire">🟣 Intérimaires</option>
-      <option value="consultant">🔵 Consultants</option>
-    </select>
-    <select id="filtreStatut" class="input-field" style="width:180px;" onchange="loadFiches()">
-      <option value="">Tous les statuts</option>
-      <option value="en_attente">⏳ En attente</option>
-      <option value="paye">✅ Payées</option>
-    </select>
-    <div id="directionTools" style="display:none;display:flex;gap:8px;flex-wrap:wrap;">
-      <input type="week" id="semaineInput" class="input-field" title="Générer fiches employés pour cette semaine">
-      <button class="btn btn-gold" onclick="genererFiches()"><i class="fa-solid fa-wand-magic-sparkles"></i> Générer fiches employés</button>
+  <!-- Formulaire création -->
+  <div class="card" id="createSection" style="display:none;">
+    <div class="card-title"><i class="fa-solid fa-plus"></i> Nouvelle fiche de paye</div>
+    <div class="form-group">
+      <label>Personnel (depuis Dossiers RH)</label>
+      <select class="input-field" id="fichePersonnel">
+        <option value="">— Chargement... —</option>
+      </select>
     </div>
+    <div class="form-group">
+      <label>Montant ($)</label>
+      <input class="input-field" id="ficheMontant" type="number" min="0" step="1" placeholder="Ex: 5000"/>
+    </div>
+    <div class="form-group">
+      <label>Description (optionnel)</label>
+      <input class="input-field" id="ficheDesc" placeholder="Ex: Mission sécurité soirée VIP"/>
+    </div>
+    <button class="btn btn-gold" onclick="creerFiche()"><i class="fa-solid fa-floppy-disk"></i> Créer la fiche</button>
   </div>
 
-  <div class="stats-row" id="statsRow" style="display:none;">
-    <div class="stat-card">
-      <div class="stat-label">Total à payer</div>
-      <div class="stat-val" id="statTotal">0 $</div>
-    </div>
-    <div class="stat-card">
-      <div class="stat-label">Fiches en attente</div>
-      <div class="stat-val" id="statAttente">0</div>
-    </div>
-    <div class="stat-card">
-      <div class="stat-label">Fiches payées</div>
-      <div class="stat-val" id="statPayees">0</div>
-    </div>
-    <div class="stat-card">
-      <div class="stat-label">Événements</div>
-      <div class="stat-val" id="statEvts">0</div>
-    </div>
-  </div>
-
-  <div id="fichesList"><div class="empty"><i class="fa-solid fa-file-invoice-dollar"></i><p>Sélectionne une semaine pour voir les fiches.</p></div></div>
-</div>
-
-<!-- Modal confirmation paiement -->
-<div class="modal-overlay" id="modalPayer">
-  <div class="modal">
-    <button class="modal-close" onclick="closeModal()"><i class="fa-solid fa-xmark"></i></button>
-    <div class="modal-title">💸 CONFIRMER LE PAIEMENT</div>
-    <div id="modalPayerContent"></div>
-    <div style="display:flex;gap:8px;margin-top:16px;">
-      <button class="btn btn-green" onclick="confirmerPaiement()"><i class="fa-solid fa-check"></i> Confirmer</button>
-      <button class="btn btn-outline" onclick="closeModal()">Annuler</button>
-    </div>
-  </div>
+  <!-- Liste fiches -->
+  <div id="fichesList"><div class="empty"><i class="fa-solid fa-spinner fa-spin"></i> Chargement...</div></div>
 </div>
 
 <script src="/token-patch.js"></script>
 <script>
 let currentUser = null;
 let isDir = false;
-let ficheAPayerId = null;
-let allFiches = [];
 
 async function init() {
   try {
@@ -161,211 +88,74 @@ async function init() {
     const d = await r.json();
     if (!d.user) { window.location.href = '/login'; return; }
     currentUser = d.user;
-    isDir = ['admin','direction'].includes(d.user.role) || ['Directeur Général','Directeur de Division','Coordinateur'].includes(d.user.poste);
-    document.getElementById('avatarEl').textContent = (d.user.prenom[0]||'?').toUpperCase();
-    document.getElementById('userName').textContent = d.user.prenom + ' ' + d.user.nom;
-    document.getElementById('userPoste').textContent = d.user.poste;
-    if (isDir) {
-      document.getElementById('directionTools').style.display = 'flex';
-      document.getElementById('statsRow').style.display = 'grid';
-    }
-    // Semaine courante par défaut
-    const now = new Date();
-    const y = now.getFullYear();
-    const w = getWeekNumber(now);
-    document.getElementById('semaineInput').value = `${y}-W${String(w).padStart(2,'0')}`;
+    isDir = ['admin','direction'].includes(d.user.role) || ['Directeur Général','Directeur de Division','Coordinateur','CEO','Directeur'].includes(d.user.poste);
+    if (isDir) document.getElementById('createSection').style.display = 'block';
+    loadDossiers();
     loadFiches();
   } catch(e) { window.location.href = '/login'; }
 }
 
-function getWeekNumber(d) {
-  const date = new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()));
-  const dayNum = date.getUTCDay() || 7;
-  date.setUTCDate(date.getUTCDate() + 4 - dayNum);
-  const yearStart = new Date(Date.UTC(date.getUTCFullYear(),0,1));
-  return Math.ceil((((date - yearStart) / 86400000) + 1)/7);
-}
-
-function weekInputToMonday(val) {
-  // val = "2026-W18"
-  const [year, week] = val.split('-W');
-  const jan4 = new Date(parseInt(year), 0, 4);
-  const startOfWeek1 = new Date(jan4);
-  startOfWeek1.setDate(jan4.getDate() - (jan4.getDay() || 7) + 1);
-  const monday = new Date(startOfWeek1);
-  monday.setDate(startOfWeek1.getDate() + (parseInt(week) - 1) * 7);
-  return monday.toISOString().split('T')[0];
+async function loadDossiers() {
+  try {
+    const r = await fetch('/api/dossiers-rh');
+    const data = await r.json();
+    const sel = document.getElementById('fichePersonnel');
+    if (!data.length) { sel.innerHTML = '<option value="">Aucun dossier RH</option>'; return; }
+    sel.innerHTML = '<option value="">— Sélectionner —</option>' + data.map(d =>
+      '<option value="' + d.id + '">' + (d.prenom||'') + ' ' + (d.nom||'') + ' — ' + (d.role||'employe') + '</option>'
+    ).join('');
+  } catch(e) {}
 }
 
 async function loadFiches() {
   try {
-    const type = document.getElementById('filtreType')?.value || '';
-    const statut = document.getElementById('filtreStatut')?.value || '';
-    let url = '/api/fiches-paye?';
-    if (type) url += `type=${type}&`;
-    if (statut) url += `statut=${statut}&`;
-    const r = await fetch(url);
-    allFiches = await r.json();
-    renderFiches(allFiches);
+    const r = await fetch('/api/fiches-paye');
+    const fiches = await r.json();
+    renderFiches(fiches);
   } catch(e) {
-    document.getElementById('fichesList').innerHTML = '<div class="empty"><i class="fa-solid fa-triangle-exclamation"></i><p>Erreur de chargement</p></div>';
+    document.getElementById('fichesList').innerHTML = '<div class="empty"><i class="fa-solid fa-triangle-exclamation"></i> Erreur chargement</div>';
   }
 }
 
 function renderFiches(fiches) {
-  document.getElementById('pageSub').textContent = `${fiches.length} fiche(s) de paye`;
-
-  if (isDir) {
-    const total = fiches.reduce((s,f) => s + parseFloat(f.montant_total||0), 0);
-    const attente = fiches.filter(f => f.statut === 'en_attente').length;
-    const payees = fiches.filter(f => f.statut === 'paye').length;
-    const evts = fiches.reduce((s,f) => { try { return s + JSON.parse(f.details||'[]').length; } catch(e) { return s; } }, 0);
-    document.getElementById('statTotal').textContent = total.toLocaleString('fr-FR') + ' $';
-    document.getElementById('statAttente').textContent = attente;
-    document.getElementById('statPayees').textContent = payees;
-    document.getElementById('statEvts').textContent = evts;
-  }
-
   const el = document.getElementById('fichesList');
-  if (!fiches.length) {
-    el.innerHTML = `<div class="empty"><i class="fa-solid fa-file-invoice-dollar"></i><p>${isDir ? 'Aucune fiche pour cette semaine. Clique sur "Générer les fiches".' : 'Aucune fiche pour cette semaine.'}</p></div>`;
-    return;
-  }
-
-  // Badges par type
-  const typeBadge = {
-    employe:     '<span class="badge" style="background:rgba(76,175,125,0.15);border:1px solid rgba(76,175,125,0.3);color:#4caf7d;">🟢 Employé</span>',
-    interimaire: '<span class="badge" style="background:rgba(167,139,250,0.15);border:1px solid rgba(167,139,250,0.3);color:#a78bfa;">🟣 Intérimaire</span>',
-    consultant:  '<span class="badge" style="background:rgba(63,167,214,0.15);border:1px solid rgba(63,167,214,0.3);color:#3fa7d6;">🔵 Consultant</span>'
-  };
-
-  el.innerHTML = '<div class="fiches-grid">' + fiches.map(f => {
+  if (!fiches.length) { el.innerHTML = '<div class="empty"><i class="fa-solid fa-file-invoice-dollar"></i> Aucune fiche de paye.</div>'; return; }
+  el.innerHTML = fiches.map(f => {
+    const payBtn = (isDir && f.statut === 'en_attente') ? '<button class="btn btn-green" style="font-size:11px;padding:6px 12px;" onclick="payerFiche(' + f.id + ')"><i class="fa-solid fa-check"></i> Payer</button>' : '';
+    const paye = f.statut === 'paye' ? '<div style="font-size:10px;color:var(--green);margin-top:4px;"><i class="fa-solid fa-check-circle"></i> Payé' + (f.paye_le ? ' le ' + new Date(f.paye_le).toLocaleDateString('fr-FR') : '') + '</div>' : '';
     let details = [];
     try { details = JSON.parse(f.details || '[]'); } catch(e) {}
-    const type = f.source_type || 'employe';
-
-    // Affichage adapté selon le type
-    let detailsHtml = '';
-    if (type === 'employe') {
-      // Événements / commandes
-      detailsHtml = details.length ? `
-        <div class="evts-list">
-          <div style="font-size:9px;font-weight:800;letter-spacing:2px;text-transform:uppercase;color:var(--white-dim);margin-bottom:6px;"><i class="fa-solid fa-calendar-check"></i> Événements participés</div>
-          ${details.map(e => `
-            <div class="evt-row">
-              <div class="evt-info">
-                <div class="evt-client">${e.client_nom||'—'}</div>
-                <div class="evt-meta">${e.type_prestation||''}${e.lieu?' — '+e.lieu:''}${e.date_evenement?' · '+new Date(e.date_evenement).toLocaleDateString('fr-FR',{day:'numeric',month:'short',year:'numeric'}):''}</div>
-              </div>
-              <div class="evt-montant">+${Number(e.montant||0).toLocaleString('fr-FR')} $</div>
-            </div>`).join('')}
-        </div>` : '<div style="font-size:11px;color:var(--white-dim);margin-top:10px;padding-top:10px;border-top:1px solid var(--border);">Aucun événement cette semaine.</div>';
-    } else {
-      // Contrats (intérimaire / consultant)
-      detailsHtml = details.length ? `
-        <div class="evts-list">
-          <div style="font-size:9px;font-weight:800;letter-spacing:2px;text-transform:uppercase;color:var(--white-dim);margin-bottom:6px;"><i class="fa-solid fa-file-contract"></i> Contrats de mission</div>
-          ${details.map(c => `
-            <div class="evt-row">
-              <div class="evt-info">
-                <div class="evt-client">${c.intitule||'—'}</div>
-                <div class="evt-meta">${c.date_debut?new Date(c.date_debut).toLocaleDateString('fr-FR',{day:'numeric',month:'short',year:'numeric'}):''}${c.heures?' · '+c.heures+'h':''}${c.date_fin?' → '+new Date(c.date_fin).toLocaleDateString('fr-FR',{day:'numeric',month:'short'}):''}</div>
-              </div>
-              <div class="evt-montant">+${Number(c.remuneration||0).toLocaleString('fr-FR')} $</div>
-            </div>`).join('')}
-        </div>` : '<div style="font-size:11px;color:var(--white-dim);margin-top:10px;padding-top:10px;border-top:1px solid var(--border);">Aucun contrat cette semaine.</div>';
-    }
-
-    const payBtn = (isDir && f.statut === 'en_attente') ?
-      `<button class="btn btn-green" style="font-size:11px;padding:7px 14px;" onclick="ouvrirPaiement(${f.id},'${(f.prenom||'')} ${(f.nom||'')}',${f.montant_total})"><i class="fa-solid fa-money-bill-wave"></i> Payer</button>` : '';
-    const exportBtn = `<button class="btn btn-outline" style="font-size:11px;padding:7px 14px;" onclick="exportFiche(${f.id})"><i class="fa-solid fa-file-pdf"></i> PDF</button>`;
-    const payeInfo = f.statut === 'paye' ?
-      `<div style="font-size:10px;color:var(--green);margin-top:4px;"><i class="fa-solid fa-check-circle"></i> Payé${f.paye_le?' le '+new Date(f.paye_le).toLocaleDateString('fr-FR',{day:'numeric',month:'short',year:'numeric'}):''}</div>` : '';
-
-    return `<div class="fiche-card">
-      <div class="fiche-header">
-        <div class="fiche-user">
-          <div class="fiche-avatar">${((f.prenom||'?')[0]).toUpperCase()}</div>
-          <div>
-            <div class="fiche-nom">${f.prenom||''} ${f.nom||''}</div>
-            <div class="fiche-poste">${f.poste||''}</div>
-            <div style="margin-top:4px;">${typeBadge[type]||typeBadge.employe}</div>
-            ${payeInfo}
-          </div>
-        </div>
-        <div style="text-align:right;">
-          <div class="fiche-montant">${Number(f.montant_total).toLocaleString('fr-FR')} $</div>
-          <span class="badge ${f.statut==='paye'?'badge-paid':'badge-wait'}">${f.statut==='paye'?'✅ Payé':'⏳ En attente'}</span>
-          <div style="margin-top:8px;display:flex;gap:6px;">${payBtn}${exportBtn}</div>
-        </div>
-      </div>
-      ${detailsHtml}
-    </div>`;
-  }).join('') + '</div>';
+    const desc = details[0]?.description || '';
+    return '<div class="fiche-card"><div class="fiche-info"><div class="fiche-nom">' + (f.prenom||'') + ' ' + (f.nom||'') + '</div><div class="fiche-meta">' + (f.poste||'') + (desc ? ' — ' + desc : '') + '</div>' + paye + '</div><div style="text-align:right;"><div class="fiche-montant">' + Number(f.montant_total).toLocaleString('fr-FR') + ' $</div><span class="badge ' + (f.statut==='paye'?'badge-paid':'badge-wait') + '">' + (f.statut==='paye'?'Payé':'En attente') + '</span><div style="margin-top:8px;">' + payBtn + '</div></div></div>';
+  }).join('');
 }
 
-async function genererFiches() {
-  const val = document.getElementById('semaineInput').value;
-  if (!val) { alert('Sélectionne une semaine'); return; }
-  const mondayStr = weekInputToMonday(val);
+async function creerFiche() {
+  const dossier_id = document.getElementById('fichePersonnel').value;
+  const montant = document.getElementById('ficheMontant').value;
+  const description = document.getElementById('ficheDesc').value.trim();
+  if (!dossier_id || !montant || parseFloat(montant) <= 0) { alert('Sélectionne un personnel et saisis un montant'); return; }
   try {
-    const r = await fetch('/api/fiches-paye/generer', {
+    const r = await fetch('/api/fiches-paye/manual', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ semaine: mondayStr })
+      body: JSON.stringify({ dossier_id: parseInt(dossier_id), montant: parseFloat(montant), description })
     });
     const d = await r.json();
     if (d.success) {
-      showToast(`✅ ${d.fiches_generees} fiche(s) générée(s)`);
+      document.getElementById('ficheMontant').value = '';
+      document.getElementById('ficheDesc').value = '';
       loadFiches();
-    } else {
-      showToast('❌ ' + (d.error || 'Erreur'), false);
-    }
-  } catch(e) { showToast('❌ Erreur réseau', false); }
+    } else { alert(d.error || 'Erreur'); }
+  } catch(e) { alert('Erreur réseau'); }
 }
 
-function ouvrirPaiement(id, nom, montant) {
-  ficheAPayerId = id;
-  document.getElementById('modalPayerContent').innerHTML = `
-    <div style="background:rgba(76,175,125,0.08);border:1px solid rgba(76,175,125,0.2);border-radius:10px;padding:16px;text-align:center;">
-      <div style="font-size:12px;color:var(--white-dim);margin-bottom:8px;">Paiement pour</div>
-      <div style="font-family:'Anton',sans-serif;font-size:20px;color:var(--white);">${nom}</div>
-      <div style="font-family:'Anton',sans-serif;font-size:32px;color:var(--green);margin-top:8px;">${Number(montant).toLocaleString('fr-FR')} $</div>
-    </div>`;
-  document.getElementById('modalPayer').classList.add('open');
-}
-
-async function confirmerPaiement() {
-  if (!ficheAPayerId) return;
+async function payerFiche(id) {
+  if (!confirm('Confirmer le paiement ?')) return;
   try {
-    const r = await fetch(`/api/fiches-paye/${ficheAPayerId}/payer`, { method: 'POST' });
-    if (r.ok) {
-      showToast('✅ Fiche marquée comme payée');
-      closeModal();
-      loadFiches();
-    } else {
-      showToast('❌ Erreur', false);
-    }
-  } catch(e) { showToast('❌ Erreur réseau', false); }
-}
-
-function closeModal() {
-  document.getElementById('modalPayer').classList.remove('open');
-  ficheAPayerId = null;
-}
-
-function showToast(msg, ok = true) {
-  let t = document.getElementById('toast');
-  if (!t) {
-    t = document.createElement('div');
-    t.id = 'toast';
-    t.style.cssText = 'position:fixed;bottom:24px;right:24px;padding:12px 20px;border-radius:12px;background:var(--bg2);border:1px solid var(--gold);color:var(--white);font-weight:700;font-size:13px;z-index:999;transition:opacity .3s;';
-    document.body.appendChild(t);
-  }
-  t.textContent = msg;
-  t.style.borderColor = ok ? 'var(--gold)' : 'var(--red)';
-  t.style.opacity = '1';
-  setTimeout(() => { t.style.opacity = '0'; }, 3000);
+    const r = await fetch('/api/fiches-paye/' + id + '/payer', { method: 'POST' });
+    if (r.ok) loadFiches();
+  } catch(e) {}
 }
 
 async function logout() {
@@ -373,68 +163,7 @@ async function logout() {
   window.location.href = '/login';
 }
 
-function exportFiche(id) {
-  const f = allFiches.find(x => x.id === id);
-  if (!f) return;
-  let evts = [];
-  try { evts = JSON.parse(f.details || '[]'); } catch(e) {}
-  const semDebut = new Date(f.semaine_debut).toLocaleDateString('fr-FR', {day:'numeric',month:'long',year:'numeric'});
-  const semFin = new Date(f.semaine_fin).toLocaleDateString('fr-FR', {day:'numeric',month:'long',year:'numeric'});
-  const evtsRows = evts.map(e => `
-    <tr>
-      <td>${e.client_nom}</td>
-      <td>${e.type_prestation}</td>
-      <td>${e.lieu||'—'}</td>
-      <td>${e.date_evenement ? new Date(e.date_evenement).toLocaleDateString('fr-FR') : '—'}</td>
-      <td style="text-align:right;font-weight:bold;">+${Number(e.montant).toLocaleString('fr-FR')} $</td>
-    </tr>`).join('');
-  const html = `<!DOCTYPE html><html lang="fr"><head><meta charset="UTF-8">
-    <title>Fiche de paye — ${f.prenom} ${f.nom}</title>
-    <style>
-      body{font-family:Arial,sans-serif;max-width:700px;margin:40px auto;color:#111;font-size:13px;}
-      h1{font-size:22px;margin-bottom:4px;}
-      .header{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:30px;border-bottom:2px solid #c9a84c;padding-bottom:16px;}
-      .logo{font-size:24px;font-weight:900;letter-spacing:3px;color:#c9a84c;}
-      .badge{display:inline-block;padding:4px 12px;border-radius:999px;font-size:11px;font-weight:bold;background:${f.statut==='paye'?'#d4edda':'#fff3cd'};color:${f.statut==='paye'?'#155724':'#856404'};border:1px solid ${f.statut==='paye'?'#c3e6cb':'#ffc107'};}
-      table{width:100%;border-collapse:collapse;margin-top:20px;}
-      th{background:#f5f5f5;padding:8px 12px;text-align:left;font-size:11px;text-transform:uppercase;letter-spacing:1px;border-bottom:2px solid #ddd;}
-      td{padding:8px 12px;border-bottom:1px solid #eee;}
-      .total{font-size:20px;font-weight:900;color:#c9a84c;text-align:right;margin-top:20px;padding-top:12px;border-top:2px solid #c9a84c;}
-      .footer{margin-top:40px;font-size:11px;color:#888;text-align:center;}
-      @media print{body{margin:20px;}}
-    </style></head><body>
-    <div class="header">
-      <div><div class="logo">ELITE CORP.</div><div style="font-size:11px;color:#888;margin-top:4px;">Panel de Gestion</div></div>
-      <div style="text-align:right;">
-        <div style="font-size:11px;color:#888;">Fiche de paye</div>
-        <div style="font-weight:bold;">${semDebut} → ${semFin}</div>
-        <div style="margin-top:6px;"><span class="badge">${f.statut==='paye'?'✅ Payé':'⏳ En attente'}</span></div>
-      </div>
-    </div>
-    <h1>${f.prenom} ${f.nom}</h1>
-    <div style="color:#666;margin-bottom:20px;">${f.poste}</div>
-    ${evts.length ? `<table><thead><tr><th>Client</th><th>Prestation</th><th>Lieu</th><th>Date</th><th style="text-align:right;">Montant</th></tr></thead><tbody>${evtsRows}</tbody></table>` : '<p style="color:#888;font-style:italic;">Aucun événement cette semaine.</p>'}
-    <div class="total">TOTAL : ${Number(f.montant_total).toLocaleString('fr-FR')} $</div>
-    ${f.statut==='paye'&&f.paye_le?`<div style="margin-top:12px;font-size:12px;color:#666;">Payé le ${new Date(f.paye_le).toLocaleDateString('fr-FR',{day:'numeric',month:'long',year:'numeric'})}</div>`:''}
-    <div class="footer">Elite Corp. — Document généré le ${new Date().toLocaleDateString('fr-FR',{day:'numeric',month:'long',year:'numeric'})}</div>
-    <script>window.onload=()=>{window.print();}<\/script>
-  </body></html>`;
-  const w = window.open('', '_blank');
-  w.document.write(html);
-  w.document.close();
-}
-
-document.getElementById('modalPayer').addEventListener('click', function(e) {
-  if (e.target === this) closeModal();
-});
-
 init();
 </script>
-
-<!-- Footer copyright -->
-<div style="position:fixed;bottom:0;left:0;right:0;text-align:center;padding:6px 24px;font-size:10px;color:rgba(201,168,76,0.35);background:rgba(10,10,15,0.85);backdrop-filter:blur(4px);letter-spacing:1px;z-index:50;pointer-events:none;">
-  &copy; 2026 <strong style="color:rgba(201,168,76,0.5);">Reoxitof</strong> &mdash; Tous droits r&eacute;serv&eacute;s &nbsp;&middot;&nbsp;
-  <a href="mailto:reoxitof@reoxitof.online" style="color:rgba(201,168,76,0.4);text-decoration:none;pointer-events:all;">reoxitof@reoxitof.online</a>
-</div>
 </body>
 </html>
