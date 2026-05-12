@@ -111,7 +111,7 @@ async function loadFiches() {
   try {
     const r = await fetch('/api/fiches-paye');
     const fiches = await r.json();
-    renderFiches(fiches);
+    allFichesData = fiches; renderFiches(fiches);
   } catch(e) {
     document.getElementById('fichesList').innerHTML = '<div class="empty"><i class="fa-solid fa-triangle-exclamation"></i> Erreur chargement</div>';
   }
@@ -122,11 +122,12 @@ function renderFiches(fiches) {
   if (!fiches.length) { el.innerHTML = '<div class="empty"><i class="fa-solid fa-file-invoice-dollar"></i> Aucune fiche de paye.</div>'; return; }
   el.innerHTML = fiches.map(f => {
     const payBtn = (isDir && f.statut === 'en_attente') ? '<button class="btn btn-green" style="font-size:11px;padding:6px 12px;" onclick="payerFiche(' + f.id + ')"><i class="fa-solid fa-check"></i> Payer</button>' : '';
+    const pngBtn = (f.statut === 'paye') ? '<button class="btn" style="font-size:11px;padding:6px 12px;margin-left:6px;" onclick="exportPNG(' + f.id + ')"><i class="fa-solid fa-image"></i> PNG</button>' : '';
     const paye = f.statut === 'paye' ? '<div style="font-size:10px;color:var(--green);margin-top:4px;"><i class="fa-solid fa-check-circle"></i> Payé' + (f.paye_le ? ' le ' + new Date(f.paye_le).toLocaleDateString('fr-FR') : '') + '</div>' : '';
     let details = [];
     try { details = JSON.parse(f.details || '[]'); } catch(e) {}
     const desc = details[0]?.description || '';
-    return '<div class="fiche-card"><div class="fiche-info"><div class="fiche-nom">' + (f.prenom||'') + ' ' + (f.nom||'') + '</div><div class="fiche-meta">' + (f.poste||'') + (desc ? ' — ' + desc : '') + '</div>' + paye + '</div><div style="text-align:right;"><div class="fiche-montant">' + Number(f.montant_total).toLocaleString('fr-FR') + ' $</div><span class="badge ' + (f.statut==='paye'?'badge-paid':'badge-wait') + '">' + (f.statut==='paye'?'Payé':'En attente') + '</span><div style="margin-top:8px;">' + payBtn + '</div></div></div>';
+    return '<div class="fiche-card"><div class="fiche-info"><div class="fiche-nom">' + (f.prenom||'') + ' ' + (f.nom||'') + '</div><div class="fiche-meta">' + (f.poste||'') + (desc ? ' — ' + desc : '') + '</div>' + paye + '</div><div style="text-align:right;"><div class="fiche-montant">' + Number(f.montant_total).toLocaleString('fr-FR') + ' $</div><span class="badge ' + (f.statut==='paye'?'badge-paid':'badge-wait') + '">' + (f.statut==='paye'?'Payé':'En attente') + '</span><div style="margin-top:8px;">' + payBtn + pngBtn + '</div></div></div>';
   }).join('');
 }
 
@@ -161,6 +162,102 @@ async function payerFiche(id) {
 async function logout() {
   await fetch('/api/logout', { method: 'POST' });
   window.location.href = '/login';
+}
+
+
+let allFichesData = [];
+let allDossiersData = [];
+
+async function exportPNG(ficheId) {
+  if (!allDossiersData.length) {
+    try { allDossiersData = await fetch('/api/dossiers-rh').then(r => r.json()); } catch(e) {}
+  }
+  const f = allFichesData.find(x => x.id === ficheId);
+  if (!f) return;
+  const dossier = allDossiersData.find(d => d.id === f.dossier_id) || {};
+  
+  const canvas = document.createElement('canvas');
+  canvas.width = 800;
+  canvas.height = 500;
+  const ctx = canvas.getContext('2d');
+  
+  // Background
+  ctx.fillStyle = '#0a0a0f';
+  ctx.fillRect(0, 0, 800, 500);
+  
+  // Border gold
+  ctx.strokeStyle = '#c9a84c';
+  ctx.lineWidth = 2;
+  ctx.strokeRect(20, 20, 760, 460);
+  
+  // Header
+  ctx.fillStyle = '#c9a84c';
+  ctx.font = 'bold 28px Arial';
+  ctx.fillText('ELITE CORP.', 40, 70);
+  ctx.fillStyle = '#9a9080';
+  ctx.font = '12px Arial';
+  ctx.fillText('FICHE DE PAYE', 40, 90);
+  
+  // Ligne séparatrice
+  ctx.strokeStyle = '#c9a84c';
+  ctx.lineWidth = 1;
+  ctx.beginPath(); ctx.moveTo(40, 105); ctx.lineTo(760, 105); ctx.stroke();
+  
+  // Infos employé
+  ctx.fillStyle = '#f0ead8';
+  ctx.font = 'bold 20px Arial';
+  ctx.fillText((f.prenom||'') + ' ' + (f.nom||''), 40, 145);
+  
+  ctx.fillStyle = '#9a9080';
+  ctx.font = '13px Arial';
+  ctx.fillText('Poste: ' + (f.poste || dossier.poste || dossier.poste_libre || '—'), 40, 170);
+  ctx.fillText('Division: ' + (dossier.division || '—'), 40, 190);
+  ctx.fillText('ID Employe: ' + (dossier.id_employe || '—'), 40, 210);
+  ctx.fillText('Tel: ' + (dossier.perso || '—'), 40, 230);
+  ctx.fillText('Compte: ' + (dossier.compte || '—'), 40, 250);
+  
+  // Ligne
+  ctx.strokeStyle = 'rgba(201,168,76,0.3)';
+  ctx.beginPath(); ctx.moveTo(40, 270); ctx.lineTo(760, 270); ctx.stroke();
+  
+  // Détails paiement
+  ctx.fillStyle = '#c9a84c';
+  ctx.font = 'bold 14px Arial';
+  ctx.fillText('DETAILS DU PAIEMENT', 40, 300);
+  
+  let details = [];
+  try { details = JSON.parse(f.details || '[]'); } catch(e) {}
+  const desc = details[0]?.description || 'Paiement';
+  
+  ctx.fillStyle = '#f0ead8';
+  ctx.font = '13px Arial';
+  ctx.fillText('Description: ' + desc, 40, 325);
+  ctx.fillText('Date: ' + new Date(f.created_at || Date.now()).toLocaleDateString('fr-FR', {day:'numeric',month:'long',year:'numeric'}), 40, 350);
+  if (f.paye_le) ctx.fillText('Paye le: ' + new Date(f.paye_le).toLocaleDateString('fr-FR', {day:'numeric',month:'long',year:'numeric'}), 40, 375);
+  
+  // Montant
+  ctx.fillStyle = '#c9a84c';
+  ctx.font = 'bold 48px Arial';
+  ctx.textAlign = 'right';
+  ctx.fillText(Number(f.montant_total).toLocaleString('fr-FR') + ' $', 740, 360);
+  
+  // Statut
+  ctx.font = 'bold 16px Arial';
+  ctx.fillStyle = '#4caf7d';
+  ctx.fillText('PAYE', 740, 390);
+  ctx.textAlign = 'left';
+  
+  // Footer
+  ctx.fillStyle = '#9a9080';
+  ctx.font = '10px Arial';
+  ctx.fillText('Elite Corp. - Document genere le ' + new Date().toLocaleDateString('fr-FR'), 40, 460);
+  ctx.fillText('reoxitof@reoxitof.online', 600, 460);
+  
+  // Download
+  const link = document.createElement('a');
+  link.download = 'fiche-paye-' + (f.prenom||'') + '-' + (f.nom||'') + '.png';
+  link.href = canvas.toDataURL('image/png');
+  link.click();
 }
 
 init();
