@@ -2292,6 +2292,7 @@ function renderRHCard(d) {
     <button class="btn btn-danger" style="font-size:10px;padding:6px 10px;" onclick="deleteDossier(${d.id},'${d.role}')"><i class="fa-solid fa-trash"></i></button>
     <button class="btn btn-outline" style="font-size:10px;padding:6px 10px;border-color:rgba(201,168,76,0.4);color:var(--gold);" onclick="exportDossierPNG(${d.id})"><i class="fa-solid fa-file-image"></i> PNG</button>
     <button class="btn btn-outline" style="font-size:10px;padding:6px 10px;border-color:rgba(167,139,250,0.4);color:#a78bfa;" onclick="ouvrirContratInterimaire(${d.id})"><i class="fa-solid fa-file-contract"></i> Contrat</button>
+    <button class="btn btn-outline" style="font-size:10px;padding:6px 10px;border-color:rgba(240,144,48,0.4);color:#f09030;" onclick="ouvrirAnnotations(${d.id})"><i class="fa-solid fa-note-sticky"></i> Notes</button>
   ` : '';
 
   return `<div class="rh-card">
@@ -4277,7 +4278,61 @@ document.addEventListener('DOMContentLoaded', function() {
     observer.observe(tab, { attributes: true, attributeFilter: ['class'] });
   });
 });
+
+// ── ANNOTATIONS RH ──
+let _annotDossierId = null;
+
+function ouvrirAnnotations(dossierId) {
+  _annotDossierId = dossierId;
+  document.getElementById('annotContenu').value = '';
+  document.getElementById('annotList').innerHTML = '<div style="color:var(--white-dim);font-size:12px;">Chargement...</div>';
+  openModal('modalAnnotations');
+  chargerAnnotations(dossierId);
+}
+
+async function chargerAnnotations(dossierId) {
+  try {
+    const r = await fetch('/api/dossiers-rh/' + dossierId + '/annotations');
+    const data = await r.json();
+    const el = document.getElementById('annotList');
+    if (!data.length) { el.innerHTML = '<div style="color:var(--white-dim);font-size:12px;text-align:center;padding:20px;">Aucune annotation.</div>'; return; }
+    el.innerHTML = data.map(a => '<div style="background:rgba(240,144,48,0.06);border:1px solid rgba(240,144,48,0.2);border-radius:10px;padding:12px;margin-bottom:8px;"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;"><div style="font-size:10px;font-weight:800;color:#f09030;">' + (a.auteur_nom||'Direction') + '</div><div style="display:flex;align-items:center;gap:8px;"><span style="font-size:10px;color:var(--white-dim);">' + new Date(a.created_at).toLocaleDateString('fr-FR',{day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'}) + '</span><button onclick="supprimerAnnotation(' + a.id + ')" style="background:none;border:none;color:var(--red);cursor:pointer;font-size:11px;"><i class="fa-solid fa-trash"></i></button></div></div><div style="font-size:12px;color:var(--white);line-height:1.5;">' + a.contenu + '</div></div>').join('');
+  } catch(e) { document.getElementById('annotList').innerHTML = '<div style="color:var(--red);font-size:12px;">Erreur chargement</div>'; }
+}
+
+async function ajouterAnnotation() {
+  const contenu = document.getElementById('annotContenu').value.trim();
+  if (!contenu) return;
+  try {
+    const r = await fetch('/api/dossiers-rh/' + _annotDossierId + '/annotations', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({ contenu }) });
+    const d = await r.json();
+    if (d.success) { document.getElementById('annotContenu').value = ''; chargerAnnotations(_annotDossierId); }
+    else showToast('Erreur: ' + (d.error||''), false);
+  } catch(e) { showToast('Erreur réseau', false); }
+}
+
+async function supprimerAnnotation(id) {
+  if (!confirm('Supprimer cette note ?')) return;
+  try {
+    await fetch('/api/annotations-rh/' + id, { method: 'DELETE' });
+    chargerAnnotations(_annotDossierId);
+  } catch(e) {}
+}
 </script>
 
+
+<!-- Modal Annotations RH -->
+<div class="modal-overlay" id="modalAnnotations">
+  <div class="modal" style="max-width:560px;">
+    <button class="modal-close" onclick="closeModal('modalAnnotations')"><i class="fa-solid fa-xmark"></i></button>
+    <div class="modal-title"><i class="fa-solid fa-note-sticky" style="color:#f09030;"></i> ANNOTATIONS</div>
+    <div style="font-size:11px;color:var(--white-dim);margin-bottom:16px;">Notes internes — visibles uniquement par la direction.</div>
+    <div class="form-group">
+      <textarea class="input-field" id="annotContenu" rows="3" placeholder="Ajouter une note..."></textarea>
+    </div>
+    <button class="btn btn-gold" onclick="ajouterAnnotation()" style="margin-bottom:16px;"><i class="fa-solid fa-plus"></i> Ajouter</button>
+    <div id="annotList" style="max-height:300px;overflow-y:auto;"></div>
+  </div>
+</div>
 </body>
 </html>

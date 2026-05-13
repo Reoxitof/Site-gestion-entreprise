@@ -1712,6 +1712,33 @@ app.delete('/api/fiches-paye/:id', admin, async (req, res) => {
     res.json({ success: true });
   } catch(e) { res.status(500).json({ error: e.message }); }
 });
+
+// ── ANNOTATIONS DOSSIERS RH (direction uniquement) ──
+app.get('/api/dossiers-rh/:id/annotations', admin, async (req, res) => {
+  try {
+    await getPool().query('CREATE TABLE IF NOT EXISTS ec_annotations_rh (id SERIAL PRIMARY KEY, dossier_id INTEGER NOT NULL, auteur_id INTEGER, auteur_nom TEXT, contenu TEXT NOT NULL, created_at TIMESTAMP DEFAULT NOW())').catch(()=>{});
+    const rows = (await getPool().query('SELECT * FROM ec_annotations_rh WHERE dossier_id=$1 ORDER BY created_at DESC', [req.params.id])).rows;
+    res.json(rows);
+  } catch(e) { res.status(500).json({ error: e.message }); }
+});
+
+app.post('/api/dossiers-rh/:id/annotations', admin, async (req, res) => {
+  try {
+    await getPool().query('CREATE TABLE IF NOT EXISTS ec_annotations_rh (id SERIAL PRIMARY KEY, dossier_id INTEGER NOT NULL, auteur_id INTEGER, auteur_nom TEXT, contenu TEXT NOT NULL, created_at TIMESTAMP DEFAULT NOW())').catch(()=>{});
+    const { contenu } = req.body;
+    if (!contenu || !contenu.trim()) return res.status(400).json({ error: 'Contenu requis' });
+    const auteur = req.session.user.prenom + ' ' + req.session.user.nom;
+    await getPool().query('INSERT INTO ec_annotations_rh (dossier_id, auteur_id, auteur_nom, contenu) VALUES ($1,$2,$3,$4)', [req.params.id, req.session.user.id, auteur, contenu.trim()]);
+    res.json({ success: true });
+  } catch(e) { res.status(500).json({ error: e.message }); }
+});
+
+app.delete('/api/annotations-rh/:id', admin, async (req, res) => {
+  try {
+    await getPool().query('DELETE FROM ec_annotations_rh WHERE id=$1', [req.params.id]);
+    res.json({ success: true });
+  } catch(e) { res.status(500).json({ error: e.message }); }
+});
 /* ═══ PAGES ═══ */
 app.get('/login', (req, res) => { res.setHeader('Content-Type', 'text/html; charset=utf-8'); res.sendFile(path.join(__dirname, 'public', 'login.html')); });
 app.get('/dashboard', (req, res) => { res.setHeader('Content-Type', 'text/html; charset=utf-8'); res.sendFile(path.join(__dirname, 'public', 'index.html')); });
