@@ -1611,7 +1611,7 @@ app.patch('/api/dossiers-rh/:id/statut', admin, async (req, res) => {
 app.delete('/api/dossiers-rh/:id', admin, async (req, res) => {
   try {
     const dossierRes = await getPool().query(
-      `SELECT d.*, u.role FROM ec_dossiers_rh d JOIN ec_users u ON d.user_id=u.id WHERE d.id=$1`,
+      `SELECT d.*, u.role FROM ec_dossiers_rh d LEFT JOIN ec_users u ON d.user_id=u.id WHERE d.id=$1`,
       [req.params.id]
     );
     const dossier = dossierRes.rows[0];
