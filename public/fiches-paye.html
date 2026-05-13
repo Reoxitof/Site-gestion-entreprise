@@ -123,11 +123,12 @@ function renderFiches(fiches) {
   el.innerHTML = fiches.map(f => {
     const payBtn = (isDir && f.statut === 'en_attente') ? '<button class="btn btn-green" style="font-size:11px;padding:6px 12px;" onclick="payerFiche(' + f.id + ')"><i class="fa-solid fa-check"></i> Payer</button>' : '';
     const pngBtn = (f.statut === 'paye') ? '<button class="btn" style="font-size:11px;padding:6px 12px;margin-left:6px;" onclick="exportPNG(' + f.id + ')"><i class="fa-solid fa-image"></i> PNG</button>' : '';
+    const delBtn = isDir ? '<button class="btn btn-danger" style="font-size:11px;padding:6px 12px;margin-left:6px;" onclick="supprimerFiche(' + f.id + ')"><i class="fa-solid fa-trash"></i></button>' : '';
     const paye = f.statut === 'paye' ? '<div style="font-size:10px;color:var(--green);margin-top:4px;"><i class="fa-solid fa-check-circle"></i> Payé' + (f.paye_le ? ' le ' + new Date(f.paye_le).toLocaleDateString('fr-FR') : '') + '</div>' : '';
     let details = [];
     try { details = JSON.parse(f.details || '[]'); } catch(e) {}
     const desc = details[0]?.description || '';
-    return '<div class="fiche-card"><div class="fiche-info"><div class="fiche-nom">' + (f.prenom||'') + ' ' + (f.nom||'') + '</div><div class="fiche-meta">' + (f.poste||'') + (desc ? ' — ' + desc : '') + '</div>' + paye + '</div><div style="text-align:right;"><div class="fiche-montant">' + Number(f.montant_total).toLocaleString('fr-FR') + ' $</div><span class="badge ' + (f.statut==='paye'?'badge-paid':'badge-wait') + '">' + (f.statut==='paye'?'Payé':'En attente') + '</span><div style="margin-top:8px;">' + payBtn + pngBtn + '</div></div></div>';
+    return '<div class="fiche-card"><div class="fiche-info"><div class="fiche-nom">' + (f.prenom||'') + ' ' + (f.nom||'') + '</div><div class="fiche-meta">' + (f.poste||'') + (desc ? ' — ' + desc : '') + '</div>' + paye + '</div><div style="text-align:right;"><div class="fiche-montant">' + Number(f.montant_total).toLocaleString('fr-FR') + ' $</div><span class="badge ' + (f.statut==='paye'?'badge-paid':'badge-wait') + '">' + (f.statut==='paye'?'Payé':'En attente') + '</span><div style="margin-top:8px;">' + payBtn + pngBtn + delBtn + '</div></div></div>';
   }).join('');
 }
 
@@ -260,6 +261,15 @@ async function exportPNG(ficheId) {
   link.click();
 }
 
+
+async function supprimerFiche(id) {
+  if (!confirm('Supprimer cette fiche de paye ?')) return;
+  try {
+    const r = await fetch('/api/fiches-paye/' + id, { method: 'DELETE' });
+    if (r.ok) loadFiches();
+    else alert('Erreur suppression');
+  } catch(e) { alert('Erreur réseau'); }
+}
 init();
 </script>
 </body>

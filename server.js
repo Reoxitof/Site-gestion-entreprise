@@ -1696,6 +1696,22 @@ app.get('/api/migrate-divisions', admin, async (req, res) => {
     res.json({ success: true, message: 'Divisions mises a jour' });
   } catch(e) { res.status(500).json({ error: e.message }); }
 });
+
+/* Debug user role */
+app.get('/api/debug-user/:username', admin, async (req, res) => {
+  try {
+    const r = await getPool().query('SELECT id,username,nom,prenom,poste,role FROM ec_users WHERE username=$1', [req.params.username]);
+    res.json(r.rows[0] || { error: 'User not found' });
+  } catch(e) { res.status(500).json({ error: e.message }); }
+});
+
+// Supprimer une fiche de paye (direction)
+app.delete('/api/fiches-paye/:id', admin, async (req, res) => {
+  try {
+    await getPool().query('DELETE FROM ec_fiches_paye WHERE id=$1', [req.params.id]);
+    res.json({ success: true });
+  } catch(e) { res.status(500).json({ error: e.message }); }
+});
 /* ═══ PAGES ═══ */
 app.get('/login', (req, res) => { res.setHeader('Content-Type', 'text/html; charset=utf-8'); res.sendFile(path.join(__dirname, 'public', 'login.html')); });
 app.get('/dashboard', (req, res) => { res.setHeader('Content-Type', 'text/html; charset=utf-8'); res.sendFile(path.join(__dirname, 'public', 'index.html')); });
